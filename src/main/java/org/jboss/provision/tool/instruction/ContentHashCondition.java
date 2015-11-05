@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.jboss.provision.ApplicationContext;
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.info.ContentPath;
@@ -46,8 +47,8 @@ class ContentHashCondition implements InstructionCondition {
     }
 
     @Override
-    public void assertSatisfied(ProvisionEnvironment env) throws ProvisionException {
-        final File targetFile = env.resolvePath(path);
+    public void assertSatisfied(ApplicationContext ctx) throws ProvisionException {
+        final File targetFile = ctx.resolvePath(path);
         if(expectedHash == null) {
             if(targetFile != null) {
                 throw ProvisionErrors.pathAlreadyExists(targetFile);

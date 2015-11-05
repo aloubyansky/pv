@@ -20,16 +20,24 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.tool.instruction;
+package org.jboss.provision;
 
-import org.jboss.provision.ApplicationContext;
-import org.jboss.provision.ProvisionException;
+import java.io.File;
+
+import org.jboss.provision.info.ContentPath;
+import org.jboss.provision.info.ProvisionUnitInfo;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public interface InstructionCondition {
+public interface ApplicationContext {
 
-    void assertSatisfied(ApplicationContext ctx) throws ProvisionException;
+    ProvisionUnitInfo getUnitInfo();
+
+    File getUnitHome();
+
+    ProvisionEnvironment getEnvironment();
+
+    File resolvePath(ContentPath path) throws ProvisionException;
 }

@@ -20,21 +20,29 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.tool.instruction;
+package org.jboss.provision;
 
-import java.io.File;
-
-import org.jboss.provision.ProvisionException;
-import org.jboss.provision.info.ContentPath;
-import org.jboss.provision.info.ProvisionUnitInfo;
+import org.jboss.provision.tool.instruction.UpdatePolicy;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public interface ProvisionEnvironment {
+public interface UnitUpdatePolicy {
 
-    ProvisionUnitInfo getUnitContentInfo(String unitName) throws ProvisionException;
+    UnitUpdatePolicy UNIT_FORCED_CONTENT_CONDITIONED = new UnitUpdatePolicy() {
+        @Override
+        public UpdatePolicy getUnitPolicy() {
+            return UpdatePolicy.FORCED;
+        }
 
-    File resolvePath(ContentPath path) throws ProvisionException;
+        @Override
+        public UpdatePolicy getContentPolicy(String path) {
+            return UpdatePolicy.CONDITIONED;
+        }
+    };
+
+    UpdatePolicy getUnitPolicy();
+
+    UpdatePolicy getContentPolicy(String path);
 }

@@ -29,6 +29,20 @@ package org.jboss.provision.info;
  */
 public interface ProvisionUnitInfo {
 
+    ProvisionUnitInfo UNDEFINED = new ProvisionUnitInfo() {
+        String UNDEFINED_STR = "UNDEFINED";
+
+        @Override
+        public String getName() {
+            return UNDEFINED_STR;
+        }
+
+        @Override
+        public String getVersion() {
+            return UNDEFINED_STR;
+        }
+    };
+
     /**
      * Name of the unit.
      *

@@ -19,17 +19,14 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-
 package org.jboss.provision.tool.instruction;
-
-import org.jboss.provision.ApplicationContext;
-import org.jboss.provision.ProvisionException;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public interface InstructionCondition {
-
-    void assertSatisfied(ApplicationContext ctx) throws ProvisionException;
+public enum UpdatePolicy {
+    FORCED,
+    CONDITIONED,
+    IGNORED
 }

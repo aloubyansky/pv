@@ -22,6 +22,7 @@
 
 package org.jboss.provision.tool.instruction;
 
+import org.jboss.provision.ApplicationContext;
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.info.ProvisionUnitInfo;
@@ -41,8 +42,8 @@ class UnitVersionCondition implements InstructionCondition {
     }
 
     @Override
-    public void assertSatisfied(ProvisionEnvironment env) throws ProvisionException {
-        final ProvisionUnitInfo unitInfo = env.getUnitContentInfo(name);
+    public void assertSatisfied(ApplicationContext ctx) throws ProvisionException {
+        final ProvisionUnitInfo unitInfo = ctx.getUnitInfo();
         if(version == null) {
             if(unitInfo != null) {
                 throw ProvisionErrors.unitAlreadyInstalled(unitInfo.getName(), unitInfo.getVersion());

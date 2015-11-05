@@ -22,22 +22,8 @@
 
 package org.jboss.provision.tool;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipException;
-import java.util.zip.ZipFile;
-
-import javax.xml.stream.XMLStreamException;
-
-import org.jboss.provision.ProvisionErrors;
+import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionException;
-import org.jboss.provision.tool.instruction.ProvisionPackageInstruction;
-import org.jboss.provision.util.IoUtils;
-import org.jboss.provision.xml.ProvisionXml;
 
 /**
  *
@@ -48,36 +34,9 @@ public class ProvisionTool {
     private ProvisionTool() {
     }
 
-    public static void apply(File pvnPackage) throws ProvisionException {
+    public static void apply(ProvisionEnvironment env) throws ProvisionException {
 
-        if (!pvnPackage.exists()) {
-            throw ProvisionErrors.pathDoesNotExist(pvnPackage);
-        }
-        final ProvisionPackageInstruction instructions = readInstructions(pvnPackage);
-    }
-
-    private static ProvisionPackageInstruction readInstructions(File pvnPackage) throws ProvisionException {
-        ZipFile zipFile = null;
-        InputStream is = null;
-        try {
-            if (pvnPackage.isDirectory()) {
-                is = new FileInputStream(new File(pvnPackage, ProvisionXml.PROVISION_XML));
-            } else {
-                zipFile = new ZipFile(pvnPackage);
-                is = zipFile.getInputStream(new ZipEntry(ProvisionXml.PROVISION_XML));
-            }
-            return ProvisionXml.parse(is);
-        } catch (ZipException e) {
-            throw ProvisionErrors.zipFormatError(pvnPackage, e);
-        } catch (FileNotFoundException e) {
-            throw ProvisionErrors.pathDoesNotExist(new File(pvnPackage, ProvisionXml.PROVISION_XML).getAbsoluteFile());
-        } catch (IOException e) {
-            throw ProvisionErrors.fileReadError(pvnPackage, e);
-        } catch (XMLStreamException e) {
-            throw ProvisionErrors.failedToParse(ProvisionXml.PROVISION_XML, e);
-        } finally {
-            IoUtils.safeClose(is);
-            IoUtils.safeClose(zipFile);
-        }
+        final ApplicationContextImpl appCtx = new ApplicationContextImpl(env);
+        appCtx.processPackage();
     }
 }

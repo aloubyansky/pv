@@ -77,7 +77,7 @@ public class ProvisionErrors {
         return new ProvisionException("Failed to read ZIP archive " + zipFile.getAbsolutePath(), e);
     }
 
-    public static ProvisionException fileReadError(File f, IOException e) {
+    public static ProvisionException readError(File f, IOException e) {
         return new ProvisionException("Failed to read " + f.getAbsolutePath(), e);
     }
 
@@ -103,5 +103,17 @@ public class ProvisionErrors {
 
     public static ProvisionException pathHashMismatch(File path, String expectedHash, String actualHash) {
         return new ProvisionException("The hash of " + path + " is " + actualHash + " but expected to be " + expectedHash);
+    }
+
+    public static ProvisionException unitHomeNotDefined(String unitName) {
+        return new ProvisionException("Unit home path not defined for " + unitName);
+    }
+
+    public static ProvisionException unfinedNamedLocation(String namedLocation) {
+        return new ProvisionException("Undefined named location: " + namedLocation);
+    }
+
+    public static ProvisionException deleteFailed(File f) {
+        return new ProvisionException("Could not delete " + f.getAbsolutePath());
     }
 }
