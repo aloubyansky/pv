@@ -36,6 +36,8 @@ import javax.xml.stream.XMLStreamException;
 
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
+import org.jboss.provision.info.ProvisionUnitContentInfo;
+import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
 import org.jboss.provision.tool.instruction.ProvisionPackageInstruction;
 import org.jboss.provision.tool.instruction.ProvisionUnitInstruction;
@@ -47,13 +49,87 @@ import org.jboss.provision.xml.ProvisionXml;
  *
  * @author Alexey Loubyansky
  */
-public class ProvisionPackageBuilder {
+public class ProvisionPackage {
 
-    private ProvisionPackageBuilder() {
+    private ProvisionPackage() {
+    }
+
+    public static Builder newBuilder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+
+        private File curInstall;
+        private File targetInstall;
+        private File pkgFile;
+
+        private Builder() {
+        }
+
+        public Builder setCurrentInstallationDir(File curInstall) {
+            this.curInstall = curInstall;
+            return this;
+        }
+
+        public Builder setTargetInstallationDir(File targetInstall) {
+            this.targetInstall = targetInstall;
+            return this;
+        }
+
+        public Builder setPackageOutputFile(File pkgFile) {
+            return this;
+        }
+
+        public void build() throws ProvisionException {
+            if(curInstall == null) {
+                buildInstall();
+            } else {
+                if(targetInstall == null) {
+                    buildUninstall();
+                } else {
+                    buildUpdate();
+                }
+            }
+        }
+
+        public void buildUpdate() throws ProvisionException {
+
+            assertExists(curInstall, "currentInstallationDir");
+            assertExists(targetInstall, "targetInstallationDir");
+            final ProvisionUnitContentInfo currentContent = ProvisionInfoReader.readContentInfo(ProvisionUnitInfo.UNDEFINED.getName(), ProvisionUnitInfo.UNDEFINED.getVersion(), curInstall);
+            final ProvisionUnitContentInfo targetContent = ProvisionInfoReader.readContentInfo(ProvisionUnitInfo.UNDEFINED.getName(), ProvisionUnitInfo.UNDEFINED.getVersion(), targetInstall);
+            final ProvisionUnitInstruction replaceInstruction = ProvisionInstructionBuilder.replace(currentContent, targetContent);
+            ProvisionPackage.build(ProvisionPackageInstruction.Builder.newPackage().add(replaceInstruction).build(), targetInstall, pkgFile);
+        }
+
+        public void buildInstall() throws ProvisionException {
+
+            assertExists(targetInstall, "targetInstallationDir");
+            final ProvisionUnitContentInfo contentInfo = ProvisionInfoReader.readContentInfo(ProvisionUnitInfo.UNDEFINED.getName(), ProvisionUnitInfo.UNDEFINED.getVersion(), targetInstall);
+            final ProvisionUnitInstruction installInstruction = ProvisionInstructionBuilder.install(contentInfo);
+            ProvisionPackage.build(ProvisionPackageInstruction.Builder.newPackage().add(installInstruction).build(), targetInstall, pkgFile);
+        }
+
+        public void buildUninstall() throws ProvisionException {
+
+            assertExists(curInstall, "currentInstallationDir");
+            final ProvisionUnitContentInfo contentInfo = ProvisionInfoReader.readContentInfo(ProvisionUnitInfo.UNDEFINED.getName(), ProvisionUnitInfo.UNDEFINED.getVersion(), curInstall);
+            final ProvisionUnitInstruction uninstallInstruction = ProvisionInstructionBuilder.uninstall(contentInfo);
+            ProvisionPackage.build(ProvisionPackageInstruction.Builder.newPackage().add(uninstallInstruction).build(), curInstall, pkgFile);
+        }
+
+        private void assertExists(File f, String argName) throws ProvisionException {
+            if(f == null) {
+                throw new ProvisionException(ProvisionErrors.nullArgument(argName));
+            }
+            if(!f.exists()) {
+                throw ProvisionErrors.pathDoesNotExist(f);
+            }
+        }
     }
 
     public static void build(ProvisionPackageInstruction instructions, File src, File packageFile) throws ProvisionException {
-
 
         ZipOutputStream zos = null;
         try {
