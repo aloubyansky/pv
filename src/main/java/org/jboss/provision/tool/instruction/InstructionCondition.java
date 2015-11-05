@@ -31,5 +31,5 @@ import org.jboss.provision.ProvisionException;
  */
 public interface InstructionCondition {
 
-    void assertSatisfied(ApplicationContext ctx) throws ProvisionException;
+    boolean isSatisfied(ApplicationContext ctx) throws ProvisionException;
 }

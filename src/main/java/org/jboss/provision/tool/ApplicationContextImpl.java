@@ -92,7 +92,9 @@ class ApplicationContextImpl implements ApplicationContext {
 
         if (updatePolicy.getUnitPolicy() == UpdatePolicy.CONDITIONED) {
             for (InstructionCondition condition : unitInstruction.getConditions()) {
-                condition.assertSatisfied(this);
+                if(!condition.isSatisfied(this)) {
+                    return;
+                }
             }
         }
 
@@ -104,7 +106,9 @@ class ApplicationContextImpl implements ApplicationContext {
             }
             if (contentPolicy == UpdatePolicy.CONDITIONED) {
                 for (InstructionCondition condition : item.getConditions()) {
-                    condition.assertSatisfied(this);
+                    if(!condition.isSatisfied(this)) {
+                        continue;
+                    }
                 }
             }
 

@@ -42,7 +42,7 @@ class UnitVersionCondition implements InstructionCondition {
     }
 
     @Override
-    public void assertSatisfied(ApplicationContext ctx) throws ProvisionException {
+    public boolean isSatisfied(ApplicationContext ctx) throws ProvisionException {
         final ProvisionUnitInfo unitInfo = ctx.getUnitInfo();
         if(version == null) {
             if(unitInfo != null) {
@@ -56,6 +56,7 @@ class UnitVersionCondition implements InstructionCondition {
                 throw ProvisionErrors.unitVersionMismatch(unitInfo.getName(), version, unitInfo.getVersion());
             }
         }
+        return true;
     }
 
     @Override

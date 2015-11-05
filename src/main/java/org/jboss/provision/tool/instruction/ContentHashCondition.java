@@ -47,7 +47,7 @@ class ContentHashCondition implements InstructionCondition {
     }
 
     @Override
-    public void assertSatisfied(ApplicationContext ctx) throws ProvisionException {
+    public boolean isSatisfied(ApplicationContext ctx) throws ProvisionException {
         final File targetFile = ctx.resolvePath(path);
         if(expectedHash == null) {
             if(targetFile != null) {
@@ -67,6 +67,7 @@ class ContentHashCondition implements InstructionCondition {
                 throw ProvisionErrors.pathHashMismatch(targetFile, HashUtils.bytesToHexString(expectedHash), HashUtils.bytesToHexString(actualHash));
             }
         }
+        return true;
     }
 
     @Override
