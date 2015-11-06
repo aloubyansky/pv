@@ -29,6 +29,7 @@ import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.info.ContentItemInfo;
 import org.jboss.provision.info.ProvisionUnitContentInfo;
+import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.util.HashUtils;
 
 /**
@@ -38,6 +39,10 @@ import org.jboss.provision.util.HashUtils;
 public class ProvisionInfoReader {
 
     private ProvisionInfoReader() {
+    }
+
+    public static ProvisionUnitContentInfo readContentInfo(File root) throws ProvisionException {
+        return readContentInfo(ProvisionUnitInfo.UNDEFINED.getName(), ProvisionUnitInfo.UNDEFINED.getVersion(), root);
     }
 
     public static ProvisionUnitContentInfo readContentInfo(String name, String version, File root) throws ProvisionException {
