@@ -27,6 +27,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.UUID;
 
+import org.jboss.provision.util.HashUtils;
 import org.jboss.provision.util.IoUtils;
 import org.jboss.provision.util.Utils;
 
@@ -133,6 +134,10 @@ public class InstallationBuilder {
 
     public File resolvePath(String relativePath) {
         return new File(home, toNativePath(relativePath));
+    }
+
+    public byte[] hashOf(String relativePath) throws IOException {
+        return HashUtils.hashFile(resolvePath(relativePath));
     }
 
     private static String toNativePath(String path) {

@@ -116,4 +116,12 @@ public class ProvisionErrors {
     public static ProvisionException deleteFailed(File f) {
         return new ProvisionException("Could not delete " + f.getAbsolutePath());
     }
+
+    public static ProvisionException patchCantChangeVersion() {
+        return new ProvisionException("Patch is not allowed to change the version of the installed software.");
+    }
+
+    public static ProvisionException patchIdMissing() {
+        return new ProvisionException("Patch ID is required to produce a patch");
+    }
 }

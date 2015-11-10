@@ -411,7 +411,7 @@ class ProvisionXml_1_0 implements XMLStreamConstants, XMLElementReader<ParsingRe
             writer.writeAttribute(Attribute.NAME.name, unit.getName());
             writer.writeAttribute(Attribute.VERSION.name, unit.getReplacedVersion());
         } else if(unit.getReplacedVersion().equals(unit.getVersion())) {
-            // PATH
+            // PATCH
             writer.writeStartElement(Element.PATCH.name);
             writer.writeAttribute(Attribute.NAME.name, unit.getName());
             writer.writeAttribute(Attribute.VERSION.name, unit.getVersion());

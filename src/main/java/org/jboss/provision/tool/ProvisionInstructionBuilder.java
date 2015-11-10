@@ -22,6 +22,7 @@
 
 package org.jboss.provision.tool;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -61,25 +62,44 @@ public class ProvisionInstructionBuilder {
     }
 
     public static ProvisionUnitInstruction replace(ProvisionUnitContentInfo replacedUnit, ProvisionUnitContentInfo nextUnit) throws ProvisionException {
+        return patch(null, replacedUnit, nextUnit);
+    }
+
+    public static ProvisionUnitInstruction patch(String patchId, ProvisionUnitContentInfo replacedUnit, ProvisionUnitContentInfo nextUnit) throws ProvisionException {
 
         if(!replacedUnit.getName().equals(nextUnit.getName())) {
             throw ProvisionErrors.unitNamesDoNotMatch(replacedUnit.getName(), nextUnit.getName());
         }
 
-        final ProvisionUnitInstruction.Builder builder = ProvisionUnitInstruction.Builder.replaceUnit(nextUnit.getName(), replacedUnit.getVersion(), nextUnit.getVersion());
+        final ProvisionUnitInstruction.Builder builder;
+        if(patchId != null) {
+            if(!nextUnit.getVersion().equals(replacedUnit.getVersion())) {
+                throw ProvisionErrors.patchCantChangeVersion();
+            }
+            builder = ProvisionUnitInstruction.Builder.patchUnit(nextUnit.getName(), replacedUnit.getVersion(), patchId);
+        } else {
+            if(nextUnit.getVersion().equals(replacedUnit.getVersion())) {
+                throw ProvisionErrors.patchIdMissing();
+            }
+            builder = ProvisionUnitInstruction.Builder.replaceUnit(nextUnit.getName(), replacedUnit.getVersion(), nextUnit.getVersion());
+        }
 
         final Set<ContentPath> commonPaths = new HashSet<ContentPath>();
         for(ContentItemInfo nextItem : nextUnit.getContentInfo()) {
             final ContentItemInfo prevItem = replacedUnit.getContentInfo(nextItem.getPath());
 
-            final ContentItemInstruction itemInstruction;
             if(prevItem == null) {
-                itemInstruction = ContentItemInstruction.Builder.addContent(nextItem.getPath(), nextItem.getContentHash()).build();
+                final ContentItemInstruction itemInstruction = ContentItemInstruction.Builder.addContent(nextItem.getPath(), nextItem.getContentHash()).build();
+                builder.addContentInstruction(itemInstruction);
             } else {
                 commonPaths.add(nextItem.getPath());
-                itemInstruction = ContentItemInstruction.Builder.replaceContent(nextItem.getPath(), nextItem.getContentHash(), prevItem.getContentHash()).build();
+                if(!Arrays.equals(nextItem.getContentHash(), prevItem.getContentHash())) {
+                    final ContentItemInstruction itemInstruction = ContentItemInstruction.Builder
+                            .replaceContent(nextItem.getPath(), nextItem.getContentHash(), prevItem.getContentHash())
+                            .build();
+                    builder.addContentInstruction(itemInstruction);
+                }
             }
-            builder.addContentInstruction(itemInstruction);
         }
         for(ContentItemInfo prevItem : replacedUnit.getContentInfo()) {
             if(!commonPaths.contains(prevItem.getPath())) {

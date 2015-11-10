@@ -52,12 +52,9 @@ public class XmlWriterTestCase {
         final StringWriter writer = new StringWriter();
         ProvisionXml.marshal(writer, pkg);
         final String xml = writer.getBuffer().toString();
-        System.out.println(xml);
 
         final ProvisionPackageInstruction parsedPkg = ProvisionXml.parse(new StringReader(xml));
-
         assertEquals(pkg, parsedPkg);
         //ProvisionPackageBuilder.build(installUnit, root, new File(root, "package.pvn"));
     }
-
 }

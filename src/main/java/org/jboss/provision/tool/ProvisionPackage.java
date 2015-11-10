@@ -63,6 +63,7 @@ public class ProvisionPackage {
         private File curInstall;
         private File targetInstall;
         private File pkgFile;
+        private String patchId;
 
         private Builder() {
         }
@@ -78,6 +79,12 @@ public class ProvisionPackage {
         }
 
         public Builder setPackageOutputFile(File pkgFile) {
+            this.pkgFile = pkgFile;
+            return this;
+        }
+
+        public Builder setPatchId(String patchId) {
+            this.patchId = patchId;
             return this;
         }
 
@@ -99,12 +106,15 @@ public class ProvisionPackage {
             assertExists(targetInstall, "targetInstallationDir");
             final ProvisionUnitContentInfo currentContent = ProvisionInfoReader.readContentInfo(ProvisionUnitInfo.UNDEFINED.getName(), ProvisionUnitInfo.UNDEFINED.getVersion(), curInstall);
             final ProvisionUnitContentInfo targetContent = ProvisionInfoReader.readContentInfo(ProvisionUnitInfo.UNDEFINED.getName(), ProvisionUnitInfo.UNDEFINED.getVersion(), targetInstall);
-            final ProvisionUnitInstruction replaceInstruction = ProvisionInstructionBuilder.replace(currentContent, targetContent);
+            final ProvisionUnitInstruction replaceInstruction = ProvisionInstructionBuilder.patch(patchId, currentContent, targetContent);
             ProvisionPackage.build(ProvisionPackageInstruction.Builder.newPackage().add(replaceInstruction).build(), targetInstall, pkgFile);
         }
 
         public void buildInstall() throws ProvisionException {
 
+            if(patchId != null) {
+                throw ProvisionErrors.patchCantChangeVersion();
+            }
             assertExists(targetInstall, "targetInstallationDir");
             final ProvisionUnitContentInfo contentInfo = ProvisionInfoReader.readContentInfo(ProvisionUnitInfo.UNDEFINED.getName(), ProvisionUnitInfo.UNDEFINED.getVersion(), targetInstall);
             final ProvisionUnitInstruction installInstruction = ProvisionInstructionBuilder.install(contentInfo);
@@ -113,6 +123,9 @@ public class ProvisionPackage {
 
         public void buildUninstall() throws ProvisionException {
 
+            if(patchId != null) {
+                throw ProvisionErrors.patchCantChangeVersion();
+            }
             assertExists(curInstall, "currentInstallationDir");
             final ProvisionUnitContentInfo contentInfo = ProvisionInfoReader.readContentInfo(ProvisionUnitInfo.UNDEFINED.getName(), ProvisionUnitInfo.UNDEFINED.getVersion(), curInstall);
             final ProvisionUnitInstruction uninstallInstruction = ProvisionInstructionBuilder.uninstall(contentInfo);

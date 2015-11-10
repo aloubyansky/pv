@@ -33,32 +33,17 @@ import org.jboss.provision.info.ContentItemInfo;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionUnitContentInfo;
 import org.jboss.provision.info.ProvisionUnitInfo;
-import org.jboss.provision.test.util.InstallationBuilder;
+import org.jboss.provision.test.TestWithInstallationBuilder;
 import org.jboss.provision.tool.ProvisionInfoReader;
 import org.jboss.provision.util.HashUtils;
-import org.jboss.provision.util.IoUtils;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public class UnitContentInfoTestCase {
-
-    private InstallationBuilder home;
-
-    @Before
-    public void init() {
-        home = InstallationBuilder.create();
-    }
-
-    @After
-    public void cleanup() {
-        IoUtils.recursiveDelete(home.getHome());
-    }
+public class UnitContentInfoTestCase extends TestWithInstallationBuilder {
 
     @Test
     public void testMain() throws Exception {
