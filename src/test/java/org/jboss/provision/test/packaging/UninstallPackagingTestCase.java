@@ -49,7 +49,7 @@ import org.junit.Test;
  *
  * @author Alexey Loubyansky
  */
-public class UninstallPackageTestCase extends PackagingTestBase {
+public class UninstallPackagingTestCase extends PackagingTestBase {
 
     @Test
     public void testMain() throws Exception {

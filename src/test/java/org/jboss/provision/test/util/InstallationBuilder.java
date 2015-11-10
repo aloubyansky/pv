@@ -23,13 +23,11 @@
 package org.jboss.provision.test.util;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.UUID;
 
 import org.jboss.provision.util.HashUtils;
 import org.jboss.provision.util.IoUtils;
-import org.jboss.provision.util.Utils;
 
 /**
  *
@@ -40,17 +38,7 @@ public class InstallationBuilder {
     private static final String TMP_DIR = "jbosspvtest";
 
     private static File nextTmpDir() {
-
-        final File tmpDir = new File(Utils.getSystemProperty("java.io.tmpdir"));
-        File f = new File(tmpDir, TMP_DIR);
-        if(f.exists()) {
-            int i = 1;
-            f = new File(tmpDir, TMP_DIR + i++);
-            while(f.exists()) {
-                f = new File(tmpDir, TMP_DIR + i++);
-            }
-        }
-        return f;
+        return FSUtils.nextTmpDir(TMP_DIR);
     }
 
     public static InstallationBuilder create() {
@@ -91,7 +79,7 @@ public class InstallationBuilder {
         if(!parent.exists()) {
             createDir(parent);
         }
-        writeContent(f, content);
+        FSUtils.writeFile(f, content);
         return this;
     }
 
@@ -110,24 +98,12 @@ public class InstallationBuilder {
         return this;
     }
 
-    private static void writeContent(File f, String content) {
-        FileWriter writer = null;
-        try {
-            writer = new FileWriter(f);
-            writer.write(content);
-        } catch (IOException e) {
-            fileWriteFailed(f, e);
-        } finally {
-            IoUtils.safeClose(writer);
-        }
-    }
-
     private static String randomString() {
         return UUID.randomUUID().toString();
     }
 
     private static void createDir(File dir) {
-        if (!dir.mkdirs()) {
+        if (!dir.exists() && !dir.mkdirs()) {
             throw dirNotCreated(dir);
         }
     }
@@ -147,7 +123,7 @@ public class InstallationBuilder {
         return path;
     }
 
-    private static IllegalStateException fileWriteFailed(File f, IOException e) {
+    static IllegalStateException fileWriteFailed(File f, IOException e) {
         return error("Failed to write to " + f.getAbsolutePath(), e);
     }
 

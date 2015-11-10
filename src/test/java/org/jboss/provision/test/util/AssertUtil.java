@@ -22,12 +22,19 @@
 
 package org.jboss.provision.test.util;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
+import org.jboss.provision.util.HashUtils;
 import org.junit.Assert;
 
 /**
@@ -45,7 +52,7 @@ public class AssertUtil {
     }
 
     public static void assertReplace(ContentItemInstruction item, byte[] replacedHash, byte[] hash) throws IOException {
-        assertEquals(1, item.getConditions().size()); // hash condition
+        Assert.assertEquals(1, item.getConditions().size()); // hash condition
         if(hash == null) {
             assertNull(item.getContentHash());
         } else {
@@ -55,6 +62,56 @@ public class AssertUtil {
             assertNull(item.getReplacedHash());
         } else {
             Assert.assertArrayEquals(replacedHash, item.getReplacedHash());
+        }
+    }
+
+    public static void assertEquals(File original, File target) {
+        assertEquals(original, target, false);
+    }
+
+    public static void assertEquals(File original, File target, boolean ignoreEmptyDirs) {
+
+        if(original.isDirectory()) {
+            Assert.assertTrue(target.isDirectory());
+
+            final Set<String> targetNames = target.list().length == 0 ?
+                    Collections.<String>emptySet() : new HashSet<String>(Arrays.asList(target.list()));
+            for(File o : original.listFiles()) {
+                if(!targetNames.remove(o.getName())) {
+                    if (ignoreEmptyDirs) {
+                        if (!o.isDirectory() || !FSUtils.isEmptyDirBranch(o)) {
+                            Assert.fail(target.getAbsolutePath() + " is missing child " + o.getName());
+                        }
+                    } else {
+                        Assert.fail(target.getAbsolutePath() + " is missing child " + o.getName());
+                    }
+                } else {
+                    assertEquals(o, new File(target, o.getName()), ignoreEmptyDirs);
+                }
+            }
+            if(!targetNames.isEmpty()) {
+                if(ignoreEmptyDirs) {
+                    List<String> emptyDirs = new ArrayList<String>();
+                    for (String t : targetNames) {
+                        final File tFile = new File(target, t);
+                        if (tFile.isDirectory() && FSUtils.isEmptyDirBranch(tFile)) {
+                            emptyDirs.add(t);
+                        }
+                    }
+                    targetNames.removeAll(emptyDirs);
+                }
+                if(!targetNames.isEmpty()) {
+                    Assert.fail(target.getAbsolutePath() + " contains unexpected children " + targetNames);
+                }
+            }
+        } else {
+            Assert.assertEquals(original.getName(), target.getName());
+            Assert.assertTrue(target.isFile());
+            try {
+                Assert.assertArrayEquals(HashUtils.hashFile(original), HashUtils.hashFile(target));
+            } catch (IOException e) {
+                throw new IllegalStateException("Failed to compute hash", e);
+            }
         }
     }
 }

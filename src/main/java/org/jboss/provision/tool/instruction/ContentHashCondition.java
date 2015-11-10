@@ -50,11 +50,11 @@ class ContentHashCondition implements InstructionCondition {
     public boolean isSatisfied(ApplicationContext ctx) throws ProvisionException {
         final File targetFile = ctx.resolvePath(path);
         if(expectedHash == null) {
-            if(targetFile != null) {
+            if(targetFile.exists()) {
                 throw ProvisionErrors.pathAlreadyExists(targetFile);
             }
         } else {
-            if(targetFile == null) {
+            if(!targetFile.exists()) {
                 throw ProvisionErrors.pathDoesNotExist(targetFile);
             }
             byte[] actualHash;

@@ -28,10 +28,10 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
 
+import org.jboss.provision.test.util.FSUtils;
 import org.jboss.provision.test.util.InstallationBuilder;
 import org.jboss.provision.util.HashUtils;
 import org.jboss.provision.util.IoUtils;
-import org.jboss.provision.util.Utils;
 import org.jboss.provision.util.ZipUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -54,9 +54,7 @@ public class PackagingTestBase {
     @Before
     public void init() throws Exception {
         home = InstallationBuilder.create();
-        final File tmpDir = new File(Utils.getSystemProperty("java.io.tmpdir"));
-        archiveDir = new File(tmpDir, "archivetestdir");
-        archiveDir.mkdirs();
+        archiveDir = FSUtils.createTmpDir("archivetestdir");
         archive = new File(archiveDir, "archive.zip");
         doInit();
     }

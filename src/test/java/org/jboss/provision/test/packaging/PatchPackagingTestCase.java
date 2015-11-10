@@ -49,7 +49,7 @@ import org.junit.Test;
  *
  * @author Alexey Loubyansky
  */
-public class PatchPackageTestCase extends PackagingTestBase {
+public class PatchPackagingTestCase extends PackagingTestBase {
 
     private InstallationBuilder next;
 
