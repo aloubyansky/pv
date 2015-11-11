@@ -78,17 +78,15 @@ public class FSUtils {
         return true;
     }
 
-    public static void writeRandomContent(File f) {
+    public static void writeRandomContent(File f) throws IOException {
         writeFile(f, UUID.randomUUID().toString());
     }
 
-    public static void writeFile(File f, String content) {
+    public static void writeFile(File f, String content) throws IOException {
         FileWriter writer = null;
         try {
             writer = new FileWriter(f);
             writer.write(content);
-        } catch (IOException e) {
-            InstallationBuilder.fileWriteFailed(f, e);
         } finally {
             IoUtils.safeClose(writer);
         }

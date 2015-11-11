@@ -23,6 +23,7 @@
 package org.jboss.provision.test.util;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.UUID;
 
@@ -79,7 +80,7 @@ public class InstallationBuilder {
         if(!parent.exists()) {
             createDir(parent);
         }
-        FSUtils.writeFile(f, content);
+        writeFile(f, content);
         return this;
     }
 
@@ -123,7 +124,19 @@ public class InstallationBuilder {
         return path;
     }
 
-    static IllegalStateException fileWriteFailed(File f, IOException e) {
+    private static void writeFile(File f, String content) {
+        FileWriter writer = null;
+        try {
+            writer = new FileWriter(f);
+            writer.write(content);
+        } catch (IOException e) {
+            InstallationBuilder.fileWriteFailed(f, e);
+        } finally {
+            IoUtils.safeClose(writer);
+        }
+    }
+
+    private static IllegalStateException fileWriteFailed(File f, IOException e) {
         return error("Failed to write to " + f.getAbsolutePath(), e);
     }
 

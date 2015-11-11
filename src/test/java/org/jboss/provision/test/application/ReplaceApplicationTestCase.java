@@ -39,24 +39,24 @@ import org.junit.Test;
  *
  * @author Alexey Loubyansky
  */
-public class InstallApplicationTestCase {
+public class ReplaceApplicationTestCase {
 
     protected InstallationBuilder original;
-    private File installDir;
+    protected InstallationBuilder next;
     protected File archive;
 
     @Before
     public void init() throws Exception {
         original = InstallationBuilder.create();
         archive = FSUtils.newTmpFile("archive.tst");
-        installDir = FSUtils.createTmpDir("installapptest");
+        next = InstallationBuilder.create();
     }
 
     @After
     public void cleanup() throws Exception {
         IoUtils.recursiveDelete(original.getHome());
         IoUtils.recursiveDelete(archive);
-        IoUtils.recursiveDelete(installDir);
+        IoUtils.recursiveDelete(next.getHome());
     }
 
     @Test
@@ -67,14 +67,25 @@ public class InstallApplicationTestCase {
             .createFileWithRandomContent("c/c/c.txt")
             .createDir("d/e/f");
 
-        ProvisionPackage.newBuilder()
-            .setTargetInstallationDir(original.getHome())
-            .setPackageOutputFile(archive)
-            .buildInstall();
+        IoUtils.copyFile(original.getHome(), next.getHome());
 
-        final ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(installDir).build();
+        next.updateFileWithRandomContent("a.txt")
+            .delete("b/b.txt")
+            .createFileWithRandomContent("d/d/d/d.txt")
+            .delete("d")
+            .createDir("g/h/i");
+
+        ProvisionPackage.newBuilder()
+            .setCurrentInstallationDir(original.getHome())
+            .setTargetInstallationDir(next.getHome())
+            .setPackageOutputFile(archive)
+            .setPatchId("patch1")
+            .buildUpdate();
+
+        AssertUtil.assertNotIdentical(original.getHome(), next.getHome(), true);
+        final ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(original.getHome()).build();
         ProvisionTool.apply(env);
 
-        AssertUtil.assertIdentical(original.getHome(), installDir, true);
+        AssertUtil.assertIdentical(next.getHome(), original.getHome(), true);
     }
 }

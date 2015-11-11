@@ -65,14 +65,30 @@ public class AssertUtil {
         }
     }
 
-    public static void assertEquals(File original, File target) {
-        assertEquals(original, target, false);
+    public static void assertIdentical(File original, File target) {
+        assertIdentical(original, target, false);
     }
 
-    public static void assertEquals(File original, File target, boolean ignoreEmptyDirs) {
+    public static void assertIdentical(File original, File target, boolean ignoreEmptyDirs) {
+        final String error = compareContent(original, target, ignoreEmptyDirs);
+        if(error != null) {
+            Assert.fail(error);
+        }
+    }
+
+    public static void assertNotIdentical(File original, File target, boolean ignoreEmptyDirs) {
+        final String error = compareContent(original, target, ignoreEmptyDirs);
+        if(error == null) {
+            Assert.fail("The branches are identical");
+        }
+    }
+
+    private static String compareContent(File original, File target, boolean ignoreEmptyDirs) {
 
         if(original.isDirectory()) {
-            Assert.assertTrue(target.isDirectory());
+            if(!target.isDirectory()) {
+                return target.getAbsolutePath() + " is not a directory while " + original.getAbsolutePath() + " is";
+            }
 
             final Set<String> targetNames = target.list().length == 0 ?
                     Collections.<String>emptySet() : new HashSet<String>(Arrays.asList(target.list()));
@@ -80,13 +96,16 @@ public class AssertUtil {
                 if(!targetNames.remove(o.getName())) {
                     if (ignoreEmptyDirs) {
                         if (!o.isDirectory() || !FSUtils.isEmptyDirBranch(o)) {
-                            Assert.fail(target.getAbsolutePath() + " is missing child " + o.getName());
+                            return target.getAbsolutePath() + " is missing child " + o.getName();
                         }
                     } else {
-                        Assert.fail(target.getAbsolutePath() + " is missing child " + o.getName());
+                        return target.getAbsolutePath() + " is missing child " + o.getName();
                     }
                 } else {
-                    assertEquals(o, new File(target, o.getName()), ignoreEmptyDirs);
+                    final String result = compareContent(o, new File(target, o.getName()), ignoreEmptyDirs);
+                    if(result != null) {
+                        return result;
+                    }
                 }
             }
             if(!targetNames.isEmpty()) {
@@ -101,17 +120,33 @@ public class AssertUtil {
                     targetNames.removeAll(emptyDirs);
                 }
                 if(!targetNames.isEmpty()) {
-                    Assert.fail(target.getAbsolutePath() + " contains unexpected children " + targetNames);
+                    return target.getAbsolutePath() + " contains unexpected children " + targetNames;
                 }
             }
         } else {
-            Assert.assertEquals(original.getName(), target.getName());
-            Assert.assertTrue(target.isFile());
+            if(!original.getName().equals(target.getName())) {
+                return "File names don't match: " + original.getAbsolutePath() + " vs " + target.getAbsolutePath();
+            }
+            if(target.isDirectory()) {
+                return target.getAbsolutePath() + " is a directory while " + original.getAbsolutePath() + " is not";
+            }
             try {
-                Assert.assertArrayEquals(HashUtils.hashFile(original), HashUtils.hashFile(target));
+                if(!Arrays.equals(HashUtils.hashFile(original), HashUtils.hashFile(target))) {
+                    return "Hashes of " + original.getAbsolutePath() + " and " + target.getAbsolutePath() + " don't match";
+                }
             } catch (IOException e) {
                 throw new IllegalStateException("Failed to compute hash", e);
             }
+        }
+        return null;
+    }
+
+    public static void assertEmptyDirBranch(File dir) {
+        if(!dir.isDirectory()) {
+            throw new IllegalStateException(dir.getAbsolutePath() + " is not a directory");
+        }
+        for(File f : dir.listFiles()) {
+            assertEmptyDirBranch(f);
         }
     }
 }

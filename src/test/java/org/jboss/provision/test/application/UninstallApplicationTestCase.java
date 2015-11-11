@@ -39,7 +39,7 @@ import org.junit.Test;
  *
  * @author Alexey Loubyansky
  */
-public class InstallApplicationTestCase {
+public class UninstallApplicationTestCase {
 
     protected InstallationBuilder original;
     private File installDir;
@@ -68,13 +68,15 @@ public class InstallApplicationTestCase {
             .createDir("d/e/f");
 
         ProvisionPackage.newBuilder()
-            .setTargetInstallationDir(original.getHome())
+            .setCurrentInstallationDir(original.getHome())
             .setPackageOutputFile(archive)
-            .buildInstall();
+            .buildUninstall();
+
+        IoUtils.copyFile(original.getHome(), installDir);
 
         final ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(installDir).build();
         ProvisionTool.apply(env);
 
-        AssertUtil.assertIdentical(original.getHome(), installDir, true);
+        AssertUtil.assertEmptyDirBranch(installDir);
     }
 }
