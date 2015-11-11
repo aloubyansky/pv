@@ -20,44 +20,21 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.test.application;
-
-import java.io.File;
+package org.jboss.provision.test.application.uninstall;
 
 import org.jboss.provision.ProvisionEnvironment;
+import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
-import org.jboss.provision.test.util.FSUtils;
-import org.jboss.provision.test.util.InstallationBuilder;
 import org.jboss.provision.tool.ProvisionPackage;
 import org.jboss.provision.tool.ProvisionTool;
 import org.jboss.provision.util.IoUtils;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public class UninstallApplicationTestCase {
-
-    protected InstallationBuilder original;
-    private File installDir;
-    protected File archive;
-
-    @Before
-    public void init() throws Exception {
-        original = InstallationBuilder.create();
-        archive = FSUtils.newTmpFile("archive.tst");
-        installDir = FSUtils.createTmpDir("installapptest");
-    }
-
-    @After
-    public void cleanup() throws Exception {
-        IoUtils.recursiveDelete(original.getHome());
-        IoUtils.recursiveDelete(archive);
-        IoUtils.recursiveDelete(installDir);
-    }
+public class CleanUninstallTestCase extends ApplicationTestBase {
 
     @Test
     public void testMain() throws Exception {

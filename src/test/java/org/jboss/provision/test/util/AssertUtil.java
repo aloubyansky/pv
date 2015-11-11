@@ -135,7 +135,7 @@ public class AssertUtil {
                     return "Hashes of " + original.getAbsolutePath() + " and " + target.getAbsolutePath() + " don't match";
                 }
             } catch (IOException e) {
-                throw new IllegalStateException("Failed to compute hash", e);
+                throw errorToComputeHash(e);
             }
         }
         return null;
@@ -152,11 +152,48 @@ public class AssertUtil {
         }
     }
 
-    public static void assertExpectedContentNotInTarget(File expected, File target, boolean ignoreEmptyDirs) {
-        final String error = expectedContentInTarget(expected, target, ignoreEmptyDirs);
-        if(error == null) {
-            Assert.fail("Target contains expected content");
+    public static void assertExpectedFilesNotInTarget(File expected, File target) {
+        final String error = expectedFilesNotInTarget(expected, target);
+        if(error != null) {
+            Assert.fail(error);
         }
+    }
+
+    private static String expectedFilesNotInTarget(File expected, File target) {
+
+        if(expected.isDirectory()) {
+            if(!target.isDirectory()) {
+                throw errorNotADir(target);
+            }
+            for(File e : expected.listFiles()) {
+                final File t = new File(target, e.getName());
+                if(t.exists()) {
+                    if(e.isDirectory()) {
+                        if(FSUtils.isEmptyDirBranch(e) || FSUtils.isEmptyDirBranch(t)) {
+                            continue;
+                        }
+                    }
+                    final String error = expectedFilesNotInTarget(e, t);
+                    if (error != null) {
+                        return error;
+                    }
+                }
+            }
+        } else {
+            if(target.isDirectory()) {
+                errorIsADir(target);
+            }
+            if(expected.getName().equals(target.getName())) {
+                try {
+                    if(Arrays.equals(HashUtils.hashFile(expected), HashUtils.hashFile(target))) {
+                        return target.getAbsolutePath() + " is not expected";
+                    }
+                } catch (IOException e) {
+                    throw errorToComputeHash(e);
+                }
+            }
+        }
+        return null;
     }
 
     private static String expectedContentInTarget(File expected, File target, boolean ignoreEmptyDirs) {
@@ -185,6 +222,9 @@ public class AssertUtil {
                 }
             }
         } else {
+            if(!target.exists()) {
+                return target.getAbsolutePath() + " does not exist";
+            }
             if(!expected.getName().equals(target.getName())) {
                 return "File names don't match: " + expected.getAbsolutePath() + " vs " + target.getAbsolutePath();
             }
@@ -196,18 +236,35 @@ public class AssertUtil {
                     return "Hashes of " + expected.getAbsolutePath() + " and " + target.getAbsolutePath() + " don't match";
                 }
             } catch (IOException e) {
-                throw new IllegalStateException("Failed to compute hash", e);
+                throw errorToComputeHash(e);
             }
         }
         return null;
     }
 
     public static void assertEmptyDirBranch(File dir) {
-        if(!dir.isDirectory()) {
-            throw new IllegalStateException(dir.getAbsolutePath() + " is not a directory");
+        if(!FSUtils.isEmptyDirBranch(dir)) {
+            Assert.fail(dir.getAbsolutePath() + " contains files in its branch");
         }
-        for(File f : dir.listFiles()) {
-            assertEmptyDirBranch(f);
-        }
+    }
+
+    private static IllegalStateException errorNotADir(File f) {
+        return error(f.getAbsolutePath() + " is not a directory");
+    }
+
+    private static IllegalStateException errorIsADir(File f) {
+        return error(f.getAbsolutePath() + " is a directory");
+    }
+
+    private static IllegalStateException errorToComputeHash(IOException e) {
+        return error("Failed to compute hash", e);
+    }
+
+    private static IllegalStateException error(String msg) {
+        return new IllegalStateException(msg);
+    }
+
+    private static IllegalStateException error(String msg, Throwable t) {
+        return new IllegalStateException(msg, t);
     }
 }

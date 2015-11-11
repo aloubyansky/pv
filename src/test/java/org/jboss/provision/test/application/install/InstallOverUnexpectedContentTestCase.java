@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionException;
+import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.FSUtils;
 import org.jboss.provision.tool.ProvisionPackage;
 import org.jboss.provision.tool.ProvisionTool;
@@ -36,7 +37,7 @@ import org.junit.Test;
  *
  * @author Alexey Loubyansky
  */
-public class InstallOverUnexpectedContentTestCase extends InstallApplicationTestBase {
+public class InstallOverUnexpectedContentTestCase extends ApplicationTestBase {
 
     @Test
     public void testMain() throws Exception {

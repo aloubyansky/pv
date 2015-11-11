@@ -25,6 +25,7 @@ package org.jboss.provision.test.application.install;
 import java.io.File;
 
 import org.jboss.provision.ProvisionEnvironment;
+import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
 import org.jboss.provision.test.util.FSUtils;
 import org.jboss.provision.tool.ProvisionPackage;
@@ -36,7 +37,7 @@ import org.junit.Test;
  *
  * @author Alexey Loubyansky
  */
-public class InstallIntoNonEmptyBranchTestCase extends InstallApplicationTestBase {
+public class InstallIntoNonEmptyBranchTestCase extends ApplicationTestBase {
 
     private File temp;
 

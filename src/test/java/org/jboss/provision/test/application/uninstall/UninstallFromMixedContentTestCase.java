@@ -20,20 +20,36 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.test.application.install;
+package org.jboss.provision.test.application.uninstall;
+
+import java.io.File;
 
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
+import org.jboss.provision.test.util.FSUtils;
 import org.jboss.provision.tool.ProvisionPackage;
 import org.jboss.provision.tool.ProvisionTool;
+import org.jboss.provision.util.IoUtils;
 import org.junit.Test;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public class CleanInstallTestCase extends ApplicationTestBase {
+public class UninstallFromMixedContentTestCase extends ApplicationTestBase {
+
+    private File temp;
+
+    @Override
+    public void doInit() {
+        temp = FSUtils.createTmpDir("installtemptest");
+    }
+
+    @Override
+    protected void doCleanUp() {
+        IoUtils.recursiveDelete(temp);
+    }
 
     @Test
     public void testMain() throws Exception {
@@ -44,13 +60,29 @@ public class CleanInstallTestCase extends ApplicationTestBase {
             .createDir("d/e/f");
 
         ProvisionPackage.newBuilder()
-            .setTargetInstallationDir(original.getHome())
+            .setCurrentInstallationDir(original.getHome())
             .setPackageOutputFile(archive)
-            .buildInstall();
+            .buildUninstall();
+
+
+        IoUtils.mkdir(temp, "b");
+        FSUtils.writeRandomContent(IoUtils.newFile(temp, "b", "bb.txt"));
+        IoUtils.mkdir(temp, "c/c");
+        FSUtils.writeRandomContent(IoUtils.newFile(temp, "c", "cc.txt"));
+        IoUtils.mkdir(temp, "d");
+        FSUtils.writeRandomContent(IoUtils.newFile(temp, "d", "dd.txt"));
+        IoUtils.mkdir(temp, "e");
+
+        IoUtils.copyFile(temp, installDir);
+        IoUtils.copyFile(original.getHome(), installDir);
+
+        AssertUtil.assertExpectedContentInTarget(temp, installDir);
+        AssertUtil.assertExpectedContentInTarget(original.getHome(), installDir);
 
         final ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(installDir).build();
         ProvisionTool.apply(env);
 
-        AssertUtil.assertIdentical(original.getHome(), installDir, true);
+        AssertUtil.assertExpectedContentInTarget(temp, installDir);
+        AssertUtil.assertExpectedFilesNotInTarget(original.getHome(), installDir);
     }
 }

@@ -19,7 +19,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.provision.test.application.install;
+package org.jboss.provision.test.application;
 
 import java.io.File;
 
@@ -33,7 +33,7 @@ import org.junit.Before;
  *
  * @author Alexey Loubyansky
  */
-public class InstallApplicationTestBase {
+public class ApplicationTestBase {
 
     protected InstallationBuilder original;
     protected File installDir;
