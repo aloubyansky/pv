@@ -141,6 +141,67 @@ public class AssertUtil {
         return null;
     }
 
+    public static void assertExpectedContentInTarget(File expected, File target) {
+        assertExpectedContentInTarget(expected, target, false);
+    }
+
+    public static void assertExpectedContentInTarget(File expected, File target, boolean ignoreEmptyDirs) {
+        final String error = expectedContentInTarget(expected, target, ignoreEmptyDirs);
+        if(error != null) {
+            Assert.fail(error);
+        }
+    }
+
+    public static void assertExpectedContentNotInTarget(File expected, File target, boolean ignoreEmptyDirs) {
+        final String error = expectedContentInTarget(expected, target, ignoreEmptyDirs);
+        if(error == null) {
+            Assert.fail("Target contains expected content");
+        }
+    }
+
+    private static String expectedContentInTarget(File expected, File target, boolean ignoreEmptyDirs) {
+
+        if(expected.isDirectory()) {
+            if(!target.isDirectory()) {
+                return target.getAbsolutePath() + " is not a directory while " + expected.getAbsolutePath() + " is";
+            }
+
+            for(File o : expected.listFiles()) {
+                final File t = new File(target, o.getName());
+                if(o.isDirectory()) {
+                    if(t.exists()) {
+                        final String error = expectedContentInTarget(o, t, ignoreEmptyDirs);
+                        if(error != null) {
+                            return error;
+                        }
+                    } else if (!(ignoreEmptyDirs && FSUtils.isEmptyDirBranch(o))) {
+                        return target.getAbsolutePath() + " is missing child " + o.getName();
+                    }
+                } else {
+                    final String error = expectedContentInTarget(o, t, ignoreEmptyDirs);
+                    if(error != null) {
+                        return error;
+                    }
+                }
+            }
+        } else {
+            if(!expected.getName().equals(target.getName())) {
+                return "File names don't match: " + expected.getAbsolutePath() + " vs " + target.getAbsolutePath();
+            }
+            if(target.isDirectory()) {
+                return target.getAbsolutePath() + " is a directory while " + expected.getAbsolutePath() + " is not";
+            }
+            try {
+                if(!Arrays.equals(HashUtils.hashFile(expected), HashUtils.hashFile(target))) {
+                    return "Hashes of " + expected.getAbsolutePath() + " and " + target.getAbsolutePath() + " don't match";
+                }
+            } catch (IOException e) {
+                throw new IllegalStateException("Failed to compute hash", e);
+            }
+        }
+        return null;
+    }
+
     public static void assertEmptyDirBranch(File dir) {
         if(!dir.isDirectory()) {
             throw new IllegalStateException(dir.getAbsolutePath() + " is not a directory");
