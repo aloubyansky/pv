@@ -34,7 +34,7 @@ import org.junit.Test;
  *
  * @author Alexey Loubyansky
  */
-public class CleanUninstallTestCase extends ApplicationTestBase {
+public class OriginalUninstallTestCase extends ApplicationTestBase {
 
     @Test
     public void testMain() throws Exception {

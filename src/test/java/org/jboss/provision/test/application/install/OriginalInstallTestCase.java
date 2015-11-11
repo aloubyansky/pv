@@ -33,7 +33,7 @@ import org.junit.Test;
  *
  * @author Alexey Loubyansky
  */
-public class CleanInstallTestCase extends ApplicationTestBase {
+public class OriginalInstallTestCase extends ApplicationTestBase {
 
     @Test
     public void testMain() throws Exception {
