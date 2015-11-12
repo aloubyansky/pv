@@ -118,7 +118,7 @@ public class ProvisionErrors {
     }
 
     public static ProvisionException patchCantChangeVersion() {
-        return new ProvisionException("Patch is not allowed to change the version of the installed software.");
+        return new ProvisionException("Patch is not allowed to install new or change the version of the installed software.");
     }
 
     public static ProvisionException patchIdMissing() {

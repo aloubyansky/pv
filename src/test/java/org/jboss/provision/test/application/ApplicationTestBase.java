@@ -35,15 +35,15 @@ import org.junit.Before;
  */
 public class ApplicationTestBase {
 
-    protected InstallationBuilder original;
-    protected File installDir;
+    protected InstallationBuilder originalInstall;
+    protected InstallationBuilder testInstall;
     protected File archive;
 
     @Before
     public void init() throws Exception {
-        original = InstallationBuilder.create();
+        originalInstall = InstallationBuilder.create();
+        testInstall = InstallationBuilder.create();
         archive = FSUtils.newTmpFile("archive.tst");
-        installDir = FSUtils.createTmpDir("installapptest");
         doInit();
     }
 
@@ -52,9 +52,9 @@ public class ApplicationTestBase {
 
     @After
     public void cleanup() throws Exception {
-        IoUtils.recursiveDelete(original.getHome());
+        IoUtils.recursiveDelete(originalInstall.getHome());
         IoUtils.recursiveDelete(archive);
-        IoUtils.recursiveDelete(installDir);
+        IoUtils.recursiveDelete(testInstall.getHome());
         doCleanUp();
     }
 

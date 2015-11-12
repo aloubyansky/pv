@@ -39,21 +39,21 @@ public class OriginalUninstallTestCase extends ApplicationTestBase {
     @Test
     public void testMain() throws Exception {
 
-        original.createFileWithRandomContent("a.txt")
+        originalInstall.createFileWithRandomContent("a.txt")
             .createFileWithRandomContent("b/b.txt")
             .createFileWithRandomContent("c/c/c.txt")
             .createDir("d/e/f");
 
         ProvisionPackage.newBuilder()
-            .setCurrentInstallationDir(original.getHome())
+            .setCurrentInstallationDir(originalInstall.getHome())
             .setPackageOutputFile(archive)
             .buildUninstall();
 
-        IoUtils.copyFile(original.getHome(), installDir);
+        IoUtils.copyFile(originalInstall.getHome(), testInstall.getHome());
 
-        final ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(installDir).build();
+        final ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(testInstall.getHome()).build();
         ProvisionTool.apply(env);
 
-        AssertUtil.assertEmptyDirBranch(installDir);
+        AssertUtil.assertEmptyDirBranch(testInstall.getHome());
     }
 }

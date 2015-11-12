@@ -54,30 +54,29 @@ public class InstallIntoNonEmptyBranchTestCase extends ApplicationTestBase {
     @Test
     public void testMain() throws Exception {
 
-        original.createFileWithRandomContent("a.txt")
+        originalInstall.createFileWithRandomContent("a.txt")
             .createFileWithRandomContent("b/b.txt")
             .createFileWithRandomContent("c/c/c.txt")
             .createDir("d/e/f");
 
         ProvisionPackage.newBuilder()
-            .setTargetInstallationDir(original.getHome())
+            .setTargetInstallationDir(originalInstall.getHome())
             .setPackageOutputFile(archive)
             .buildInstall();
 
-        IoUtils.mkdir(installDir, "b");
-        FSUtils.writeRandomContent(IoUtils.newFile(installDir, "b", "bb.txt"));
-        IoUtils.mkdir(installDir, "c/c");
-        FSUtils.writeRandomContent(IoUtils.newFile(installDir, "c", "cc.txt"));
-        IoUtils.mkdir(installDir, "d");
-        FSUtils.writeRandomContent(IoUtils.newFile(installDir, "d", "dd.txt"));
-        IoUtils.mkdir(installDir, "e");
+        testInstall.createFileWithRandomContent("b/bb.txt");
+        testInstall.createFileWithRandomContent("c/cc.txt");
+        testInstall.createFileWithRandomContent("d/dd.txt");
+        testInstall.createDir("e");
 
-        IoUtils.copyFile(installDir, temp);
+        IoUtils.copyFile(testInstall.getHome(), temp);
 
-        final ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(installDir).build();
+        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), true);
+
+        final ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(testInstall.getHome()).build();
         ProvisionTool.apply(env);
 
-        AssertUtil.assertExpectedContentInTarget(original.getHome(), installDir, true);
-        AssertUtil.assertExpectedContentInTarget(temp, installDir);
+        AssertUtil.assertExpectedContentInTarget(originalInstall.getHome(), testInstall.getHome(), true);
+        AssertUtil.assertExpectedContentInTarget(temp, testInstall.getHome(), true);
     }
 }

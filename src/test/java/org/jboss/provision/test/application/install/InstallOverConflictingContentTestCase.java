@@ -26,41 +26,59 @@ import static org.junit.Assert.fail;
 
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionException;
+import org.jboss.provision.UnitUpdatePolicy;
 import org.jboss.provision.test.application.ApplicationTestBase;
-import org.jboss.provision.test.util.FSUtils;
+import org.jboss.provision.test.util.AssertUtil;
 import org.jboss.provision.tool.ProvisionPackage;
 import org.jboss.provision.tool.ProvisionTool;
-import org.jboss.provision.util.IoUtils;
+import org.jboss.provision.tool.instruction.UpdatePolicy;
 import org.junit.Test;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public class InstallOverUnexpectedContentTestCase extends ApplicationTestBase {
+public class InstallOverConflictingContentTestCase extends ApplicationTestBase {
 
     @Test
     public void testMain() throws Exception {
 
-        original.createFileWithRandomContent("a.txt")
+        originalInstall.createFileWithRandomContent("a.txt")
             .createFileWithRandomContent("b/b.txt")
             .createFileWithRandomContent("c/c/c.txt")
             .createDir("d/e/f");
 
         ProvisionPackage.newBuilder()
-            .setTargetInstallationDir(original.getHome())
+            .setTargetInstallationDir(originalInstall.getHome())
             .setPackageOutputFile(archive)
             .buildInstall();
 
-        IoUtils.mkdir(installDir, "b");
-        FSUtils.writeRandomContent(IoUtils.newFile(installDir, "b", "b.txt"));
+        testInstall.createFileWithRandomContent("b/b.txt");
 
-        final ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(installDir).build();
+        ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(testInstall.getHome()).build();
         try {
             ProvisionTool.apply(env);
             fail("install didn't fail");
         } catch(ProvisionException e) {
             // expected
         }
+
+//        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), true);
+
+        env = ProvisionEnvironment.Builder.forPackage(archive)
+                .setInstallationHome(testInstall.getHome())
+                .setDefaultUnitUpdatePolicy(new UnitUpdatePolicy() {
+                    @Override
+                    public UpdatePolicy getUnitPolicy() {
+                        return UpdatePolicy.FORCED;
+                    }
+
+                    @Override
+                    public UpdatePolicy getContentPolicy(String path) {
+                        return UpdatePolicy.FORCED;
+                    }}).build();
+        ProvisionTool.apply(env);
+
+        AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome(), true);
     }
 }

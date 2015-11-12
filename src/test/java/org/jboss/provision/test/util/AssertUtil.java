@@ -152,19 +152,20 @@ public class AssertUtil {
         }
     }
 
-    public static void assertExpectedFilesNotInTarget(File expected, File target) {
-        final String error = expectedFilesNotInTarget(expected, target);
+    public static void assertExpectedFilesNotInTarget(File expected, File target, boolean all) {
+        final String error = expectedFilesNotInTarget(expected, target, all);
         if(error != null) {
             Assert.fail(error);
         }
     }
 
-    private static String expectedFilesNotInTarget(File expected, File target) {
+    private static String expectedFilesNotInTarget(File expected, File target, boolean all) {
 
         if(expected.isDirectory()) {
             if(!target.isDirectory()) {
                 throw errorNotADir(target);
             }
+            String error = null;
             for(File e : expected.listFiles()) {
                 final File t = new File(target, e.getName());
                 if(t.exists()) {
@@ -173,25 +174,34 @@ public class AssertUtil {
                             continue;
                         }
                     }
-                    final String error = expectedFilesNotInTarget(e, t);
-                    if (error != null) {
-                        return error;
+                    error = expectedFilesNotInTarget(e, t, all);
+                    if(all) {
+                        if(error != null) {
+                            return error;
+                        }
+                    } else if(error == null) {
+                        return null;
                     }
                 }
+            }
+            if(error != null) {
+                return error;
             }
         } else {
             if(target.isDirectory()) {
                 errorIsADir(target);
             }
-            if(expected.getName().equals(target.getName())) {
-                try {
-                    if(Arrays.equals(HashUtils.hashFile(expected), HashUtils.hashFile(target))) {
-                        return target.getAbsolutePath() + " is not expected";
-                    }
-                } catch (IOException e) {
-                    throw errorToComputeHash(e);
-                }
+            if(!expected.getName().equals(target.getName())) {
+                return null;
             }
+            try {
+                if(!Arrays.equals(HashUtils.hashFile(expected), HashUtils.hashFile(target))) {
+                    return null;
+                }
+            } catch (IOException e) {
+                throw errorToComputeHash(e);
+            }
+            return target.getAbsolutePath() + " is not expected";
         }
         return null;
     }

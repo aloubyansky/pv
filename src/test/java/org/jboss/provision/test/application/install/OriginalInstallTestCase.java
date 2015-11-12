@@ -38,19 +38,19 @@ public class OriginalInstallTestCase extends ApplicationTestBase {
     @Test
     public void testMain() throws Exception {
 
-        original.createFileWithRandomContent("a.txt")
+        originalInstall.createFileWithRandomContent("a.txt")
             .createFileWithRandomContent("b/b.txt")
             .createFileWithRandomContent("c/c/c.txt")
             .createDir("d/e/f");
 
         ProvisionPackage.newBuilder()
-            .setTargetInstallationDir(original.getHome())
+            .setTargetInstallationDir(originalInstall.getHome())
             .setPackageOutputFile(archive)
             .buildInstall();
 
-        final ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(installDir).build();
+        final ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(testInstall.getHome()).build();
         ProvisionTool.apply(env);
 
-        AssertUtil.assertIdentical(original.getHome(), installDir, true);
+        AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome(), true);
     }
 }

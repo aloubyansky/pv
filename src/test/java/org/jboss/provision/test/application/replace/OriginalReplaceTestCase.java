@@ -20,14 +20,12 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.test.application.uninstall;
-
-import java.io.File;
+package org.jboss.provision.test.application.replace;
 
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
-import org.jboss.provision.test.util.FSUtils;
+import org.jboss.provision.test.util.InstallationBuilder;
 import org.jboss.provision.tool.ProvisionPackage;
 import org.jboss.provision.tool.ProvisionTool;
 import org.jboss.provision.util.IoUtils;
@@ -37,18 +35,18 @@ import org.junit.Test;
  *
  * @author Alexey Loubyansky
  */
-public class UninstallFromMixedContentTestCase extends ApplicationTestBase {
+public class OriginalReplaceTestCase extends ApplicationTestBase {
 
-    private File temp;
+    private InstallationBuilder nextOriginal;
 
     @Override
-    public void doInit() {
-        temp = FSUtils.createTmpDir("installtemptest");
+    protected void doInit() {
+        nextOriginal = InstallationBuilder.create();
     }
 
     @Override
     protected void doCleanUp() {
-        IoUtils.recursiveDelete(temp);
+        IoUtils.recursiveDelete(nextOriginal.getHome());
     }
 
     @Test
@@ -59,27 +57,30 @@ public class UninstallFromMixedContentTestCase extends ApplicationTestBase {
             .createFileWithRandomContent("c/c/c.txt")
             .createDir("d/e/f");
 
+        IoUtils.copyFile(originalInstall.getHome(), nextOriginal.getHome());
+
+        nextOriginal.updateFileWithRandomContent("a.txt")
+            .delete("b/b.txt")
+            .createFileWithRandomContent("b/bb.txt")
+            .createFileWithRandomContent("d/d/d/d.txt")
+            .createDir("g/h/i");
+
         ProvisionPackage.newBuilder()
             .setCurrentInstallationDir(originalInstall.getHome())
+            .setTargetInstallationDir(nextOriginal.getHome())
             .setPackageOutputFile(archive)
-            .buildUninstall();
+            .setPatchId("patch1")
+            .buildUpdate();
 
-        testInstall.createFileWithRandomContent("aa.txt");
-        testInstall.createFileWithRandomContent("b/bb.txt");
-        testInstall.createFileWithRandomContent("c/cc.txt");
-        testInstall.createFileWithRandomContent("d/dd.txt");
-        testInstall.createDir("e");
-
-        IoUtils.copyFile(testInstall.getHome(), temp);
         IoUtils.copyFile(originalInstall.getHome(), testInstall.getHome());
 
-        AssertUtil.assertExpectedContentInTarget(temp, testInstall.getHome(), true);
-        AssertUtil.assertExpectedContentInTarget(originalInstall.getHome(), testInstall.getHome(), true);
+        AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome());
+        AssertUtil.assertNotIdentical(nextOriginal.getHome(), testInstall.getHome(), true);
 
         final ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(testInstall.getHome()).build();
         ProvisionTool.apply(env);
 
-        AssertUtil.assertExpectedContentInTarget(temp, testInstall.getHome(), true);
-        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), true);
+        AssertUtil.assertNotIdentical(originalInstall.getHome(), testInstall.getHome(), true);
+        AssertUtil.assertIdentical(nextOriginal.getHome(), testInstall.getHome(), true);
     }
 }
