@@ -27,6 +27,9 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
@@ -58,6 +61,7 @@ class ApplicationContextImpl implements ApplicationContext {
     private String unitName;
     private File unitHome;
     private ProvisionUnitInstruction unitInstruction;
+    private FSPaths fsPaths = new FSPaths();
 
     private ZipFile zip;
 
@@ -72,18 +76,62 @@ class ApplicationContextImpl implements ApplicationContext {
         }
         final ProvisionPackageInstruction instructions = readInstructions(env.getPackageFile());
         try {
-            for (String unitName : instructions.getUnitNames()) {
-                this.unitName = unitName;
-                this.unitHome = env.getInstallationHome();
-                this.unitInstruction = instructions.getUnitInstruction(unitName);
-                processUnit();
-            }
+            assertCanApply(instructions);
+            fsPaths.delete();
+            fsPaths.copy();
         } finally {
             IoUtils.safeClose(zip);
         }
     }
 
-    void processUnit() throws ProvisionException {
+    void assertCanApply(ProvisionPackageInstruction instructions) throws ProvisionException {
+
+        for (String unitName : instructions.getUnitNames()) {
+            this.unitName = unitName;
+            this.unitHome = env.getInstallationHome();
+            this.unitInstruction = instructions.getUnitInstruction(unitName);
+            assertCanApplyUnit();
+        }
+    }
+
+    void assertCanApplyUnit() throws ProvisionException {
+
+        final UnitUpdatePolicy updatePolicy = env.getUnitUpdatePolicy(this.unitName);
+        if (updatePolicy.getUnitPolicy() == UpdatePolicy.IGNORED) {
+            return;
+        }
+
+        if (updatePolicy.getUnitPolicy() == UpdatePolicy.CONDITIONED) {
+            for (InstructionCondition condition : unitInstruction.getConditions()) {
+                if(!condition.isSatisfied(this)) {
+                    return;
+                }
+            }
+        }
+
+        for(ContentItemInstruction item : unitInstruction.getContentInstructions()) {
+
+            final UpdatePolicy contentPolicy = updatePolicy.getContentPolicy(item.getPath().getRelativePath());
+            if(contentPolicy == UpdatePolicy.IGNORED) {
+                continue;
+            }
+            if (contentPolicy == UpdatePolicy.CONDITIONED) {
+                for (InstructionCondition condition : item.getConditions()) {
+                    if(!condition.isSatisfied(this)) {
+                        continue;
+                    }
+                }
+            }
+
+            if(item.getContentHash() == null) {
+                fsPaths.scheduleDelete(item.getPath());
+            } else {
+                fsPaths.scheduleCopy(item.getPath());
+            }
+        }
+    }
+
+/*    void processUnit() throws ProvisionException {
 
         final UnitUpdatePolicy updatePolicy = env.getUnitUpdatePolicy(this.unitName);
         if (updatePolicy.getUnitPolicy() == UpdatePolicy.IGNORED) {
@@ -128,7 +176,7 @@ class ApplicationContextImpl implements ApplicationContext {
             }
         }
     }
-
+*/
     /* (non-Javadoc)
      * @see org.jboss.provision.tool.instruction.ProvisionEnvironment#getUnitContentInfo(java.lang.String)
      */
@@ -193,6 +241,70 @@ class ApplicationContextImpl implements ApplicationContext {
             throw ProvisionErrors.failedToParse(ProvisionXml.PROVISION_XML, e);
         } finally {
             IoUtils.safeClose(is);
+        }
+    }
+
+    private class FSPaths {
+
+        private Set<ContentPath> deleted = Collections.emptySet();
+        private Set<ContentPath> copied = Collections.emptySet();
+
+        void scheduleDelete(ContentPath path) throws ProvisionException {
+
+            switch(deleted.size()) {
+                case 0:
+                    deleted = Collections.singleton(path);
+                    break;
+                case 1:
+                    deleted = new HashSet<ContentPath>(deleted);
+                default:
+                    deleted.add(path);
+            }
+
+            if(copied.contains(path)) {
+                throw ProvisionErrors.pathCopiedAndDeleted(path);
+            }
+        }
+
+        void scheduleCopy(ContentPath path) throws ProvisionException {
+
+            switch(copied.size()) {
+                case 0:
+                    copied = Collections.singleton(path);
+                    break;
+                case 1:
+                    copied = new HashSet<ContentPath>(copied);
+                default:
+                    if(!copied.add(path)) {
+                        throw ProvisionErrors.pathCopiedMoreThanOnce(path);
+                    }
+            }
+
+            if(deleted.contains(path)) {
+                throw ProvisionErrors.pathCopiedAndDeleted(path);
+            }
+        }
+
+        void delete() throws ProvisionException {
+            for (ContentPath path : deleted) {
+                final File targetFile = resolvePath(path);
+                if (!IoUtils.recursiveDelete(targetFile)) {
+                    throw ProvisionErrors.deleteFailed(targetFile);
+                }
+            }
+        }
+
+        void copy() throws ProvisionException {
+            for (ContentPath path : copied) {
+                final File targetFile = resolvePath(path);
+                InputStream is = null;
+                try {
+                    is = zip.getInputStream(new ZipEntry(path.getRelativePath()));
+                    IoUtils.copy(is, targetFile);
+                } catch(IOException e) {
+                    IoUtils.safeClose(is);
+                }
+            }
         }
     }
 }

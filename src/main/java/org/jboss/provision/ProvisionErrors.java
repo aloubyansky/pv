@@ -28,6 +28,7 @@ import java.util.zip.ZipException;
 
 import javax.xml.stream.XMLStreamException;
 
+import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.util.HashUtils;
 
 /**
@@ -123,5 +124,13 @@ public class ProvisionErrors {
 
     public static ProvisionException patchIdMissing() {
         return new ProvisionException("Patch ID is required to produce a patch");
+    }
+
+    public static ProvisionException pathCopiedAndDeleted(ContentPath path) {
+        return new ProvisionException(path + " is copied and deleted during the same file system update.");
+    }
+
+    public static ProvisionException pathCopiedMoreThanOnce(ContentPath path) {
+        return new ProvisionException(path + " is copied more than once during the same file system update.");
     }
 }

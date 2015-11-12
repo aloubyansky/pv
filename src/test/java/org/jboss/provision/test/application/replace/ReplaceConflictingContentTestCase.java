@@ -39,7 +39,7 @@ import org.junit.Test;
  *
  * @author Alexey Loubyansky
  */
-public class ReplaceModifiedContentTestCase extends ApplicationTestBase {
+public class ReplaceConflictingContentTestCase extends ApplicationTestBase {
 
     private InstallationBuilder nextOriginal;
     private InstallationBuilder testInstall;
@@ -97,6 +97,9 @@ public class ReplaceModifiedContentTestCase extends ApplicationTestBase {
             // expected
         }
 
+        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
+        AssertUtil.assertExpectedFilesNotInTarget(nextOriginal.getHome(), testInstall.getHome(), false);
+
         env = ProvisionEnvironment.Builder.forPackage(archive)
                 .setInstallationHome(testInstall.getHome())
                 .setDefaultUnitUpdatePolicy(new UnitUpdatePolicy() {
@@ -110,6 +113,7 @@ public class ReplaceModifiedContentTestCase extends ApplicationTestBase {
                     public UpdatePolicy getContentPolicy(String path) {
                         return UpdatePolicy.FORCED;
                     }}).build();
+        ProvisionTool.apply(env);
 
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
         AssertUtil.assertExpectedContentInTarget(nextOriginal.getHome(), testInstall.getHome(), true);

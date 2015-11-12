@@ -20,33 +20,29 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.test.application.uninstall;
+package org.jboss.provision.test.application.install;
 
 import java.io.File;
 
 import org.jboss.provision.ProvisionEnvironment;
-import org.jboss.provision.ProvisionException;
-import org.jboss.provision.UnitUpdatePolicy;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
 import org.jboss.provision.test.util.FSUtils;
 import org.jboss.provision.tool.ProvisionPackage;
 import org.jboss.provision.tool.ProvisionTool;
-import org.jboss.provision.tool.instruction.UpdatePolicy;
 import org.jboss.provision.util.IoUtils;
-import org.junit.Assert;
 import org.junit.Test;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public class UninstallModifiedContentTestCase extends ApplicationTestBase {
+public class InstallIntoMixedEnvTestCase extends ApplicationTestBase {
 
     private File temp;
 
     @Override
-    public void doInit() {
+    protected void doInit() {
         temp = FSUtils.createTmpDir("installtemptest");
     }
 
@@ -64,47 +60,23 @@ public class UninstallModifiedContentTestCase extends ApplicationTestBase {
             .createDir("d/e/f");
 
         ProvisionPackage.newBuilder()
-            .setCurrentInstallationDir(originalInstall.getHome())
+            .setTargetInstallationDir(originalInstall.getHome())
             .setPackageOutputFile(archive)
-            .buildUninstall();
+            .buildInstall();
 
-        testInstall.createFileWithRandomContent("aa.txt");
         testInstall.createFileWithRandomContent("b/bb.txt");
         testInstall.createFileWithRandomContent("c/cc.txt");
         testInstall.createFileWithRandomContent("d/dd.txt");
         testInstall.createDir("e");
 
         IoUtils.copyFile(testInstall.getHome(), temp);
-        IoUtils.copyFile(originalInstall.getHome(), testInstall.getHome());
 
-        testInstall.updateFileWithRandomContent("b/b.txt");
+        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), true);
 
-        AssertUtil.assertExpectedContentInTarget(temp, testInstall.getHome(), false);
-        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
-
-        ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(testInstall.getHome()).build();
-        try {
-            ProvisionTool.apply(env);
-            Assert.fail("Modified content uninstalled");
-        } catch(ProvisionException e) {
-            // expected
-        }
-
-        env = ProvisionEnvironment.Builder.forPackage(archive)
-                .setInstallationHome(testInstall.getHome())
-                .setDefaultUnitUpdatePolicy(new UnitUpdatePolicy() {
-                    @Override
-                    public UpdatePolicy getUnitPolicy() {
-                        return UpdatePolicy.FORCED;
-                    }
-
-                    @Override
-                    public UpdatePolicy getContentPolicy(String path) {
-                        return UpdatePolicy.FORCED;
-                    }}).build();
+        final ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(testInstall.getHome()).build();
         ProvisionTool.apply(env);
 
-        AssertUtil.assertExpectedContentInTarget(temp, testInstall.getHome());
-        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), true);
+        AssertUtil.assertExpectedContentInTarget(originalInstall.getHome(), testInstall.getHome(), true);
+        AssertUtil.assertExpectedContentInTarget(temp, testInstall.getHome(), true);
     }
 }

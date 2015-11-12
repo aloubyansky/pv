@@ -25,19 +25,23 @@ package org.jboss.provision.test.application.uninstall;
 import java.io.File;
 
 import org.jboss.provision.ProvisionEnvironment;
+import org.jboss.provision.ProvisionException;
+import org.jboss.provision.UnitUpdatePolicy;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
 import org.jboss.provision.test.util.FSUtils;
 import org.jboss.provision.tool.ProvisionPackage;
 import org.jboss.provision.tool.ProvisionTool;
+import org.jboss.provision.tool.instruction.UpdatePolicy;
 import org.jboss.provision.util.IoUtils;
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public class UninstallFromMixedContentTestCase extends ApplicationTestBase {
+public class UninstallConflictingContentTestCase extends ApplicationTestBase {
 
     private File temp;
 
@@ -73,13 +77,37 @@ public class UninstallFromMixedContentTestCase extends ApplicationTestBase {
         IoUtils.copyFile(testInstall.getHome(), temp);
         IoUtils.copyFile(originalInstall.getHome(), testInstall.getHome());
 
-        AssertUtil.assertExpectedContentInTarget(temp, testInstall.getHome(), true);
-        AssertUtil.assertExpectedContentInTarget(originalInstall.getHome(), testInstall.getHome(), true);
+        testInstall.updateFileWithRandomContent("b/b.txt");
 
-        final ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(testInstall.getHome()).build();
+        AssertUtil.assertExpectedContentInTarget(temp, testInstall.getHome(), false);
+        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
+
+        ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(testInstall.getHome()).build();
+        try {
+            ProvisionTool.apply(env);
+            Assert.fail("Modified content uninstalled");
+        } catch(ProvisionException e) {
+            // expected
+        }
+
+        AssertUtil.assertExpectedContentInTarget(temp, testInstall.getHome(), false);
+        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
+
+        env = ProvisionEnvironment.Builder.forPackage(archive)
+                .setInstallationHome(testInstall.getHome())
+                .setDefaultUnitUpdatePolicy(new UnitUpdatePolicy() {
+                    @Override
+                    public UpdatePolicy getUnitPolicy() {
+                        return UpdatePolicy.FORCED;
+                    }
+
+                    @Override
+                    public UpdatePolicy getContentPolicy(String path) {
+                        return UpdatePolicy.FORCED;
+                    }}).build();
         ProvisionTool.apply(env);
 
-        AssertUtil.assertExpectedContentInTarget(temp, testInstall.getHome(), true);
+        AssertUtil.assertExpectedContentInTarget(temp, testInstall.getHome());
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), true);
     }
 }

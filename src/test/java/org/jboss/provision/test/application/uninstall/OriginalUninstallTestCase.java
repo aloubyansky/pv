@@ -51,6 +51,8 @@ public class OriginalUninstallTestCase extends ApplicationTestBase {
 
         IoUtils.copyFile(originalInstall.getHome(), testInstall.getHome());
 
+        AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome());
+
         final ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(testInstall.getHome()).build();
         ProvisionTool.apply(env);
 

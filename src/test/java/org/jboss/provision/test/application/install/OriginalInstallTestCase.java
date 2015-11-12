@@ -48,6 +48,8 @@ public class OriginalInstallTestCase extends ApplicationTestBase {
             .setPackageOutputFile(archive)
             .buildInstall();
 
+        AssertUtil.assertEmptyDirBranch(testInstall.getHome());
+
         final ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(testInstall.getHome()).build();
         ProvisionTool.apply(env);
 

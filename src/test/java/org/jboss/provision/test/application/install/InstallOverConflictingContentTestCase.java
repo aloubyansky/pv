@@ -63,7 +63,7 @@ public class InstallOverConflictingContentTestCase extends ApplicationTestBase {
             // expected
         }
 
-//        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), true);
+        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), true);
 
         env = ProvisionEnvironment.Builder.forPackage(archive)
                 .setInstallationHome(testInstall.getHome())
