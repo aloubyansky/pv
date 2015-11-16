@@ -182,7 +182,7 @@ public class ProvisionPackage {
         } catch (IOException ioe) {
             throw ProvisionErrors.failedToZip(src, ioe);
         } catch (XMLStreamException xmlE) {
-            throw ProvisionErrors.failedMarshalXml(ProvisionXml.PROVISION_XML, xmlE);
+            throw ProvisionErrors.xmlMarshallingFailed(ProvisionXml.PROVISION_XML, xmlE);
         } finally {
             IoUtils.safeClose(zos);
         }

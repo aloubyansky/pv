@@ -29,6 +29,7 @@ import java.util.zip.ZipException;
 import javax.xml.stream.XMLStreamException;
 
 import org.jboss.provision.info.ContentPath;
+import org.jboss.provision.tool.instruction.ContentItemInstruction;
 import org.jboss.provision.util.HashUtils;
 
 /**
@@ -47,6 +48,10 @@ public class ProvisionErrors {
 
     public static IOException notADir(File f) {
         return new IOException("Not a directory: " + f.getAbsolutePath());
+    }
+
+    public static IOException dirIsNotEmpty(File f) {
+        return new IOException("Directory " + f.getAbsolutePath() + " is not empty");
     }
 
     public static ProvisionException hashCalculationFailed(File f, IOException e) {
@@ -70,7 +75,7 @@ public class ProvisionErrors {
         return new ProvisionException("Expected unit name " + expected + " but the target is " + actual);
     }
 
-    public static ProvisionException failedMarshalXml(String xmlName, Exception e) {
+    public static ProvisionException xmlMarshallingFailed(String xmlName, Exception e) {
         return new ProvisionException("Failed to marshal " + xmlName, e);
     }
 
@@ -132,5 +137,41 @@ public class ProvisionErrors {
 
     public static ProvisionException pathCopiedMoreThanOnce(ContentPath path) {
         return new ProvisionException(path + " is copied more than once during the same file system update.");
+    }
+
+    public static ProvisionException failedToBackupInstruction(ContentItemInstruction instruction, Throwable t) {
+        return new ProvisionException("Failed to back up instruction for " + instruction.getPath(), t);
+    }
+
+    public static ProvisionException backupSessionNotActive() {
+        return new ProvisionException("Backup session is not active");
+    }
+
+    public static ProvisionException backupSessionInitFailed(Throwable t) {
+        return new ProvisionException("Backup session initialization failed", t);
+    }
+
+    public static ProvisionException backupSessionLoadFailed(Throwable t) {
+        return new ProvisionException("Failed to load the backup session", t);
+    }
+
+    public static ProvisionException backupInstructionFailed(ContentItemInstruction instruction, Throwable t) {
+        return new ProvisionException("Failed to backup instruction for " + instruction.getPath(), t);
+    }
+
+    public static ProvisionException backedUpInstructionLoadFailed(Throwable t) {
+        return new ProvisionException("Failed to load backed up instruction", t);
+    }
+
+    public static ProvisionException backedUpInstructionLoadFailed(String msg) {
+        return new ProvisionException("Failed to load backed up instruction: " + msg);
+    }
+
+    public static String relativePathMissing() {
+        return "relative path is missing";
+    }
+
+    public static String contentHashMissing() {
+        return "content hash is missing";
     }
 }
