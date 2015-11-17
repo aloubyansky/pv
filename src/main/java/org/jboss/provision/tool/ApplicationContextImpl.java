@@ -25,11 +25,12 @@ package org.jboss.provision.tool;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
@@ -41,6 +42,8 @@ import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.UnitUpdatePolicy;
+import org.jboss.provision.audit.AuditSession;
+import org.jboss.provision.audit.AuditSessionFactory;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
@@ -75,12 +78,22 @@ class ApplicationContextImpl implements ApplicationContext {
             throw ProvisionErrors.pathDoesNotExist(env.getPackageFile());
         }
         final ProvisionPackageInstruction instructions = readInstructions(env.getPackageFile());
+        AuditSession auditSession = null;
         try {
             assertCanApply(instructions);
-            fsPaths.delete();
-            fsPaths.copy();
+            auditSession = AuditSessionFactory.newInstance().startSession(env);
+            fsPaths.delete(auditSession);
+            fsPaths.copy(auditSession);
+        } catch(ProvisionException|RuntimeException|Error e) {
+            if(auditSession != null) {
+                // revert
+            }
+            throw e;
         } finally {
             IoUtils.safeClose(zip);
+            if(auditSession != null) {
+                auditSession.close();
+            }
         }
     }
 
@@ -124,59 +137,13 @@ class ApplicationContextImpl implements ApplicationContext {
             }
 
             if(item.getContentHash() == null) {
-                fsPaths.scheduleDelete(item.getPath());
+                fsPaths.scheduleDelete(item);
             } else {
-                fsPaths.scheduleCopy(item.getPath());
+                fsPaths.scheduleCopy(item);
             }
         }
     }
 
-/*    void processUnit() throws ProvisionException {
-
-        final UnitUpdatePolicy updatePolicy = env.getUnitUpdatePolicy(this.unitName);
-        if (updatePolicy.getUnitPolicy() == UpdatePolicy.IGNORED) {
-            return;
-        }
-
-        if (updatePolicy.getUnitPolicy() == UpdatePolicy.CONDITIONED) {
-            for (InstructionCondition condition : unitInstruction.getConditions()) {
-                if(!condition.isSatisfied(this)) {
-                    return;
-                }
-            }
-        }
-
-        for(ContentItemInstruction item : unitInstruction.getContentInstructions()) {
-
-            final UpdatePolicy contentPolicy = updatePolicy.getContentPolicy(item.getPath().getRelativePath());
-            if(contentPolicy == UpdatePolicy.IGNORED) {
-                continue;
-            }
-            if (contentPolicy == UpdatePolicy.CONDITIONED) {
-                for (InstructionCondition condition : item.getConditions()) {
-                    if(!condition.isSatisfied(this)) {
-                        continue;
-                    }
-                }
-            }
-
-            final File targetFile = resolvePath(item.getPath());
-            if(item.getContentHash() == null) {
-                if(!IoUtils.recursiveDelete(targetFile)) {
-                    throw ProvisionErrors.deleteFailed(targetFile);
-                }
-            } else {
-                InputStream is = null;
-                try {
-                    is = zip.getInputStream(new ZipEntry(item.getPath().getRelativePath()));
-                    IoUtils.copy(is, targetFile);
-                } catch(IOException e) {
-                    IoUtils.safeClose(is);
-                }
-            }
-        }
-    }
-*/
     /* (non-Javadoc)
      * @see org.jboss.provision.tool.instruction.ProvisionEnvironment#getUnitContentInfo(java.lang.String)
      */
@@ -246,63 +213,76 @@ class ApplicationContextImpl implements ApplicationContext {
 
     private class FSPaths {
 
-        private Set<ContentPath> deleted = Collections.emptySet();
-        private Set<ContentPath> copied = Collections.emptySet();
+        private Map<ContentPath, ContentItemInstruction> deleted = Collections.emptyMap();
+        private Map<ContentPath, ContentItemInstruction> copied = Collections.emptyMap();
 
-        void scheduleDelete(ContentPath path) throws ProvisionException {
+        void scheduleDelete(ContentItemInstruction item) throws ProvisionException {
 
             switch(deleted.size()) {
                 case 0:
-                    deleted = Collections.singleton(path);
+                    deleted = Collections.singletonMap(item.getPath(), item);
                     break;
                 case 1:
-                    deleted = new HashSet<ContentPath>(deleted);
+                    deleted = new HashMap<ContentPath, ContentItemInstruction>(deleted);
                 default:
-                    deleted.add(path);
+                    deleted.put(item.getPath(), item);
             }
 
-            if(copied.contains(path)) {
-                throw ProvisionErrors.pathCopiedAndDeleted(path);
+            if(copied.containsKey(item.getPath())) {
+                throw ProvisionErrors.pathCopiedAndDeleted(item.getPath());
             }
         }
 
-        void scheduleCopy(ContentPath path) throws ProvisionException {
+        void scheduleCopy(ContentItemInstruction item) throws ProvisionException {
 
             switch(copied.size()) {
                 case 0:
-                    copied = Collections.singleton(path);
+                    copied = Collections.singletonMap(item.getPath(), item);
                     break;
                 case 1:
-                    copied = new HashSet<ContentPath>(copied);
+                    copied = new HashMap<ContentPath, ContentItemInstruction>(copied);
                 default:
-                    if(!copied.add(path)) {
-                        throw ProvisionErrors.pathCopiedMoreThanOnce(path);
+                    if(copied.put(item.getPath(), item) != null) {
+                        throw ProvisionErrors.pathCopiedMoreThanOnce(item.getPath());
                     }
             }
 
-            if(deleted.contains(path)) {
-                throw ProvisionErrors.pathCopiedAndDeleted(path);
+            if(deleted.containsKey(item.getPath())) {
+                throw ProvisionErrors.pathCopiedAndDeleted(item.getPath());
             }
         }
 
-        void delete() throws ProvisionException {
-            for (ContentPath path : deleted) {
-                final File targetFile = resolvePath(path);
+        void delete(AuditSession session) throws ProvisionException {
+            for (ContentItemInstruction item : deleted.values()) {
+                final File targetFile = resolvePath(item.getPath());
+                session.record(item, targetFile);
                 if (!IoUtils.recursiveDelete(targetFile)) {
                     throw ProvisionErrors.deleteFailed(targetFile);
                 }
             }
         }
 
-        void copy() throws ProvisionException {
-            for (ContentPath path : copied) {
+        void copy(AuditSession session) throws ProvisionException {
+            for (ContentItemInstruction item : copied.values()) {
+                final ContentPath path = item.getPath();
                 final File targetFile = resolvePath(path);
+                session.record(item, targetFile);
+                if(!targetFile.getParentFile().exists()) {
+                    if(!targetFile.getParentFile().mkdirs()) {
+                        throw new ProvisionException(ProvisionErrors.couldNotCreateDir(targetFile.getParentFile()));
+                    }
+                }
                 InputStream is = null;
+                FileOutputStream os = null;
                 try {
                     is = zip.getInputStream(new ZipEntry(path.getRelativePath()));
-                    IoUtils.copy(is, targetFile);
+                    os = new FileOutputStream(targetFile);
+                    IoUtils.copyStream(is, os);
                 } catch(IOException e) {
+                    throw ProvisionErrors.failedToCopyContentFromZIP(path, targetFile, e);
+                } finally {
                     IoUtils.safeClose(is);
+                    IoUtils.safeClose(os);
                 }
             }
         }

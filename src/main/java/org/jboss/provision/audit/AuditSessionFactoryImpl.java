@@ -20,19 +20,31 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.backup;
+package org.jboss.provision.audit;
 
 import java.io.File;
 
-import org.jboss.provision.tool.instruction.ContentItemInstruction;
+import org.jboss.provision.ProvisionEnvironment;
+import org.jboss.provision.ProvisionException;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public interface InstructionBackup {
+class AuditSessionFactoryImpl extends AuditSessionFactory {
 
-    ContentItemInstruction getInstruction();
+    private static final String AUDIT_DIR = ".pvaudit";
 
-    File getReplacedFile();
+    /* (non-Javadoc)
+     * @see org.jboss.provision.audit.AuditSessionFactory#startSession(org.jboss.provision.ProvisionEnvironment)
+     */
+    @Override
+    public AuditSession startSession(ProvisionEnvironment env) throws ProvisionException {
+        return AuditSessionImpl.start(new File(env.getInstallationHome(), AUDIT_DIR));
+    }
+
+    @Override
+    public AuditSession loadCrushedSession(ProvisionEnvironment env) throws ProvisionException {
+        return AuditSessionImpl.load(new File(env.getInstallationHome(), AUDIT_DIR));
+    }
 }

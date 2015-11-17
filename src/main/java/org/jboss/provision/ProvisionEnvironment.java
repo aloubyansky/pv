@@ -141,7 +141,7 @@ public interface ProvisionEnvironment {
             public File resolveNamedLocation(String namedLocation) throws ProvisionException {
                 final File f = paths.get(namedLocation);
                 if(f == null) {
-                    throw ProvisionErrors.unfinedNamedLocation(namedLocation);
+                    throw ProvisionErrors.undefinedNamedLocation(namedLocation);
                 }
                 return f;
             }

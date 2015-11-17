@@ -105,7 +105,7 @@ public class IoUtils {
             File parent = targetFile.getParentFile();
             if (!parent.exists()) {
                 if (!parent.mkdirs()) {
-                    throw ProvisionErrors.couldNotCreateDir(parent);
+                    throw new IOException(ProvisionErrors.couldNotCreateDir(parent));
                 }
             }
             final InputStream is = new FileInputStream(sourceFile);
@@ -117,10 +117,10 @@ public class IoUtils {
     private static void copyDir(File sourceDir, File targetDir) throws IOException {
         if (targetDir.exists()) {
             if (!targetDir.isDirectory()) {
-                throw ProvisionErrors.notADir(targetDir);
+                throw new IOException(ProvisionErrors.notADir(targetDir));
             }
         } else if (!targetDir.mkdirs()) {
-            throw ProvisionErrors.couldNotCreateDir(targetDir);
+            throw new IOException(ProvisionErrors.couldNotCreateDir(targetDir));
         }
 
         File[] children = sourceDir.listFiles();

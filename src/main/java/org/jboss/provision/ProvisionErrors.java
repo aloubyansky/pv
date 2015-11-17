@@ -42,16 +42,16 @@ public class ProvisionErrors {
         return name + " is null";
     }
 
-    public static IOException couldNotCreateDir(File dir) {
-        return new IOException("Could not create directory " + dir.getAbsolutePath());
+    public static String couldNotCreateDir(File dir) {
+        return "Could not create directory " + dir.getAbsolutePath();
     }
 
-    public static IOException notADir(File f) {
-        return new IOException("Not a directory: " + f.getAbsolutePath());
+    public static String notADir(File f) {
+        return "Not a directory: " + f.getAbsolutePath();
     }
 
-    public static IOException dirIsNotEmpty(File f) {
-        return new IOException("Directory " + f.getAbsolutePath() + " is not empty");
+    public static ProvisionException dirIsNotEmpty(File f) {
+        return new ProvisionException("Directory " + f.getAbsolutePath() + " is not empty");
     }
 
     public static ProvisionException hashCalculationFailed(File f, IOException e) {
@@ -115,7 +115,7 @@ public class ProvisionErrors {
         return new ProvisionException("Unit home path not defined for " + unitName);
     }
 
-    public static ProvisionException unfinedNamedLocation(String namedLocation) {
+    public static ProvisionException undefinedNamedLocation(String namedLocation) {
         return new ProvisionException("Undefined named location: " + namedLocation);
     }
 
@@ -139,32 +139,28 @@ public class ProvisionErrors {
         return new ProvisionException(path + " is copied more than once during the same file system update.");
     }
 
-    public static ProvisionException failedToBackupInstruction(ContentItemInstruction instruction, Throwable t) {
-        return new ProvisionException("Failed to back up instruction for " + instruction.getPath(), t);
+    public static ProvisionException failedToAuditInstruction(ContentItemInstruction instruction, Throwable t) {
+        return new ProvisionException("Failed to audit instruction for " + instruction.getPath(), t);
     }
 
-    public static ProvisionException backupSessionNotActive() {
-        return new ProvisionException("Backup session is not active");
+    public static ProvisionException auditSessionNotActive() {
+        return new ProvisionException("Audit session is not active");
     }
 
-    public static ProvisionException backupSessionInitFailed(Throwable t) {
-        return new ProvisionException("Backup session initialization failed", t);
+    public static ProvisionException auditSessionInitFailed(String msg) {
+        return new ProvisionException("Audit session initialization failed: " + msg);
     }
 
-    public static ProvisionException backupSessionLoadFailed(Throwable t) {
-        return new ProvisionException("Failed to load the backup session", t);
+    public static ProvisionException failedToLoadAuditSession(String msg) {
+        return new ProvisionException("Failed to load the audit session: " + msg);
     }
 
-    public static ProvisionException backupInstructionFailed(ContentItemInstruction instruction, Throwable t) {
-        return new ProvisionException("Failed to backup instruction for " + instruction.getPath(), t);
+    public static ProvisionException failedToLoadInstructionAuditRecord(Throwable t) {
+        return new ProvisionException("Failed to load instruction audit record", t);
     }
 
-    public static ProvisionException backedUpInstructionLoadFailed(Throwable t) {
-        return new ProvisionException("Failed to load backed up instruction", t);
-    }
-
-    public static ProvisionException backedUpInstructionLoadFailed(String msg) {
-        return new ProvisionException("Failed to load backed up instruction: " + msg);
+    public static ProvisionException failedToLoadInstructionAuditRecord(String msg) {
+        return new ProvisionException("Failed to load instruction audit record: " + msg);
     }
 
     public static String relativePathMissing() {
@@ -173,5 +169,13 @@ public class ProvisionErrors {
 
     public static String contentHashMissing() {
         return "content hash is missing";
+    }
+
+    public static ProvisionException failedToCopy(ContentPath path, File target) {
+        return new ProvisionException("Failed to copy " + path + " to " + target.getAbsolutePath());
+    }
+
+    public static ProvisionException failedToCopyContentFromZIP(ContentPath path, File targetFile, IOException e) {
+        return new ProvisionException("Failed to copy content from ZIP path " + path.getRelativePath() + " to " + targetFile.getAbsolutePath(), e);
     }
 }

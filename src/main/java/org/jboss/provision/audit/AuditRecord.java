@@ -20,18 +20,19 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.backup;
+package org.jboss.provision.audit;
 
-import org.jboss.provision.ProvisionEnvironment;
-import org.jboss.provision.ProvisionException;
+import java.io.File;
+
+import org.jboss.provision.tool.instruction.ContentItemInstruction;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public interface BackupSessionFactory {
+public interface AuditRecord {
 
-    BackupSession startSession(ProvisionEnvironment env) throws ProvisionException;
+    ContentItemInstruction getInstruction();
 
-    //BackupSession loadCrushedSession(String sessionId);
+    File getBackupFile();
 }

@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.backup;
+package org.jboss.provision.audit;
 
 import java.io.File;
 import java.io.FileReader;
@@ -39,7 +39,7 @@ import org.jboss.provision.util.IoUtils;
  *
  * @author Alexey Loubyansky
  */
-class BackupUtil {
+class AuditUtil {
 
     private static final String FALSE = "false";
     private static final String HASH = "hash";
@@ -55,7 +55,7 @@ class BackupUtil {
         assert f != null : ProvisionErrors.nullArgument("file");
 
         if(f.exists()) {
-            throw ProvisionErrors.backupInstructionFailed(instruction, ProvisionErrors.pathAlreadyExists(f));
+            throw ProvisionErrors.failedToAuditInstruction(instruction, ProvisionErrors.pathAlreadyExists(f));
         }
 
         final Properties props = new Properties();
@@ -76,7 +76,7 @@ class BackupUtil {
             writer = new FileWriter(f);
             props.store(writer, null);
         } catch (IOException e) {
-            throw ProvisionErrors.backupInstructionFailed(instruction, e);
+            throw ProvisionErrors.failedToAuditInstruction(instruction, e);
         } finally {
             IoUtils.safeClose(writer);
         }
@@ -87,7 +87,7 @@ class BackupUtil {
         assert f != null : ProvisionErrors.nullArgument("file");
 
         if(!f.exists()) {
-            throw ProvisionErrors.backedUpInstructionLoadFailed(ProvisionErrors.pathDoesNotExist(f));
+            throw ProvisionErrors.failedToLoadInstructionAuditRecord(ProvisionErrors.pathDoesNotExist(f));
         }
 
         final Properties props = new Properties();
@@ -97,7 +97,7 @@ class BackupUtil {
             reader = new FileReader(f);
             props.load(reader);
         } catch (IOException e) {
-            throw ProvisionErrors.backedUpInstructionLoadFailed(e);
+            throw ProvisionErrors.failedToLoadInstructionAuditRecord(e);
         } finally {
             IoUtils.safeClose(reader);
         }
@@ -105,7 +105,7 @@ class BackupUtil {
         final String location = props.getProperty(LOCATION);
         final String relativePath = props.getProperty(RELATIVE_PATH);
         if(relativePath == null) {
-            throw ProvisionErrors.backedUpInstructionLoadFailed(ProvisionErrors.relativePathMissing());
+            throw ProvisionErrors.failedToLoadInstructionAuditRecord(ProvisionErrors.relativePathMissing());
         }
         final ContentPath path = ContentPath.BUILDER.build(location, relativePath);
 
@@ -115,7 +115,7 @@ class BackupUtil {
         ContentItemInstruction.Builder builder;
         if(hash == null) {
             if(replacedHash == null) {
-                throw ProvisionErrors.backedUpInstructionLoadFailed(ProvisionErrors.contentHashMissing());
+                throw ProvisionErrors.failedToLoadInstructionAuditRecord(ProvisionErrors.contentHashMissing());
             }
             builder = ContentItemInstruction.Builder.removeContent(path, replacedHash);
         } else if(replacedHash == null) {

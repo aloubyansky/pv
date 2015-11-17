@@ -20,25 +20,22 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.backup;
+package org.jboss.provision.audit;
 
-import java.io.File;
-import java.util.List;
-
+import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionException;
-import org.jboss.provision.tool.instruction.ContentItemInstruction;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public interface BackupSession {
+public abstract class AuditSessionFactory {
 
-    boolean isActive();
+    public static AuditSessionFactory newInstance() {
+        return new AuditSessionFactoryImpl();
+    }
 
-    void backup(ContentItemInstruction instruction, File replacedFile) throws ProvisionException;
+    public abstract AuditSession startSession(ProvisionEnvironment env) throws ProvisionException;
 
-    List<InstructionBackup> getRecorded();
-
-    void close() throws ProvisionException;
+    public abstract AuditSession loadCrushedSession(ProvisionEnvironment env) throws ProvisionException;
 }

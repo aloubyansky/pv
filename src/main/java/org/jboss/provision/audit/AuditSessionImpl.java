@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.backup;
+package org.jboss.provision.audit;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,103 +38,106 @@ import org.jboss.provision.util.IoUtils;
  *
  * @author Alexey Loubyansky
  */
-class BackupSessionImpl implements BackupSession {
+class AuditSessionImpl implements AuditSession {
 
     private static final String INSTR_DIR = "instructions";
     private static final String CONTENT_DIR = "content";
     private static final String INSTR_FILE_SUFFIX = ".properties";
 
     //private final ProvisionEnvironment env;
+    private final File auditHome;
     private final File instructionsDir;
     private final File contentDir;
 
-    private List<InstructionBackup> recorded = Collections.emptyList();
+    private List<AuditRecord> recorded = Collections.emptyList();
 
     private boolean active;
 
-    static BackupSessionImpl start(File backupDir) throws ProvisionException {
+    static AuditSessionImpl start(File auditHome) throws ProvisionException {
 
-        assert backupDir != null : ProvisionErrors.nullArgument("backupDir");
+        assert auditHome != null : ProvisionErrors.nullArgument("auditHome");
 
-        if(backupDir.exists()) {
-            if(!backupDir.isDirectory()) {
-                throw ProvisionErrors.backupSessionInitFailed(ProvisionErrors.notADir(backupDir));
+        if(auditHome.exists()) {
+            if(!auditHome.isDirectory()) {
+                throw ProvisionErrors.auditSessionInitFailed(ProvisionErrors.notADir(auditHome));
             }
-            if(backupDir.list().length != 0) {
-                throw ProvisionErrors.backupSessionInitFailed(ProvisionErrors.dirIsNotEmpty(backupDir));
+            if(auditHome.list().length != 0) {
+                throw ProvisionErrors.dirIsNotEmpty(auditHome);
             }
         } else {
-            if(!backupDir.mkdirs()) {
-                throw ProvisionErrors.backupSessionInitFailed(ProvisionErrors.couldNotCreateDir(backupDir));
+            if(!auditHome.mkdirs()) {
+                throw ProvisionErrors.auditSessionInitFailed(ProvisionErrors.couldNotCreateDir(auditHome));
             }
         }
 
-        final File instructionsDir = new File(backupDir, INSTR_DIR);
+        final File instructionsDir = new File(auditHome, INSTR_DIR);
         if(!instructionsDir.mkdir()) {
-            throw ProvisionErrors.backupSessionInitFailed(ProvisionErrors.couldNotCreateDir(instructionsDir));
+            throw ProvisionErrors.auditSessionInitFailed(ProvisionErrors.couldNotCreateDir(instructionsDir));
         }
-        final File contentDir = new File(backupDir, CONTENT_DIR);
+        final File contentDir = new File(auditHome, CONTENT_DIR);
         if(!contentDir.mkdir()) {
-            throw ProvisionErrors.backupSessionInitFailed(ProvisionErrors.couldNotCreateDir(contentDir));
+            throw ProvisionErrors.auditSessionInitFailed(ProvisionErrors.couldNotCreateDir(contentDir));
         }
-        return new BackupSessionImpl(instructionsDir, contentDir);
+        return new AuditSessionImpl(auditHome, instructionsDir, contentDir);
     }
 
-    static BackupSessionImpl load(File backupDir) throws ProvisionException {
+    static AuditSessionImpl load(File auditHome) throws ProvisionException {
 
-        assert backupDir != null : ProvisionErrors.nullArgument("backupDir");
+        assert auditHome != null : ProvisionErrors.nullArgument("auditHome");
 
-        assertDirToLoad(backupDir);
+        assertDirToLoad(auditHome);
 
-        final File instructionsDir = new File(backupDir, INSTR_DIR);
+        final File instructionsDir = new File(auditHome, INSTR_DIR);
         assertDirToLoad(instructionsDir);
 
-        final File contentDir = new File(backupDir, CONTENT_DIR);
+        final File contentDir = new File(auditHome, CONTENT_DIR);
         assertDirToLoad(contentDir);
 
         final List<String> names = Arrays.asList(instructionsDir.list());
         Collections.sort(names);
 
-        List<InstructionBackup> recorded = new ArrayList<InstructionBackup>(names.size());
+        List<AuditRecord> recorded = new ArrayList<AuditRecord>(names.size());
         for(String name : names) {
             if(!name.endsWith(INSTR_FILE_SUFFIX)) {
                 continue;
             }
             final File f = new File(instructionsDir, name);
-            final ContentItemInstruction instruction = BackupUtil.load(f);
+            final ContentItemInstruction instruction = AuditUtil.load(f);
 
             String relativePath = instruction.getPath().getRelativePath();
             if(File.separatorChar == '\\') {
                 relativePath = relativePath.replace('/', '\\');
             }
-            File contentFile = new File(contentDir, relativePath);
-            if(!contentFile.exists()) {
-                contentFile = null;
+            File backupFile = new File(contentDir, relativePath);
+            if(!backupFile.exists()) {
+                backupFile = null;
             }
 
-            recorded.add(new InstructionBackupImpl(instruction, contentFile));
+            recorded.add(new AuditRecordImpl(instruction, backupFile));
         }
-        return new BackupSessionImpl(instructionsDir, contentDir, recorded);
+        return new AuditSessionImpl(auditHome, instructionsDir, contentDir, recorded);
     }
 
     private static void assertDirToLoad(final File dir) throws ProvisionException {
         if(!dir.exists()) {
-            throw ProvisionErrors.backupSessionLoadFailed(ProvisionErrors.pathDoesNotExist(dir));
+            throw ProvisionErrors.pathDoesNotExist(dir);
         }
         if(!dir.isDirectory()) {
-            throw ProvisionErrors.backupSessionLoadFailed(ProvisionErrors.notADir(dir));
+            throw ProvisionErrors.failedToLoadAuditSession(ProvisionErrors.notADir(dir));
         }
     }
 
-    private BackupSessionImpl(File instructionsDir, File contentDir) throws ProvisionException {
+    private AuditSessionImpl(File backupDir, File instructionsDir, File contentDir) throws ProvisionException {
 
+        this.auditHome = backupDir;
         this.instructionsDir = instructionsDir;
         this.contentDir = contentDir;
         active = true;
     }
 
-    private BackupSessionImpl(File instructionsDir, File contentDir, List<InstructionBackup> recorded) throws ProvisionException {
+    private AuditSessionImpl(File backupDir, File instructionsDir, File contentDir, List<AuditRecord> recorded) throws ProvisionException {
 
+        this.auditHome = backupDir;
         this.instructionsDir = instructionsDir;
         this.contentDir = contentDir;
         this.recorded = recorded;
@@ -153,46 +156,48 @@ class BackupSessionImpl implements BackupSession {
      * @see org.jboss.provision.backup.BackupSession#record(org.jboss.provision.tool.instruction.ContentItemInstruction, java.io.File)
      */
     @Override
-    public void backup(ContentItemInstruction instruction, File replacedFile) throws ProvisionException {
+    public void record(ContentItemInstruction instruction, File replacedFile) throws ProvisionException {
 
         if(!active) {
-            throw ProvisionErrors.backupSessionNotActive();
+            throw ProvisionErrors.auditSessionNotActive();
         }
 
-        final InstructionBackup record = new InstructionBackupImpl(instruction, replacedFile);
+        File backup = null;
+        if (replacedFile.exists()) {
+            String relativePath = instruction.getPath().getRelativePath();
+            if (File.separatorChar == '\\') {
+                relativePath = relativePath.replace('/', '\\');
+            }
+            backup = new File(contentDir, relativePath);
+            if (!backup.getParentFile().exists() && !backup.getParentFile().mkdirs()) {
+                throw new ProvisionException(ProvisionErrors.couldNotCreateDir(backup.getParentFile()));
+            }
+            try {
+                IoUtils.copy(replacedFile, backup);
+            } catch (IOException e) {
+                throw ProvisionErrors.failedToAuditInstruction(instruction, e);
+            }
+        }
+
+        final AuditRecord record = new AuditRecordImpl(instruction, backup);
         switch(recorded.size()) {
             case 0:
                 recorded = Collections.singletonList(record);
                 break;
             case 1:
-                recorded = new ArrayList<InstructionBackup>(recorded);
+                recorded = new ArrayList<AuditRecord>(recorded);
             default:
                 recorded.add(record);
         }
 
-        String relativePath = instruction.getPath().getRelativePath();
-        if(File.separatorChar == '\\') {
-            relativePath = relativePath.replace('/', '\\');
-        }
-        File backup = new File(contentDir, relativePath);
-        if(backup.mkdirs()) {
-            throw ProvisionErrors.failedToBackupInstruction(instruction, ProvisionErrors.couldNotCreateDir(backup));
-        }
-        backup = new File(backup, replacedFile.getName());
-        try {
-            IoUtils.copy(replacedFile, backup);
-        } catch (IOException e) {
-            throw ProvisionErrors.failedToBackupInstruction(instruction, e);
-        }
-
-        BackupUtil.record(instruction, new File(instructionsDir, recorded.size() + INSTR_FILE_SUFFIX));
+        AuditUtil.record(instruction, new File(instructionsDir, recorded.size() + INSTR_FILE_SUFFIX));
     }
 
     /* (non-Javadoc)
      * @see org.jboss.provision.backup.BackupSession#getRecorded()
      */
     @Override
-    public List<InstructionBackup> getRecorded() {
+    public List<AuditRecord> getRecorded() {
         return recorded;
     }
 
@@ -202,21 +207,18 @@ class BackupSessionImpl implements BackupSession {
     @Override
     public void close() throws ProvisionException {
         active = false;
+        IoUtils.recursiveDelete(auditHome);
     }
 
-    private static class InstructionBackupImpl implements InstructionBackup {
+    private static class AuditRecordImpl implements AuditRecord {
 
         private final ContentItemInstruction item;
-        private final File f;
+        private final File backup;
 
-        private InstructionBackupImpl(ContentItemInstruction item, File f) throws ProvisionException {
+        private AuditRecordImpl(ContentItemInstruction item, File backup) throws ProvisionException {
             assert item != null : ProvisionErrors.nullArgument("item");
-            assert f != null : ProvisionErrors.nullArgument("file");
             this.item = item;
-            this.f = f;
-            if(!f.exists()) {
-                throw ProvisionErrors.pathDoesNotExist(f);
-            }
+            this.backup = backup;
         }
 
         @Override
@@ -225,8 +227,8 @@ class BackupSessionImpl implements BackupSession {
         }
 
         @Override
-        public File getReplacedFile() {
-            return f;
+        public File getBackupFile() {
+            return backup;
         }
     }
 }

@@ -20,26 +20,25 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.backup;
+package org.jboss.provision.audit;
 
 import java.io.File;
+import java.util.List;
 
-import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionException;
+import org.jboss.provision.tool.instruction.ContentItemInstruction;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-class BackupSessionFactoryImpl implements BackupSessionFactory {
+public interface AuditSession {
 
-    private static final String BACKUP_DIR = ".pvbkp";
+    boolean isActive();
 
-    /* (non-Javadoc)
-     * @see org.jboss.provision.backup.BackupSessionFactory#startSession(org.jboss.provision.ProvisionEnvironment)
-     */
-    @Override
-    public BackupSession startSession(ProvisionEnvironment env) throws ProvisionException {
-        return BackupSessionImpl.start(new File(env.getInstallationHome(), BACKUP_DIR));
-    }
+    void record(ContentItemInstruction instruction, File replacedFile) throws ProvisionException;
+
+    List<AuditRecord> getRecorded();
+
+    void close() throws ProvisionException;
 }
