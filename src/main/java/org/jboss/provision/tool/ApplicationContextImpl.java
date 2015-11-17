@@ -42,6 +42,7 @@ import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.UnitUpdatePolicy;
+import org.jboss.provision.audit.AuditRecord;
 import org.jboss.provision.audit.AuditSession;
 import org.jboss.provision.audit.AuditSessionFactory;
 import org.jboss.provision.info.ContentPath;
@@ -79,25 +80,62 @@ class ApplicationContextImpl implements ApplicationContext {
         }
         final ProvisionPackageInstruction instructions = readInstructions(env.getPackageFile());
         AuditSession auditSession = null;
+        boolean discardBackup = true;
         try {
             assertCanApply(instructions);
             auditSession = AuditSessionFactory.newInstance().startSession(env);
             fsPaths.delete(auditSession);
             fsPaths.copy(auditSession);
         } catch(ProvisionException|RuntimeException|Error e) {
+            discardBackup = false;
             if(auditSession != null) {
-                // revert
+                revertPerformedInstructions(auditSession);
+                discardBackup = true;
             }
             throw e;
         } finally {
             IoUtils.safeClose(zip);
             if(auditSession != null) {
+                if(discardBackup) {
+                    auditSession.discardBackup();
+                }
                 auditSession.close();
             }
         }
     }
 
-    void assertCanApply(ProvisionPackageInstruction instructions) throws ProvisionException {
+    void revertPerformedInstructions() throws ProvisionException {
+        final AuditSession auditSession = AuditSessionFactory.newInstance().loadCrushedSession(env);
+        boolean discardBackup = true;
+        try {
+            revertPerformedInstructions(auditSession);
+        } catch(ProvisionException|RuntimeException|Error e) {
+            discardBackup = false;
+            throw e;
+        } finally {
+            if(discardBackup) {
+                auditSession.discardBackup();
+            }
+            auditSession.close();
+        }
+    }
+
+    private void revertPerformedInstructions(AuditSession session) throws ProvisionException {
+        for(AuditRecord record : session.getRecorded()) {
+            final File targetFile = resolvePath(record.getInstruction().getPath());
+            if(record.getBackupFile() == null) {
+                IoUtils.recursiveDelete(targetFile);
+            } else {
+                try {
+                    IoUtils.copyFile(record.getBackupFile(), targetFile);
+                } catch (IOException e) {
+                    throw ProvisionErrors.failedToCopy(record.getInstruction().getPath(), targetFile);
+                }
+            }
+        }
+    }
+
+    private void assertCanApply(ProvisionPackageInstruction instructions) throws ProvisionException {
 
         for (String unitName : instructions.getUnitNames()) {
             this.unitName = unitName;
@@ -107,7 +145,7 @@ class ApplicationContextImpl implements ApplicationContext {
         }
     }
 
-    void assertCanApplyUnit() throws ProvisionException {
+    private void assertCanApplyUnit() throws ProvisionException {
 
         final UnitUpdatePolicy updatePolicy = env.getUnitUpdatePolicy(this.unitName);
         if (updatePolicy.getUnitPolicy() == UpdatePolicy.IGNORED) {

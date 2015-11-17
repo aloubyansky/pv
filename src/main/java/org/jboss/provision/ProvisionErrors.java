@@ -50,10 +50,6 @@ public class ProvisionErrors {
         return "Not a directory: " + f.getAbsolutePath();
     }
 
-    public static ProvisionException dirIsNotEmpty(File f) {
-        return new ProvisionException("Directory " + f.getAbsolutePath() + " is not empty");
-    }
-
     public static ProvisionException hashCalculationFailed(File f, IOException e) {
         return new ProvisionException("Failed to calculate hash for " + f.getAbsolutePath(), e);
     }
@@ -145,6 +141,10 @@ public class ProvisionErrors {
 
     public static ProvisionException auditSessionNotActive() {
         return new ProvisionException("Audit session is not active");
+    }
+
+    public static ProvisionException cantStartNewAuditSessionOverExistingOne() {
+        return new ProvisionException("There is a backup content left after the previously failed provisioning task which needs to be rolled back before a new task can be performed.");
     }
 
     public static ProvisionException auditSessionInitFailed(String msg) {

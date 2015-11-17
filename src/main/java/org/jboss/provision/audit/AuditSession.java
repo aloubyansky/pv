@@ -40,5 +40,7 @@ public interface AuditSession {
 
     List<AuditRecord> getRecorded();
 
+    void discardBackup() throws ProvisionException;
+
     void close() throws ProvisionException;
 }

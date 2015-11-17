@@ -58,12 +58,7 @@ class AuditSessionImpl implements AuditSession {
         assert auditHome != null : ProvisionErrors.nullArgument("auditHome");
 
         if(auditHome.exists()) {
-            if(!auditHome.isDirectory()) {
-                throw ProvisionErrors.auditSessionInitFailed(ProvisionErrors.notADir(auditHome));
-            }
-            if(auditHome.list().length != 0) {
-                throw ProvisionErrors.dirIsNotEmpty(auditHome);
-            }
+            throw ProvisionErrors.cantStartNewAuditSessionOverExistingOne();
         } else {
             if(!auditHome.mkdirs()) {
                 throw ProvisionErrors.auditSessionInitFailed(ProvisionErrors.couldNotCreateDir(auditHome));
@@ -201,13 +196,17 @@ class AuditSessionImpl implements AuditSession {
         return recorded;
     }
 
+    @Override
+    public void discardBackup() throws ProvisionException {
+        IoUtils.recursiveDelete(auditHome);
+    }
+
     /* (non-Javadoc)
      * @see org.jboss.provision.backup.BackupSession#close()
      */
     @Override
     public void close() throws ProvisionException {
         active = false;
-        IoUtils.recursiveDelete(auditHome);
     }
 
     private static class AuditRecordImpl implements AuditRecord {
