@@ -31,7 +31,6 @@ import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
 import org.jboss.provision.tool.ProvisionPackage;
 import org.jboss.provision.tool.ProvisionTool;
-import org.jboss.provision.tool.instruction.UpdatePolicy;
 import org.junit.Test;
 
 /**
@@ -67,16 +66,7 @@ public class InstallOverConflictingContentTestCase extends ApplicationTestBase {
 
         env = ProvisionEnvironment.Builder.forPackage(archive)
                 .setInstallationHome(testInstall.getHome())
-                .setDefaultUnitUpdatePolicy(new UnitUpdatePolicy() {
-                    @Override
-                    public UpdatePolicy getUnitPolicy() {
-                        return UpdatePolicy.FORCED;
-                    }
-
-                    @Override
-                    public UpdatePolicy getContentPolicy(String path) {
-                        return UpdatePolicy.FORCED;
-                    }}).build();
+                .setDefaultUnitUpdatePolicy(UnitUpdatePolicy.FORCED).build();
         ProvisionTool.apply(env);
 
         AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome(), true);

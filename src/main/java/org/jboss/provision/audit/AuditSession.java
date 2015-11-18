@@ -25,6 +25,7 @@ package org.jboss.provision.audit;
 import java.io.File;
 import java.util.List;
 
+import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
 
@@ -35,6 +36,8 @@ import org.jboss.provision.tool.instruction.ContentItemInstruction;
 public interface AuditSession {
 
     boolean isActive();
+
+    void record(ProvisionEnvironment env) throws ProvisionException;
 
     void record(ContentItemInstruction instruction, File replacedFile) throws ProvisionException;
 

@@ -84,6 +84,7 @@ class ApplicationContextImpl implements ApplicationContext {
         try {
             assertCanApply(instructions);
             auditSession = AuditSessionFactory.newInstance().startSession(env);
+            auditSession.record(env);
             fsPaths.delete(auditSession);
             fsPaths.copy(auditSession);
         } catch(ProvisionException|RuntimeException|Error e) {

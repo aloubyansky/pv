@@ -22,27 +22,99 @@
 
 package org.jboss.provision;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
 import org.jboss.provision.tool.instruction.UpdatePolicy;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public interface UnitUpdatePolicy {
+public abstract class UnitUpdatePolicy {
 
-    UnitUpdatePolicy UNIT_FORCED_CONTENT_CONDITIONED = new UnitUpdatePolicy() {
-        @Override
-        public UpdatePolicy getUnitPolicy() {
-            return UpdatePolicy.FORCED;
+    public static final UnitUpdatePolicy UNIT_FORCED_CONTENT_CONDITIONED = UnitUpdatePolicy.newBuilder()
+            .setUnitPolicy(UpdatePolicy.FORCED)
+            .setDefaultContentPolicy(UpdatePolicy.CONDITIONED)
+            .build();
+
+    public static final UnitUpdatePolicy FORCED = UnitUpdatePolicy.newBuilder()
+            .setUnitPolicy(UpdatePolicy.FORCED)
+            .setDefaultContentPolicy(UpdatePolicy.FORCED)
+            .build();
+
+    public static Builder newBuilder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+
+        private UpdatePolicy unitPolicy;
+        private UpdatePolicy defaultContentPolicy;
+        private Map<String, UpdatePolicy> pathPolicy = Collections.emptyMap();
+
+        private Builder() {
         }
 
-        @Override
-        public UpdatePolicy getContentPolicy(String path) {
-            return UpdatePolicy.CONDITIONED;
+        public Builder setUnitPolicy(UpdatePolicy unitPolicy) {
+            this.unitPolicy = unitPolicy;
+            return this;
         }
-    };
 
-    UpdatePolicy getUnitPolicy();
+        public Builder setDefaultContentPolicy(UpdatePolicy policy) {
+            this.defaultContentPolicy = policy;
+            return this;
+        }
 
-    UpdatePolicy getContentPolicy(String path);
+        public Builder setPolicy(String path, UpdatePolicy policy) {
+            switch(pathPolicy.size()) {
+                case 0:
+                    pathPolicy = Collections.singletonMap(path, policy);
+                    break;
+                case 1:
+                    pathPolicy = new HashMap<String, UpdatePolicy>(pathPolicy);
+                default:
+                    pathPolicy.put(path, policy);
+            }
+            return this;
+        }
+
+        public UnitUpdatePolicy build() {
+            return new UnitUpdatePolicy(unitPolicy, defaultContentPolicy, pathPolicy) {};
+        }
+    }
+
+    protected final UpdatePolicy unitPolicy;
+    protected final UpdatePolicy defaultContentPolicy;
+    protected final Map<String, UpdatePolicy> pathPolicy;
+
+    protected UnitUpdatePolicy(UpdatePolicy unitPolicy, UpdatePolicy defaultContentPolicy, Map<String, UpdatePolicy> pathPolicy) {
+        assert unitPolicy != null : ProvisionErrors.nullArgument("unitPolicy");
+        assert defaultContentPolicy != null : ProvisionErrors.nullArgument("defaultContentPolicy");
+        this.unitPolicy = unitPolicy;
+        this.defaultContentPolicy = defaultContentPolicy;
+        this.pathPolicy = pathPolicy;
+    }
+
+    public UpdatePolicy getUnitPolicy() {
+        return unitPolicy;
+    }
+
+    public UpdatePolicy getDefaultContentPolicy() {
+        return defaultContentPolicy;
+    }
+
+    public Set<String> getPaths() {
+        return pathPolicy == null ? Collections.<String>emptySet() : pathPolicy.keySet();
+    }
+
+    public UpdatePolicy getContentPolicy(String path) {
+        if(pathPolicy == null) {
+            return defaultContentPolicy;
+        }
+        final UpdatePolicy policy = pathPolicy.get(path);
+        return policy == null ? defaultContentPolicy : policy;
+    }
 }

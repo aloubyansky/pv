@@ -25,7 +25,9 @@ package org.jboss.provision;
 import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  *
@@ -37,27 +39,44 @@ public interface ProvisionEnvironment {
 
     File getInstallationHome();
 
+    Set<String> getUnitNames();
+
     File getUnitHome(String unitName);
 
     File resolveNamedLocation(String namedLocation) throws ProvisionException;
+
+    UnitUpdatePolicy getDefaultUnitUpdatePolicy();
 
     UnitUpdatePolicy getUnitUpdatePolicy(String unitName);
 
     class Builder {
 
+        public static Builder create() {
+            return new Builder();
+        }
+
         public static Builder forPackage(File pkgFile) {
             return new Builder(pkgFile);
         }
 
-        private final File pkgFile;
+        private File pkgFile;
         private File installationHome;
         private Map<String, File> paths = Collections.emptyMap();
         private Map<String, File> unitHomes = Collections.emptyMap();
         private UnitUpdatePolicy defaultUnitUpdatePolicy = UnitUpdatePolicy.UNIT_FORCED_CONTENT_CONDITIONED;
         private Map<String, UnitUpdatePolicy> unitUpdatePolicies = Collections.emptyMap();
+        private Set<String> unitNames = Collections.emptySet();
+
+        private Builder() {
+        }
 
         private Builder(File pkgFile) {
             this.pkgFile = pkgFile;
+        }
+
+        public Builder setPackageFile(File pkgFile) {
+            this.pkgFile = pkgFile;
+            return this;
         }
 
         public Builder setInstallationHome(File installationHome) {
@@ -88,6 +107,7 @@ public interface ProvisionEnvironment {
                 default:
                     unitHomes.put(unitName, homeDir);
             }
+            addUnitName(unitName);
             return this;
         }
 
@@ -106,7 +126,23 @@ public interface ProvisionEnvironment {
                 default:
                     unitUpdatePolicies.put(unitName, updatePolicy);
             }
+            addUnitName(unitName);
             return this;
+        }
+
+        private void addUnitName(String unitName) {
+            if(unitNames.contains(unitName)) {
+                return;
+            }
+            switch(unitNames.size()) {
+                case 0:
+                    unitNames = Collections.singleton(unitName);
+                    break;
+                case 1:
+                    unitNames = new HashSet<String>(unitNames);
+                default:
+                    unitNames.add(unitName);
+            }
         }
 
         public ProvisionEnvironment build() {
@@ -121,6 +157,7 @@ public interface ProvisionEnvironment {
             private final Map<String, File> unitHomes;
             private final UnitUpdatePolicy defaultUnitUpdatePolicy;
             private final Map<String, UnitUpdatePolicy> unitUpdatePolicies;
+            private final Set<String> unitNames;
 
             public ProvisionEnvImpl(Builder builder) {
                 assert builder.pkgFile != null : ProvisionErrors.nullArgument("packageFile");
@@ -135,6 +172,7 @@ public interface ProvisionEnvironment {
                 this.unitHomes = builder.unitHomes;
                 this.defaultUnitUpdatePolicy = builder.defaultUnitUpdatePolicy;
                 this.unitUpdatePolicies = builder.unitUpdatePolicies;
+                this.unitNames = builder.unitNames;
             }
 
             @Override
@@ -163,10 +201,20 @@ public interface ProvisionEnvironment {
             }
 
             @Override
+            public UnitUpdatePolicy getDefaultUnitUpdatePolicy() {
+                return defaultUnitUpdatePolicy;
+            }
+
+            @Override
             public UnitUpdatePolicy getUnitUpdatePolicy(String unitName) {
                 assert unitName != null : ProvisionErrors.nullArgument("unitName");
                 final UnitUpdatePolicy updatePolicy = unitUpdatePolicies.get(unitName);
                 return updatePolicy == null ? defaultUnitUpdatePolicy : updatePolicy;
+            }
+
+            @Override
+            public Set<String> getUnitNames() {
+                return unitNames;
             }
         }
     }

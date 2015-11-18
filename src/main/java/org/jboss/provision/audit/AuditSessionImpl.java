@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
@@ -40,8 +41,10 @@ import org.jboss.provision.util.IoUtils;
  */
 class AuditSessionImpl implements AuditSession {
 
-    private static final String INSTR_DIR = "instructions";
+    private static final String AUDIT_DIR = ".pvaudit";
     private static final String CONTENT_DIR = "content";
+    private static final String ENV_PROPS = "env.properties";
+    private static final String INSTR_DIR = "instructions";
     private static final String INSTR_FILE_SUFFIX = ".properties";
 
     //private final ProvisionEnvironment env;
@@ -53,45 +56,64 @@ class AuditSessionImpl implements AuditSession {
 
     private boolean active;
 
-    static AuditSessionImpl start(File auditHome) throws ProvisionException {
+    static AuditSessionImpl start(ProvisionEnvironment env) throws ProvisionException {
+        final AuditSessionImpl session = new AuditSessionImpl(env);
+        session.start();
+        return session;
+    }
 
-        assert auditHome != null : ProvisionErrors.nullArgument("auditHome");
+    static AuditSessionImpl load(ProvisionEnvironment env) throws ProvisionException {
+        final AuditSessionImpl session = new AuditSessionImpl(env);
+        session.load();
+        return session;
+    }
 
+    private static void assertDirToLoad(final File dir) throws ProvisionException {
+        if(!dir.exists()) {
+            throw ProvisionErrors.pathDoesNotExist(dir);
+        }
+        if(!dir.isDirectory()) {
+            throw ProvisionErrors.failedToLoadAuditSession(ProvisionErrors.notADir(dir));
+        }
+    }
+
+    private AuditSessionImpl(ProvisionEnvironment env) throws ProvisionException {
+
+        assert env != null : ProvisionErrors.nullArgument("env");
+
+        auditHome = new File(env.getInstallationHome(), AUDIT_DIR);
+        instructionsDir = new File(auditHome, INSTR_DIR);
+        contentDir = new File(auditHome, CONTENT_DIR);
+    }
+
+    void start() throws ProvisionException {
         if(auditHome.exists()) {
             throw ProvisionErrors.cantStartNewAuditSessionOverExistingOne();
-        } else {
-            if(!auditHome.mkdirs()) {
-                throw ProvisionErrors.auditSessionInitFailed(ProvisionErrors.couldNotCreateDir(auditHome));
-            }
+        } else if (!auditHome.mkdirs()) {
+            throw ProvisionErrors.auditSessionInitFailed(ProvisionErrors.couldNotCreateDir(auditHome));
         }
 
-        final File instructionsDir = new File(auditHome, INSTR_DIR);
         if(!instructionsDir.mkdir()) {
             throw ProvisionErrors.auditSessionInitFailed(ProvisionErrors.couldNotCreateDir(instructionsDir));
         }
-        final File contentDir = new File(auditHome, CONTENT_DIR);
         if(!contentDir.mkdir()) {
             throw ProvisionErrors.auditSessionInitFailed(ProvisionErrors.couldNotCreateDir(contentDir));
         }
-        return new AuditSessionImpl(auditHome, instructionsDir, contentDir);
+        active = true;
     }
 
-    static AuditSessionImpl load(File auditHome) throws ProvisionException {
-
-        assert auditHome != null : ProvisionErrors.nullArgument("auditHome");
+    void load() throws ProvisionException {
 
         assertDirToLoad(auditHome);
-
-        final File instructionsDir = new File(auditHome, INSTR_DIR);
         assertDirToLoad(instructionsDir);
-
-        final File contentDir = new File(auditHome, CONTENT_DIR);
         assertDirToLoad(contentDir);
+
+        final ProvisionEnvironment prevEnv = AuditUtil.loadEnv(new File(auditHome, ENV_PROPS));
 
         final List<String> names = Arrays.asList(instructionsDir.list());
         Collections.sort(names);
 
-        List<AuditRecord> recorded = new ArrayList<AuditRecord>(names.size());
+        recorded = new ArrayList<AuditRecord>(names.size());
         for(String name : names) {
             if(!name.endsWith(INSTR_FILE_SUFFIX)) {
                 continue;
@@ -110,32 +132,7 @@ class AuditSessionImpl implements AuditSession {
 
             recorded.add(new AuditRecordImpl(instruction, backupFile));
         }
-        return new AuditSessionImpl(auditHome, instructionsDir, contentDir, recorded);
-    }
 
-    private static void assertDirToLoad(final File dir) throws ProvisionException {
-        if(!dir.exists()) {
-            throw ProvisionErrors.pathDoesNotExist(dir);
-        }
-        if(!dir.isDirectory()) {
-            throw ProvisionErrors.failedToLoadAuditSession(ProvisionErrors.notADir(dir));
-        }
-    }
-
-    private AuditSessionImpl(File backupDir, File instructionsDir, File contentDir) throws ProvisionException {
-
-        this.auditHome = backupDir;
-        this.instructionsDir = instructionsDir;
-        this.contentDir = contentDir;
-        active = true;
-    }
-
-    private AuditSessionImpl(File backupDir, File instructionsDir, File contentDir, List<AuditRecord> recorded) throws ProvisionException {
-
-        this.auditHome = backupDir;
-        this.instructionsDir = instructionsDir;
-        this.contentDir = contentDir;
-        this.recorded = recorded;
         active = false;
     }
 
@@ -145,6 +142,11 @@ class AuditSessionImpl implements AuditSession {
     @Override
     public boolean isActive() {
         return active;
+    }
+
+    @Override
+    public void record(ProvisionEnvironment env) throws ProvisionException {
+        AuditUtil.record(env, new File(auditHome, ENV_PROPS));
     }
 
     /* (non-Javadoc)

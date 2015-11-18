@@ -30,7 +30,6 @@ import org.jboss.provision.test.util.AssertUtil;
 import org.jboss.provision.test.util.InstallationBuilder;
 import org.jboss.provision.tool.ProvisionPackage;
 import org.jboss.provision.tool.ProvisionTool;
-import org.jboss.provision.tool.instruction.UpdatePolicy;
 import org.jboss.provision.util.IoUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -102,17 +101,7 @@ public class ReplaceConflictingContentTestCase extends ApplicationTestBase {
 
         env = ProvisionEnvironment.Builder.forPackage(archive)
                 .setInstallationHome(testInstall.getHome())
-                .setDefaultUnitUpdatePolicy(new UnitUpdatePolicy() {
-
-                    @Override
-                    public UpdatePolicy getUnitPolicy() {
-                        return UpdatePolicy.FORCED;
-                    }
-
-                    @Override
-                    public UpdatePolicy getContentPolicy(String path) {
-                        return UpdatePolicy.FORCED;
-                    }}).build();
+                .setDefaultUnitUpdatePolicy(UnitUpdatePolicy.FORCED).build();
         ProvisionTool.apply(env);
 
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);

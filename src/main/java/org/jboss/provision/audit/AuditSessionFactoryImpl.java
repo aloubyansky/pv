@@ -33,18 +33,16 @@ import org.jboss.provision.ProvisionException;
  */
 class AuditSessionFactoryImpl extends AuditSessionFactory {
 
-    private static final String AUDIT_DIR = ".pvaudit";
-
     /* (non-Javadoc)
      * @see org.jboss.provision.audit.AuditSessionFactory#startSession(org.jboss.provision.ProvisionEnvironment)
      */
     @Override
     public AuditSession startSession(ProvisionEnvironment env) throws ProvisionException {
-        return AuditSessionImpl.start(new File(env.getInstallationHome(), AUDIT_DIR));
+        return AuditSessionImpl.start(env);
     }
 
     @Override
     public AuditSession loadCrushedSession(ProvisionEnvironment env) throws ProvisionException {
-        return AuditSessionImpl.load(new File(env.getInstallationHome(), AUDIT_DIR));
+        return AuditSessionImpl.load(env);
     }
 }

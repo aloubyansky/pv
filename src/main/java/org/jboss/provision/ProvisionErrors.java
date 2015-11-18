@@ -139,6 +139,10 @@ public class ProvisionErrors {
         return new ProvisionException("Failed to audit instruction for " + instruction.getPath(), t);
     }
 
+    public static ProvisionException failedToAuditEnvironment(Throwable t) {
+        return new ProvisionException("Failed to store provision environment", t);
+    }
+
     public static ProvisionException auditSessionNotActive() {
         return new ProvisionException("Audit session is not active");
     }
@@ -159,6 +163,10 @@ public class ProvisionErrors {
         return new ProvisionException("Failed to load instruction audit record", t);
     }
 
+    public static ProvisionException failedToLoadEnvironmentAuditRecord(Throwable t) {
+        return new ProvisionException("Failed to load provision environment audit record", t);
+    }
+
     public static ProvisionException failedToLoadInstructionAuditRecord(String msg) {
         return new ProvisionException("Failed to load instruction audit record: " + msg);
     }
@@ -177,5 +185,9 @@ public class ProvisionErrors {
 
     public static ProvisionException failedToCopyContentFromZIP(ContentPath path, File targetFile, IOException e) {
         return new ProvisionException("Failed to copy content from ZIP path " + path.getRelativePath() + " to " + targetFile.getAbsolutePath(), e);
+    }
+
+    public static ProvisionException unknownEnvironmentProperty(String prop) {
+        return new ProvisionException("Unknown provision environment property: " + prop);
     }
 }
