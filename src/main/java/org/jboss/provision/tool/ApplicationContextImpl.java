@@ -85,8 +85,8 @@ class ApplicationContextImpl implements ApplicationContext {
             assertCanApply(instructions);
             auditSession = AuditSessionFactory.newInstance().startSession(env);
             auditSession.record(env);
-            fsPaths.delete(auditSession);
             fsPaths.copy(auditSession);
+            fsPaths.delete(auditSession);
         } catch(ProvisionException|RuntimeException|Error e) {
             discardBackup = false;
             if(auditSession != null) {
@@ -252,57 +252,100 @@ class ApplicationContextImpl implements ApplicationContext {
 
     private class FSPaths {
 
-        private Map<ContentPath, ContentItemInstruction> deleted = Collections.emptyMap();
-        private Map<ContentPath, ContentItemInstruction> copied = Collections.emptyMap();
+        /** After a path from this map is deleted, its parent dir will be checked for containing other
+         *  files or directories. If the parent dir is empty it will also be deleted
+         *  and then its parent directory will checked, etc. This will trigger a cascading delete
+         *  of empty parent directories up to the unit home directory */
+        private Map<ContentPath, ContentItemInstruction> deleteWithDirs = Collections.emptyMap();
+
+        /** Unlike the previous map, deleting paths from this map won't trigger deleting empty parent directories.
+         *  The logic is that these paths could be outside of the unit home branch. */
+        private Map<ContentPath, ContentItemInstruction> delete = Collections.emptyMap();
+
+        private Map<ContentPath, ContentItemInstruction> copy = Collections.emptyMap();
 
         void scheduleDelete(ContentItemInstruction item) throws ProvisionException {
 
-            switch(deleted.size()) {
-                case 0:
-                    deleted = Collections.singletonMap(item.getPath(), item);
-                    break;
-                case 1:
-                    deleted = new HashMap<ContentPath, ContentItemInstruction>(deleted);
-                default:
-                    deleted.put(item.getPath(), item);
+            final ContentPath path = item.getPath();
+            if(copy.containsKey(path)) {
+                throw ProvisionErrors.pathCopiedAndDeleted(path);
             }
 
-            if(copied.containsKey(item.getPath())) {
-                throw ProvisionErrors.pathCopiedAndDeleted(item.getPath());
+            if (path.getNamedLocation() == null) {
+                switch (deleteWithDirs.size()) {
+                    case 0:
+                        deleteWithDirs = Collections.singletonMap(path, item);
+                        break;
+                    case 1:
+                        deleteWithDirs = new HashMap<ContentPath, ContentItemInstruction>(deleteWithDirs);
+                    default:
+                        deleteWithDirs.put(path, item);
+                }
+            } else {
+                switch (delete.size()) {
+                    case 0:
+                        delete = Collections.singletonMap(path, item);
+                        break;
+                    case 1:
+                        delete = new HashMap<ContentPath, ContentItemInstruction>(delete);
+                    default:
+                        delete.put(path, item);
+                }
             }
         }
 
         void scheduleCopy(ContentItemInstruction item) throws ProvisionException {
 
-            switch(copied.size()) {
-                case 0:
-                    copied = Collections.singletonMap(item.getPath(), item);
-                    break;
-                case 1:
-                    copied = new HashMap<ContentPath, ContentItemInstruction>(copied);
-                default:
-                    if(copied.put(item.getPath(), item) != null) {
-                        throw ProvisionErrors.pathCopiedMoreThanOnce(item.getPath());
-                    }
+            if(deleteWithDirs.containsKey(item.getPath())) {
+                throw ProvisionErrors.pathCopiedAndDeleted(item.getPath());
+            }
+            if(delete.containsKey(item.getPath())) {
+                throw ProvisionErrors.pathCopiedAndDeleted(item.getPath());
             }
 
-            if(deleted.containsKey(item.getPath())) {
-                throw ProvisionErrors.pathCopiedAndDeleted(item.getPath());
+            switch(copy.size()) {
+                case 0:
+                    copy = Collections.singletonMap(item.getPath(), item);
+                    break;
+                case 1:
+                    copy = new HashMap<ContentPath, ContentItemInstruction>(copy);
+                default:
+                    if(copy.put(item.getPath(), item) != null) {
+                        throw ProvisionErrors.pathCopiedMoreThanOnce(item.getPath());
+                    }
             }
         }
 
         void delete(AuditSession session) throws ProvisionException {
-            for (ContentItemInstruction item : deleted.values()) {
-                final File targetFile = resolvePath(item.getPath());
+            delete(session, deleteWithDirs, true);
+            delete(session, delete, false);
+        }
+
+        private void delete(AuditSession session, Map<ContentPath, ContentItemInstruction> delete, boolean withDirs) throws ProvisionException {
+            for (ContentItemInstruction item : delete.values()) {
+                File targetFile = resolvePath(item.getPath());
                 session.record(item, targetFile);
                 if (!IoUtils.recursiveDelete(targetFile)) {
                     throw ProvisionErrors.deleteFailed(targetFile);
+                }
+                if (withDirs) {
+                    targetFile = targetFile.getParentFile();
+                    while (targetFile.list().length == 0) {
+                        if(targetFile.equals(unitHome)) {
+                            IoUtils.recursiveDelete(targetFile);
+                            break;
+                        }
+                        if (!IoUtils.recursiveDelete(targetFile)) {
+                            break;
+                        }
+                        targetFile = targetFile.getParentFile();
+                    }
                 }
             }
         }
 
         void copy(AuditSession session) throws ProvisionException {
-            for (ContentItemInstruction item : copied.values()) {
+            for (ContentItemInstruction item : copy.values()) {
                 final ContentPath path = item.getPath();
                 final File targetFile = resolvePath(path);
                 session.record(item, targetFile);
