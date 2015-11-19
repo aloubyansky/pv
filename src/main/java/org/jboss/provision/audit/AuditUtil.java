@@ -54,7 +54,6 @@ class AuditUtil {
     private static final String HASH = "hash";
     private static final String INSTALLATION_HOME = "installation-home";
     private static final String LOCATION = "location";
-    private static final String PKG_FILE = "package-file";
     private static final String POLICY = "policy.";
     private static final String RELATIVE_PATH = "relative-path";
     private static final String REPLACED_HASH = "replaced-hash";
@@ -142,7 +141,6 @@ class AuditUtil {
         }
 
         final Properties props = new Properties();
-        props.setProperty(PKG_FILE, env.getPackageFile().getAbsolutePath());
         props.setProperty(INSTALLATION_HOME, env.getInstallationHome().getAbsolutePath());
 
         final UnitUpdatePolicy defaultPolicy = env.getDefaultUnitUpdatePolicy();
@@ -196,9 +194,7 @@ class AuditUtil {
         UnitUpdatePolicy.Builder defPolicy = null;
         Map<String, UnitUpdatePolicy.Builder> unitPolicies = null;
         for(String prop : props.stringPropertyNames()) {
-            if(prop.equals(PKG_FILE)) {
-                envBuilder.setPackageFile(new File(props.getProperty(prop)));
-            } else if(prop.equals(INSTALLATION_HOME)) {
+            if(prop.equals(INSTALLATION_HOME)) {
                 envBuilder.setInstallationHome(new File(props.getProperty(prop)));
             } else if(prop.startsWith(DEFAULT_POLICY)) {
                 if(defPolicy == null) {

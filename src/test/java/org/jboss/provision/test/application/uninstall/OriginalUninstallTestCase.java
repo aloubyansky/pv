@@ -53,8 +53,8 @@ public class OriginalUninstallTestCase extends ApplicationTestBase {
 
         AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome());
 
-        final ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(testInstall.getHome()).build();
-        ProvisionTool.apply(env);
+        final ProvisionEnvironment env = ProvisionEnvironment.Builder.create().setInstallationHome(testInstall.getHome()).build();
+        ProvisionTool.apply(env, archive);
 
         AssertUtil.assertEmptyDirBranch(testInstall.getHome());
     }

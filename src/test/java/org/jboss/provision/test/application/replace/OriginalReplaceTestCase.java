@@ -77,8 +77,8 @@ public class OriginalReplaceTestCase extends ApplicationTestBase {
         AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome());
         AssertUtil.assertNotIdentical(nextOriginal.getHome(), testInstall.getHome(), true);
 
-        final ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(testInstall.getHome()).build();
-        ProvisionTool.apply(env);
+        final ProvisionEnvironment env = ProvisionEnvironment.Builder.create().setInstallationHome(testInstall.getHome()).build();
+        ProvisionTool.apply(env, archive);
 
         AssertUtil.assertNotIdentical(originalInstall.getHome(), testInstall.getHome(), true);
         AssertUtil.assertIdentical(nextOriginal.getHome(), testInstall.getHome(), true);

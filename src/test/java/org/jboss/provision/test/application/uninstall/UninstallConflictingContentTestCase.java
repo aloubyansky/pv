@@ -81,9 +81,9 @@ public class UninstallConflictingContentTestCase extends ApplicationTestBase {
         AssertUtil.assertExpectedContentInTarget(temp, testInstall.getHome(), false);
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
 
-        ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(testInstall.getHome()).build();
+        ProvisionEnvironment env = ProvisionEnvironment.Builder.create().setInstallationHome(testInstall.getHome()).build();
         try {
-            ProvisionTool.apply(env);
+            ProvisionTool.apply(env, archive);
             Assert.fail("Modified content uninstalled");
         } catch(ProvisionException e) {
             // expected
@@ -92,10 +92,10 @@ public class UninstallConflictingContentTestCase extends ApplicationTestBase {
         AssertUtil.assertExpectedContentInTarget(temp, testInstall.getHome(), false);
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
 
-        env = ProvisionEnvironment.Builder.forPackage(archive)
+        env = ProvisionEnvironment.Builder.create()
                 .setInstallationHome(testInstall.getHome())
                 .setDefaultUnitUpdatePolicy(UnitUpdatePolicy.FORCED).build();
-        ProvisionTool.apply(env);
+        ProvisionTool.apply(env, archive);
 
         AssertUtil.assertExpectedContentInTarget(temp, testInstall.getHome());
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), true);

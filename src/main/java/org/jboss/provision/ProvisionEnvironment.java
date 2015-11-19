@@ -35,7 +35,7 @@ import java.util.Set;
  */
 public interface ProvisionEnvironment {
 
-    File getPackageFile();
+    //java.util.Date getLastModifiedDate();
 
     File getInstallationHome();
 
@@ -55,11 +55,6 @@ public interface ProvisionEnvironment {
             return new Builder();
         }
 
-        public static Builder forPackage(File pkgFile) {
-            return new Builder(pkgFile);
-        }
-
-        private File pkgFile;
         private File installationHome;
         private Map<String, File> paths = Collections.emptyMap();
         private Map<String, File> unitHomes = Collections.emptyMap();
@@ -68,15 +63,6 @@ public interface ProvisionEnvironment {
         private Set<String> unitNames = Collections.emptySet();
 
         private Builder() {
-        }
-
-        private Builder(File pkgFile) {
-            this.pkgFile = pkgFile;
-        }
-
-        public Builder setPackageFile(File pkgFile) {
-            this.pkgFile = pkgFile;
-            return this;
         }
 
         public Builder setInstallationHome(File installationHome) {
@@ -151,7 +137,6 @@ public interface ProvisionEnvironment {
 
         class ProvisionEnvImpl implements ProvisionEnvironment {
 
-            private final File packageFile;
             private final File installHome;
             private final Map<String, File> paths;
             private final Map<String, File> unitHomes;
@@ -160,13 +145,11 @@ public interface ProvisionEnvironment {
             private final Set<String> unitNames;
 
             public ProvisionEnvImpl(Builder builder) {
-                assert builder.pkgFile != null : ProvisionErrors.nullArgument("packageFile");
                 assert builder.installationHome != null : ProvisionErrors.nullArgument("home");
                 assert builder.paths != null : ProvisionErrors.nullArgument("paths");
                 assert builder.unitHomes != null : ProvisionErrors.nullArgument("unitHome");
                 assert builder.defaultUnitUpdatePolicy != null : ProvisionErrors.nullArgument("defaultUnitUpdatePolicy");
                 assert builder.unitUpdatePolicies != null : ProvisionErrors.nullArgument("unitUpdatePolicies");
-                this.packageFile = builder.pkgFile;
                 this.installHome = builder.installationHome;
                 this.paths = builder.paths;
                 this.unitHomes = builder.unitHomes;
@@ -182,11 +165,6 @@ public interface ProvisionEnvironment {
                     throw ProvisionErrors.undefinedNamedLocation(namedLocation);
                 }
                 return f;
-            }
-
-            @Override
-            public File getPackageFile() {
-                return packageFile;
             }
 
             @Override

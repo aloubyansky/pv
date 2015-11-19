@@ -20,25 +20,13 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.tool;
-
-import java.io.File;
-
-import org.jboss.provision.ProvisionEnvironment;
-import org.jboss.provision.ProvisionException;
+package org.jboss.provision.history;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public class ProvisionTool {
+public interface EnvironmentHistory {
 
-    private ProvisionTool() {
-    }
 
-    public static void apply(ProvisionEnvironment env, File packageFile) throws ProvisionException {
-
-        final ApplicationContextImpl appCtx = new ApplicationContextImpl(env);
-        appCtx.processPackage(packageFile);
-    }
 }

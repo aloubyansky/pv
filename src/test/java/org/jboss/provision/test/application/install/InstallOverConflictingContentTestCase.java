@@ -54,9 +54,9 @@ public class InstallOverConflictingContentTestCase extends ApplicationTestBase {
 
         testInstall.createFileWithRandomContent("b/b.txt");
 
-        ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(testInstall.getHome()).build();
+        ProvisionEnvironment env = ProvisionEnvironment.Builder.create().setInstallationHome(testInstall.getHome()).build();
         try {
-            ProvisionTool.apply(env);
+            ProvisionTool.apply(env, archive);
             fail("install didn't fail");
         } catch(ProvisionException e) {
             // expected
@@ -64,10 +64,10 @@ public class InstallOverConflictingContentTestCase extends ApplicationTestBase {
 
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), true);
 
-        env = ProvisionEnvironment.Builder.forPackage(archive)
+        env = ProvisionEnvironment.Builder.create()
                 .setInstallationHome(testInstall.getHome())
                 .setDefaultUnitUpdatePolicy(UnitUpdatePolicy.FORCED).build();
-        ProvisionTool.apply(env);
+        ProvisionTool.apply(env, archive);
 
         AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome(), true);
     }

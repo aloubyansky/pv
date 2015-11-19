@@ -74,11 +74,13 @@ class ApplicationContextImpl implements ApplicationContext {
         this.env = env;
     }
 
-    void processPackage() throws ProvisionException {
-        if (!env.getPackageFile().exists()) {
-            throw ProvisionErrors.pathDoesNotExist(env.getPackageFile());
+    void processPackage(File pkgFile) throws ProvisionException {
+        assert pkgFile != null : ProvisionErrors.nullArgument("packageFile");
+
+        if (!pkgFile.exists()) {
+            throw ProvisionErrors.pathDoesNotExist(pkgFile);
         }
-        final ProvisionPackageInstruction instructions = readInstructions(env.getPackageFile());
+        final ProvisionPackageInstruction instructions = readInstructions(pkgFile);
         AuditSession auditSession = null;
         boolean discardBackup = true;
         try {

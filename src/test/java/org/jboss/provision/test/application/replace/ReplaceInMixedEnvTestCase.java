@@ -83,9 +83,9 @@ public class ReplaceInMixedEnvTestCase extends ApplicationTestBase {
         AssertUtil.assertExpectedContentInTarget(originalInstall.getHome(), testInstall.getHome());
         AssertUtil.assertExpectedFilesNotInTarget(nextOriginal.getHome(), testInstall.getHome(), false);
 
-        final ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive)
+        final ProvisionEnvironment env = ProvisionEnvironment.Builder.create()
                 .setInstallationHome(testInstall.getHome()).build();
-        ProvisionTool.apply(env);
+        ProvisionTool.apply(env, archive);
 
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
         AssertUtil.assertExpectedContentInTarget(nextOriginal.getHome(), testInstall.getHome(), true);

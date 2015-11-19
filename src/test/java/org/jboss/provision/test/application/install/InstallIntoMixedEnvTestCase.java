@@ -73,8 +73,8 @@ public class InstallIntoMixedEnvTestCase extends ApplicationTestBase {
 
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), true);
 
-        final ProvisionEnvironment env = ProvisionEnvironment.Builder.forPackage(archive).setInstallationHome(testInstall.getHome()).build();
-        ProvisionTool.apply(env);
+        final ProvisionEnvironment env = ProvisionEnvironment.Builder.create().setInstallationHome(testInstall.getHome()).build();
+        ProvisionTool.apply(env, archive);
 
         AssertUtil.assertExpectedContentInTarget(originalInstall.getHome(), testInstall.getHome(), true);
         AssertUtil.assertExpectedContentInTarget(temp, testInstall.getHome(), true);
