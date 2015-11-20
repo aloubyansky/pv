@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionUnitInfo;
 
 /**
@@ -43,8 +44,8 @@ public abstract class ProvisionEnvironment {
     public static class Builder {
 
         private File envHome;
-        private Map<String, File> namedLocations = Collections.emptyMap();
-        private Map<String, File> unitHomes = Collections.emptyMap();
+        private Map<String, ContentPath> namedLocations = Collections.emptyMap();
+        private Map<String, ContentPath> unitHomes = Collections.emptyMap();
         private UnitUpdatePolicy defaultUnitUpdatePolicy = UnitUpdatePolicy.UNIT_FORCED_CONTENT_CONDITIONED;
         private Map<String, UnitUpdatePolicy> unitUpdatePolicies = Collections.emptyMap();
         private Map<String, ProvisionUnitInfo> unitInfos = Collections.emptyMap();
@@ -57,15 +58,19 @@ public abstract class ProvisionEnvironment {
             return this;
         }
 
-        public Builder nameLocation(String name, File path) {
+        public Builder nameLocation(String name, String relativePath) {
+            return nameLocation(name, ContentPath.forPath(relativePath));
+        }
+
+        public Builder nameLocation(String name, ContentPath relativePath) {
             switch(namedLocations.size()) {
                 case 0:
-                    namedLocations = Collections.singletonMap(name, path);
+                    namedLocations = Collections.singletonMap(name, relativePath);
                     break;
                 case 1:
-                    namedLocations = new HashMap<String, File>(namedLocations);
+                    namedLocations = new HashMap<String, ContentPath>(namedLocations);
                 default:
-                    namedLocations.put(name, path);
+                    namedLocations.put(name, relativePath);
             }
             return this;
         }
@@ -86,18 +91,18 @@ public abstract class ProvisionEnvironment {
             return this;
         }
 
-        public Builder setUnitHome(String unitName, File homeDir) throws ProvisionException {
+        public Builder setUnitHome(String unitName, ContentPath unitHome) throws ProvisionException {
             if(!unitInfos.containsKey(unitName)) {
                 throw ProvisionErrors.unknownUnit(unitName);
             }
             switch(unitHomes.size()) {
                 case 0:
-                    unitHomes = Collections.singletonMap(unitName, homeDir);
+                    unitHomes = Collections.singletonMap(unitName, unitHome);
                     break;
                 case 1:
-                    unitHomes = new HashMap<String, File>(unitHomes);
+                    unitHomes = new HashMap<String, ContentPath>(unitHomes);
                 default:
-                    unitHomes.put(unitName, homeDir);
+                    unitHomes.put(unitName, unitHome);
             }
             return this;
         }
@@ -143,8 +148,8 @@ public abstract class ProvisionEnvironment {
     }
 
     private final File envHome;
-    private final Map<String, File> namedLocations;
-    private final Map<String, File> unitHomes;
+    private final Map<String, ContentPath> namedLocations;
+    private final Map<String, ContentPath> unitHomes;
     private final UnitUpdatePolicy defaultUnitPolicy;
     private final Map<String, UnitUpdatePolicy> unitUpdatePolicies;
     private final Map<String, ProvisionUnitInfo> unitInfos;
@@ -164,7 +169,7 @@ public abstract class ProvisionEnvironment {
         return unitInfos.get(unitName);
     }
 
-    public File getUnitHome(String unitName) {
+    public ContentPath getUnitHome(String unitName) {
         assert unitName != null : ProvisionErrors.nullArgument("unitName");
         return unitHomes.get(unitName);
     }
@@ -173,12 +178,30 @@ public abstract class ProvisionEnvironment {
         return namedLocations.keySet();
     }
 
+    public ContentPath getNamedLocation(String namedLocation) {
+        return namedLocations.get(namedLocation);
+    }
+
     public File resolveNamedLocation(String namedLocation) throws ProvisionException {
-        final File f = namedLocations.get(namedLocation);
-        if(f == null) {
+        ContentPath path = namedLocations.get(namedLocation);
+        if(path == null) {
             throw ProvisionErrors.undefinedNamedLocation(namedLocation);
         }
-        return f;
+
+        File f = envHome;
+        if(path.getNamedLocation() != null) {
+            f = resolveNamedLocation(path.getNamedLocation());
+        }
+
+        String relativePath = path.getRelativePath();
+        if(relativePath == null) {
+            return f;
+        }
+        if(File.separatorChar == '\\') {
+            relativePath = relativePath.replace('/', '\\');
+        }
+
+        return new File(f, relativePath);
     }
 
     public UnitUpdatePolicy getDefaultUnitPolicy() {
@@ -231,26 +254,14 @@ public abstract class ProvisionEnvironment {
         if (namedLocations == null) {
             if (other.namedLocations != null)
                 return false;
-        } else if (!namedLocations.keySet().equals(other.namedLocations.keySet())) {
+        } else if (!namedLocations.equals(other.namedLocations)) {
             return false;
-        } else {
-            for(String name : namedLocations.keySet()) {
-                if(!namedLocations.get(name).getAbsolutePath().equals(other.namedLocations.get(name).getAbsolutePath())) {
-                    return false;
-                }
-            }
         }
         if (unitHomes == null) {
             if (other.unitHomes != null)
                 return false;
-        } else if(!unitHomes.keySet().equals(other.unitHomes.keySet())) {
+        } else if(!unitHomes.equals(other.unitHomes)) {
             return false;
-        } else {
-            for(String name : unitHomes.keySet()) {
-                if(!unitHomes.get(name).getAbsolutePath().equals(other.unitHomes.get(name).getAbsolutePath())) {
-                    return false;
-                }
-            }
         }
         if (unitInfos == null) {
             if (other.unitInfos != null)

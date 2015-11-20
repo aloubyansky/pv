@@ -157,9 +157,9 @@ public class AuditUtil {
 
         for(String unitName : env.getUnitNames()) {
             props.setProperty(unitName + VERSION, env.getUnitInfo(unitName).getVersion());
-            final File unitHome = env.getUnitHome(unitName);
+            final ContentPath unitHome = env.getUnitHome(unitName);
             if(unitHome != null) {
-                props.setProperty(unitName + UNIT_HOME, unitHome.getAbsolutePath());
+                props.setProperty(unitName + UNIT_HOME, unitHome.toString());
             }
             final UnitUpdatePolicy updatePolicy = env.getUnitPolicy(unitName);
             if(updatePolicy != null) {
@@ -175,7 +175,7 @@ public class AuditUtil {
         }
 
         for(String name : env.getLocationNames()) {
-            props.setProperty(LOCATION + name, env.resolveNamedLocation(name).getAbsolutePath());
+            props.setProperty(LOCATION + name, env.getNamedLocation(name).toString());
         }
 
         try {
@@ -221,7 +221,7 @@ public class AuditUtil {
                 }
             } else if(prop.startsWith(LOCATION)) {
                 final String name = prop.substring(LOCATION.length());
-                envBuilder.nameLocation(name, new File(props.getProperty(prop)));
+                envBuilder.nameLocation(name, ContentPath.fromString(props.getProperty(prop)));
             } else {
                 int i = prop.indexOf('.');
                 if(i <= 0) {
@@ -242,7 +242,7 @@ public class AuditUtil {
                 }
 
                 if (prop.startsWith(UNIT_HOME, i)) {
-                    envBuilder.setUnitHome(unitName, new File(props.getProperty(prop)));
+                    envBuilder.setUnitHome(unitName, ContentPath.fromString(props.getProperty(prop)));
                 } else if (prop.startsWith(POLICY, i)) {
                     if (unitPolicies == null) {
                         unitPolicies = new HashMap<String, UnitUpdatePolicy.Builder>();

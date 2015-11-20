@@ -32,6 +32,7 @@ import java.io.StringWriter;
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.UnitUpdatePolicy;
 import org.jboss.provision.audit.AuditUtil;
+import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.tool.instruction.UpdatePolicy;
 import org.jboss.provision.util.IoUtils;
 import org.junit.After;
@@ -61,10 +62,11 @@ public class ProvisionEnvironmentPersistenceTestCase {
     public void testMain() throws Exception {
 
         final File installationHome = new File("test-location");
-        final File aUnitHome = new File(installationHome, "aUnit");
-        final File bUnitHome = new File(aUnitHome, "bUnit");
-        final File aLocation = new File("aLocation");
-        final File bLocation = new File(bUnitHome, "bLocation");
+        final ContentPath aUnitHome = ContentPath.forPath("aUnit");
+        final ContentPath bUnitHome = ContentPath.create("bLocation", "bUnit");
+        final ContentPath aLocation = ContentPath.forPath("a/a.txt");
+        final ContentPath bLocation = ContentPath.forName("aLocation");
+        final ContentPath cLocation = ContentPath.create("bLocation", "b/b.txt");
         final ProvisionEnvironment env = ProvisionEnvironment.create()
             .setEnvironmentHome(installationHome)
             .addUnit("aUnit", "0.0.1.Alpha-SNAPSHOT")
@@ -82,6 +84,7 @@ public class ProvisionEnvironmentPersistenceTestCase {
             .setUnitUpdatePolicy("cUnit", UnitUpdatePolicy.FORCED)
             .nameLocation("aLocation", aLocation)
             .nameLocation("bLocation", bLocation)
+            .nameLocation("cLocation", cLocation)
             .build();
 
         AuditUtil.record(env, envFile);

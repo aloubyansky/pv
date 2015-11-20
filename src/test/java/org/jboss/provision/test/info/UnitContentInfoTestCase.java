@@ -67,7 +67,7 @@ public class UnitContentInfoTestCase extends TestWithInstallationBuilder {
     }
 
     private void assertContent(final ProvisionUnitContentInfo unitInfo, String relativePath) throws IOException {
-        ContentItemInfo itemInfo = unitInfo.getContentInfo(ContentPath.create(relativePath));
+        ContentItemInfo itemInfo = unitInfo.getContentInfo(ContentPath.forPath(relativePath));
         assertNotNull(itemInfo);
         assertNull(itemInfo.getPath().getNamedLocation());
         assertEquals(relativePath, itemInfo.getPath().getRelativePath());

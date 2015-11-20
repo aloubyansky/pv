@@ -39,7 +39,7 @@ public interface ContentItemInfo {
         }
 
         public ContentItemInfo build(final String relativePath, final byte[] hash) {
-            return build(ContentPath.create(relativePath), hash);
+            return build(ContentPath.forPath(relativePath), hash);
         }
 
         public ContentItemInfo build(final ContentPath path, final byte[] hash) {

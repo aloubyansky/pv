@@ -30,8 +30,12 @@ import org.jboss.provision.ProvisionErrors;
  */
 public abstract class ContentPath {
 
-    public static ContentPath create(final String relativePath) {
+    public static ContentPath forPath(final String relativePath) {
         return create(null, relativePath);
+    }
+
+    public static ContentPath forName(final String name) {
+        return create(name, null);
     }
 
     public static ContentPath create(final String namedLocation, final String relativePath) {
@@ -42,7 +46,7 @@ public abstract class ContentPath {
     private final String relativePath;
 
     protected ContentPath(String namedLocation, String relativePath) {
-        assert relativePath != null : ProvisionErrors.nullArgument("relativePath");
+        assert relativePath != null || namedLocation != null : ProvisionErrors.nullArgument("relativePath && namedLocation");
         this.namedLocation = namedLocation;
         this.relativePath = relativePath;
     }
@@ -92,6 +96,35 @@ public abstract class ContentPath {
             return relativePath;
         }
         final StringBuilder buf = new StringBuilder();
-        return buf.append('$').append(namedLocation).append('/').append(relativePath).toString();
+        buf.append('$').append(namedLocation);
+        if(relativePath == null) {
+            return buf.toString();
+        }
+        return buf.append('/').append(relativePath).toString();
+    }
+
+    public static ContentPath fromString(String str) {
+        if(str == null) {
+            throw new IllegalArgumentException(ProvisionErrors.nullArgument("str"));
+        }
+        if(str.isEmpty()) {
+            throw new IllegalArgumentException("string is empty");
+        }
+        if(str.charAt(0) != '$') {
+            return ContentPath.forPath(str);
+        }
+        final int i = str.indexOf('/');
+        if(i < 0) {
+            return ContentPath.forName(str.substring(1));
+        }
+        final String name = str.substring(1, i);
+        if(name.isEmpty()) {
+            throw new IllegalStateException("The name is empty in '" + str + "'");
+        }
+        final String path = str.substring(i + 1);
+        if(path.isEmpty()) {
+            throw new IllegalStateException("The path is empty in '" + str + "'");
+        }
+        return ContentPath.create(name, path);
     }
 }
