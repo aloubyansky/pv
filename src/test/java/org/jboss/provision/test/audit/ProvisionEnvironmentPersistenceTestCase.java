@@ -66,7 +66,7 @@ public class ProvisionEnvironmentPersistenceTestCase {
         final File aLocation = new File("aLocation");
         final File bLocation = new File(bUnitHome, "bLocation");
         final ProvisionEnvironment env = ProvisionEnvironment.create()
-            .setInstallationHome(installationHome)
+            .setEnvironmentHome(installationHome)
             .addUnit("aUnit", "0.0.1.Alpha-SNAPSHOT")
             .addUnit("bUnit", "1.0.0.GA")
             .addUnit("cUnit", "3.2.1.GA")

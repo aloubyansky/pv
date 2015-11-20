@@ -142,7 +142,7 @@ class ApplicationContextImpl implements ApplicationContext {
 
         for (String unitName : instructions.getUnitNames()) {
             this.unitName = unitName;
-            this.unitHome = env.getInstallationHome();
+            this.unitHome = env.getEnvironmentHome();
             this.unitInstruction = instructions.getUnitInstruction(unitName);
             assertCanApplyUnit();
         }

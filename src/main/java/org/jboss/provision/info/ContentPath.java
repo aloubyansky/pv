@@ -22,87 +22,76 @@
 
 package org.jboss.provision.info;
 
+import org.jboss.provision.ProvisionErrors;
+
 /**
  *
  * @author Alexey Loubyansky
  */
-public interface ContentPath {
+public abstract class ContentPath {
 
-    Builder BUILDER = new Builder();
-
-    class Builder {
-
-        private static final class ContentPathImpl implements ContentPath {
-            private final String namedLocation;
-            private final String relativePath;
-
-            private ContentPathImpl(String namedLocation, String relativePath) {
-                this.namedLocation = namedLocation;
-                this.relativePath = relativePath;
-            }
-
-            public String getNamedLocation() {
-                return namedLocation;
-            }
-
-            public String getRelativePath() {
-                return relativePath;
-            }
-
-            @Override
-            public int hashCode() {
-                final int prime = 31;
-                int result = 1;
-                result = prime * result + ((namedLocation == null) ? 0 : namedLocation.hashCode());
-                result = prime * result + ((relativePath == null) ? 0 : relativePath.hashCode());
-                return result;
-            }
-
-            @Override
-            public boolean equals(Object obj) {
-                if (this == obj)
-                    return true;
-                if (obj == null)
-                    return false;
-                if (getClass() != obj.getClass())
-                    return false;
-                ContentPathImpl other = (ContentPathImpl) obj;
-                if (namedLocation == null) {
-                    if (other.namedLocation != null)
-                        return false;
-                } else if (!namedLocation.equals(other.namedLocation))
-                    return false;
-                if (relativePath == null) {
-                    if (other.relativePath != null)
-                        return false;
-                } else if (!relativePath.equals(other.relativePath))
-                    return false;
-                return true;
-            }
-
-            @Override
-            public String toString() {
-                if(namedLocation == null) {
-                    return relativePath;
-                }
-                final StringBuilder buf = new StringBuilder();
-                return buf.append('$').append(namedLocation).append('/').append(relativePath).toString();
-            }
-        }
-
-        private Builder() {
-        }
-
-        public ContentPath build(final String relativePath) {
-            return build(null, relativePath);
-        }
-
-        public ContentPath build(final String namedLocation, final String relativePath) {
-            return new ContentPathImpl(namedLocation, relativePath);
-        }
+    public static ContentPath create(final String relativePath) {
+        return create(null, relativePath);
     }
 
-    String getNamedLocation();
+    public static ContentPath create(final String namedLocation, final String relativePath) {
+        return new ContentPath(namedLocation, relativePath){};
+    }
 
-    String getRelativePath();
+    private final String namedLocation;
+    private final String relativePath;
+
+    protected ContentPath(String namedLocation, String relativePath) {
+        assert relativePath != null : ProvisionErrors.nullArgument("relativePath");
+        this.namedLocation = namedLocation;
+        this.relativePath = relativePath;
+    }
+
+    public String getNamedLocation() {
+        return namedLocation;
+    }
+
+    public String getRelativePath() {
+        return relativePath;
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((namedLocation == null) ? 0 : namedLocation.hashCode());
+        result = prime * result + ((relativePath == null) ? 0 : relativePath.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (!(obj instanceof ContentPath))
+            return false;
+        ContentPath other = (ContentPath) obj;
+        if (namedLocation == null) {
+            if (other.namedLocation != null)
+                return false;
+        } else if (!namedLocation.equals(other.namedLocation))
+            return false;
+        if (relativePath == null) {
+            if (other.relativePath != null)
+                return false;
+        } else if (!relativePath.equals(other.relativePath))
+            return false;
+        return true;
+    }
+
+    @Override
+    public String toString() {
+        if(namedLocation == null) {
+            return relativePath;
+        }
+        final StringBuilder buf = new StringBuilder();
+        return buf.append('$').append(namedLocation).append('/').append(relativePath).toString();
+    }
 }

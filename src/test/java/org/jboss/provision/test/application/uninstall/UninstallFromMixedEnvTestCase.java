@@ -76,7 +76,7 @@ public class UninstallFromMixedEnvTestCase extends ApplicationTestBase {
         AssertUtil.assertExpectedContentInTarget(temp, testInstall.getHome(), true);
         AssertUtil.assertExpectedContentInTarget(originalInstall.getHome(), testInstall.getHome(), true);
 
-        final ProvisionEnvironment env = ProvisionEnvironment.create().setInstallationHome(testInstall.getHome()).build();
+        final ProvisionEnvironment env = ProvisionEnvironment.create().setEnvironmentHome(testInstall.getHome()).build();
         ProvisionTool.apply(env, archive);
 
         AssertUtil.assertExpectedContentInTarget(temp, testInstall.getHome(), true);

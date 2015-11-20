@@ -333,7 +333,7 @@ class ProvisionXml_1_0 implements XMLStreamConstants, XMLElementReader<ParsingRe
         if(hash == null) {
             ParseUtils.missingRequiredAttributes(reader, Attribute.HASH.name);
         }
-        return ContentItemInstruction.Builder.addContent(ContentPath.BUILDER.build(location, path), HashUtils.hexStringToByteArray(hash)).build();
+        return ContentItemInstruction.Builder.addContent(ContentPath.create(location, path), HashUtils.hexStringToByteArray(hash)).build();
     }
 
     private ContentItemInstruction readRemoveInstruction(XMLExtendedStreamReader reader) throws XMLStreamException {
@@ -360,7 +360,7 @@ class ProvisionXml_1_0 implements XMLStreamConstants, XMLElementReader<ParsingRe
         if(hash == null) {
             ParseUtils.missingRequiredAttributes(reader, Attribute.HASH.name);
         }
-        return ContentItemInstruction.Builder.removeContent(ContentPath.BUILDER.build(location, path), HashUtils.hexStringToByteArray(hash)).build();
+        return ContentItemInstruction.Builder.removeContent(ContentPath.create(location, path), HashUtils.hexStringToByteArray(hash)).build();
     }
 
     private ContentItemInstruction readReplaceInstruction(XMLExtendedStreamReader reader) throws XMLStreamException {
@@ -393,7 +393,7 @@ class ProvisionXml_1_0 implements XMLStreamConstants, XMLElementReader<ParsingRe
         if(replacedHash == null) {
             ParseUtils.missingRequiredAttributes(reader, Attribute.REPLACED_HASH.name);
         }
-        return ContentItemInstruction.Builder.replaceContent(ContentPath.BUILDER.build(location, path),
+        return ContentItemInstruction.Builder.replaceContent(ContentPath.create(location, path),
                 HashUtils.hexStringToByteArray(hash),
                 HashUtils.hexStringToByteArray(replacedHash)).build();
     }

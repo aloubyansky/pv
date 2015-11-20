@@ -42,8 +42,8 @@ public abstract class ProvisionEnvironment {
 
     public static class Builder {
 
-        private File installationHome;
-        private Map<String, File> paths = Collections.emptyMap();
+        private File envHome;
+        private Map<String, File> namedLocations = Collections.emptyMap();
         private Map<String, File> unitHomes = Collections.emptyMap();
         private UnitUpdatePolicy defaultUnitUpdatePolicy = UnitUpdatePolicy.UNIT_FORCED_CONTENT_CONDITIONED;
         private Map<String, UnitUpdatePolicy> unitUpdatePolicies = Collections.emptyMap();
@@ -52,20 +52,20 @@ public abstract class ProvisionEnvironment {
         private Builder() {
         }
 
-        public Builder setInstallationHome(File installationHome) {
-            this.installationHome = installationHome;
+        public Builder setEnvironmentHome(File envHome) {
+            this.envHome = envHome;
             return this;
         }
 
         public Builder nameLocation(String name, File path) {
-            switch(paths.size()) {
+            switch(namedLocations.size()) {
                 case 0:
-                    paths = Collections.singletonMap(name, path);
+                    namedLocations = Collections.singletonMap(name, path);
                     break;
                 case 1:
-                    paths = new HashMap<String, File>(paths);
+                    namedLocations = new HashMap<String, File>(namedLocations);
                 default:
-                    paths.put(name, path);
+                    namedLocations.put(name, path);
             }
             return this;
         }
@@ -129,20 +129,20 @@ public abstract class ProvisionEnvironment {
     }
 
     protected ProvisionEnvironment(Builder builder) {
-        assert builder.installationHome != null : ProvisionErrors.nullArgument("home");
-        assert builder.paths != null : ProvisionErrors.nullArgument("paths");
+        assert builder.envHome != null : ProvisionErrors.nullArgument("envHome");
+        assert builder.namedLocations != null : ProvisionErrors.nullArgument("namedLocations");
         assert builder.unitHomes != null : ProvisionErrors.nullArgument("unitHome");
         assert builder.defaultUnitUpdatePolicy != null : ProvisionErrors.nullArgument("defaultUnitUpdatePolicy");
         assert builder.unitUpdatePolicies != null : ProvisionErrors.nullArgument("unitUpdatePolicies");
-        this.installHome = builder.installationHome;
-        this.namedLocations = builder.paths;
+        this.envHome = builder.envHome;
+        this.namedLocations = builder.namedLocations;
         this.unitHomes = builder.unitHomes;
         this.defaultUnitPolicy = builder.defaultUnitUpdatePolicy;
         this.unitUpdatePolicies = builder.unitUpdatePolicies;
         this.unitInfos = builder.unitInfos;
     }
 
-    private final File installHome;
+    private final File envHome;
     private final Map<String, File> namedLocations;
     private final Map<String, File> unitHomes;
     private final UnitUpdatePolicy defaultUnitPolicy;
@@ -151,8 +151,8 @@ public abstract class ProvisionEnvironment {
 
     //java.util.Date getLastModifiedDate();
 
-    public File getInstallationHome() {
-        return installHome;
+    public File getEnvironmentHome() {
+        return envHome;
     }
 
     public Set<String> getUnitNames() {
@@ -200,7 +200,7 @@ public abstract class ProvisionEnvironment {
         final int prime = 31;
         int result = 1;
         result = prime * result + ((defaultUnitPolicy == null) ? 0 : defaultUnitPolicy.hashCode());
-        result = prime * result + ((installHome == null) ? 0 : installHome.hashCode());
+        result = prime * result + ((envHome == null) ? 0 : envHome.hashCode());
         result = prime * result + ((namedLocations == null) ? 0 : namedLocations.hashCode());
         result = prime * result + ((unitHomes == null) ? 0 : unitHomes.hashCode());
         result = prime * result + ((unitInfos == null) ? 0 : unitInfos.hashCode());
@@ -214,7 +214,7 @@ public abstract class ProvisionEnvironment {
             return true;
         if (obj == null)
             return false;
-        if (getClass() != obj.getClass())
+        if (!(obj instanceof ProvisionEnvironment))
             return false;
         ProvisionEnvironment other = (ProvisionEnvironment) obj;
         if (defaultUnitPolicy == null) {
@@ -222,10 +222,10 @@ public abstract class ProvisionEnvironment {
                 return false;
         } else if (!defaultUnitPolicy.equals(other.defaultUnitPolicy))
             return false;
-        if (installHome == null) {
-            if (other.installHome != null)
+        if (envHome == null) {
+            if (other.envHome != null)
                 return false;
-        } else if (!installHome.getAbsolutePath().equals(other.installHome.getAbsolutePath())) {
+        } else if (!envHome.getAbsolutePath().equals(other.envHome.getAbsolutePath())) {
             return false;
         }
         if (namedLocations == null) {

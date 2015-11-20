@@ -69,9 +69,9 @@ public class InstallInstructionsTestCase extends TestWithInstallationBuilder {
         assertEquals(3, contentInstructions.size());
 
         final Set<ContentPath> knownPaths = new HashSet<ContentPath>(3);
-        knownPaths.add(ContentPath.BUILDER.build("a.txt"));
-        knownPaths.add(ContentPath.BUILDER.build("b/b.txt"));
-        knownPaths.add(ContentPath.BUILDER.build("c/c/c.txt"));
+        knownPaths.add(ContentPath.create("a.txt"));
+        knownPaths.add(ContentPath.create("b/b.txt"));
+        knownPaths.add(ContentPath.create("c/c/c.txt"));
 
         for(ContentItemInstruction item : contentInstructions) {
             final ContentPath path = item.getPath();

@@ -60,8 +60,8 @@ public class ProvisionPackage {
 
     public static class Builder {
 
-        private File curInstall;
-        private File targetInstall;
+        private File curDir;
+        private File targetDir;
         private File pkgFile;
         private String patchId;
 
@@ -69,12 +69,12 @@ public class ProvisionPackage {
         }
 
         public Builder setCurrentInstallationDir(File curInstall) {
-            this.curInstall = curInstall;
+            this.curDir = curInstall;
             return this;
         }
 
         public Builder setTargetInstallationDir(File targetInstall) {
-            this.targetInstall = targetInstall;
+            this.targetDir = targetInstall;
             return this;
         }
 
@@ -89,10 +89,10 @@ public class ProvisionPackage {
         }
 
         public void build() throws ProvisionException {
-            if(curInstall == null) {
+            if(curDir == null) {
                 buildInstall();
             } else {
-                if(targetInstall == null) {
+                if(targetDir == null) {
                     buildUninstall();
                 } else {
                     buildUpdate();
@@ -102,12 +102,12 @@ public class ProvisionPackage {
 
         public void buildUpdate() throws ProvisionException {
 
-            assertExists(curInstall, "currentInstallationDir");
-            assertExists(targetInstall, "targetInstallationDir");
-            final ProvisionUnitContentInfo currentContent = ProvisionInfoReader.readContentInfo(ProvisionUnitInfo.UNDEFINED_INFO.getName(), ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), curInstall);
-            final ProvisionUnitContentInfo targetContent = ProvisionInfoReader.readContentInfo(ProvisionUnitInfo.UNDEFINED_INFO.getName(), ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), targetInstall);
+            assertExists(curDir, "currentInstallationDir");
+            assertExists(targetDir, "targetInstallationDir");
+            final ProvisionUnitContentInfo currentContent = ProvisionInfoReader.readContentInfo(ProvisionUnitInfo.UNDEFINED_INFO.getName(), ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), curDir);
+            final ProvisionUnitContentInfo targetContent = ProvisionInfoReader.readContentInfo(ProvisionUnitInfo.UNDEFINED_INFO.getName(), ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), targetDir);
             final ProvisionUnitInstruction replaceInstruction = ProvisionInstructionBuilder.patch(patchId, currentContent, targetContent);
-            ProvisionPackage.build(ProvisionPackageInstruction.Builder.newPackage().add(replaceInstruction).build(), targetInstall, pkgFile);
+            ProvisionPackage.build(ProvisionPackageInstruction.Builder.newPackage().add(replaceInstruction).build(), targetDir, pkgFile);
         }
 
         public void buildInstall() throws ProvisionException {
@@ -115,10 +115,10 @@ public class ProvisionPackage {
             if(patchId != null) {
                 throw ProvisionErrors.patchCantChangeVersion();
             }
-            assertExists(targetInstall, "targetInstallationDir");
-            final ProvisionUnitContentInfo contentInfo = ProvisionInfoReader.readContentInfo(ProvisionUnitInfo.UNDEFINED_INFO.getName(), ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), targetInstall);
+            assertExists(targetDir, "targetInstallationDir");
+            final ProvisionUnitContentInfo contentInfo = ProvisionInfoReader.readContentInfo(ProvisionUnitInfo.UNDEFINED_INFO.getName(), ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), targetDir);
             final ProvisionUnitInstruction installInstruction = ProvisionInstructionBuilder.install(contentInfo);
-            ProvisionPackage.build(ProvisionPackageInstruction.Builder.newPackage().add(installInstruction).build(), targetInstall, pkgFile);
+            ProvisionPackage.build(ProvisionPackageInstruction.Builder.newPackage().add(installInstruction).build(), targetDir, pkgFile);
         }
 
         public void buildUninstall() throws ProvisionException {
@@ -126,10 +126,10 @@ public class ProvisionPackage {
             if(patchId != null) {
                 throw ProvisionErrors.patchCantChangeVersion();
             }
-            assertExists(curInstall, "currentInstallationDir");
-            final ProvisionUnitContentInfo contentInfo = ProvisionInfoReader.readContentInfo(ProvisionUnitInfo.UNDEFINED_INFO.getName(), ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), curInstall);
+            assertExists(curDir, "currentInstallationDir");
+            final ProvisionUnitContentInfo contentInfo = ProvisionInfoReader.readContentInfo(ProvisionUnitInfo.UNDEFINED_INFO.getName(), ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), curDir);
             final ProvisionUnitInstruction uninstallInstruction = ProvisionInstructionBuilder.uninstall(contentInfo);
-            ProvisionPackage.build(ProvisionPackageInstruction.Builder.newPackage().add(uninstallInstruction).build(), curInstall, pkgFile);
+            ProvisionPackage.build(ProvisionPackageInstruction.Builder.newPackage().add(uninstallInstruction).build(), curDir, pkgFile);
         }
 
         private void assertExists(File f, String argName) throws ProvisionException {

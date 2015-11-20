@@ -54,9 +54,9 @@ public class AuditUtil {
     private static final String CONTENT_POLICY = ".content";
     private static final String DOT = ".";
     private static final String DEFAULT_POLICY = "default-policy";
+    private static final String ENV_HOME = "env-home";
     private static final String FALSE = "false";
     private static final String HASH = "hash";
-    private static final String INSTALLATION_HOME = "installation-home";
     private static final String LOCATION = "location.";
     private static final String POLICY = ".policy";
     private static final String RELATIVE_PATH = "relative-path";
@@ -116,7 +116,7 @@ public class AuditUtil {
         if(relativePath == null) {
             throw ProvisionErrors.failedToLoadInstructionAuditRecord(ProvisionErrors.relativePathMissing());
         }
-        final ContentPath path = ContentPath.BUILDER.build(location, relativePath);
+        final ContentPath path = ContentPath.create(location, relativePath);
 
         final byte[] hash = props.containsKey(HASH) ? HashUtils.hexStringToByteArray(props.getProperty(HASH)) : null;
         final byte[] replacedHash = props.containsKey(REPLACED_HASH) ? HashUtils.hexStringToByteArray(props.getProperty(REPLACED_HASH)) : null;
@@ -146,7 +146,7 @@ public class AuditUtil {
         }
 
         final Properties props = new Properties();
-        props.setProperty(INSTALLATION_HOME, env.getInstallationHome().getAbsolutePath());
+        props.setProperty(ENV_HOME, env.getEnvironmentHome().getAbsolutePath());
 
         final UnitUpdatePolicy defaultPolicy = env.getDefaultUnitPolicy();
         props.setProperty(DEFAULT_POLICY + UNIT_POLICY, defaultPolicy.getUnitPolicy().name());
@@ -205,8 +205,8 @@ public class AuditUtil {
         Map<String, UnitUpdatePolicy.Builder> unitPolicies = null;
         Set<String> addedUnits = Collections.emptySet();
         for(String prop : props.stringPropertyNames()) {
-            if(prop.equals(INSTALLATION_HOME)) {
-                envBuilder.setInstallationHome(new File(props.getProperty(prop)));
+            if(prop.equals(ENV_HOME)) {
+                envBuilder.setEnvironmentHome(new File(props.getProperty(prop)));
             } else if(prop.startsWith(DEFAULT_POLICY)) {
                 if(defPolicy == null) {
                     defPolicy = UnitUpdatePolicy.newBuilder();

@@ -82,7 +82,7 @@ public abstract class ProvisionUnitInfo {
             return true;
         if (obj == null)
             return false;
-        if (getClass() != obj.getClass())
+        if (!(obj instanceof ProvisionUnitInfo))
             return false;
         ProvisionUnitInfo other = (ProvisionUnitInfo) obj;
         if (name == null) {

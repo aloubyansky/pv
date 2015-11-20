@@ -81,7 +81,7 @@ class AuditSessionImpl implements AuditSession {
 
         assert env != null : ProvisionErrors.nullArgument("env");
 
-        auditHome = new File(env.getInstallationHome(), AUDIT_DIR);
+        auditHome = new File(env.getEnvironmentHome(), AUDIT_DIR);
         instructionsDir = new File(auditHome, INSTR_DIR);
         contentDir = new File(auditHome, CONTENT_DIR);
     }

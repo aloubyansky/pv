@@ -182,7 +182,7 @@ public abstract class ProvisionUnitInstruction extends ProvisionUnitInfo {
             return true;
         if (!super.equals(obj))
             return false;
-        if (getClass() != obj.getClass())
+        if (!(obj instanceof ProvisionUnitInstruction))
             return false;
         ProvisionUnitInstruction other = (ProvisionUnitInstruction) obj;
         if (conditions == null) {

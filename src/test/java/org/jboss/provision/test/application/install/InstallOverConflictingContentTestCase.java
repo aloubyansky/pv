@@ -54,7 +54,7 @@ public class InstallOverConflictingContentTestCase extends ApplicationTestBase {
 
         testInstall.createFileWithRandomContent("b/b.txt");
 
-        ProvisionEnvironment env = ProvisionEnvironment.create().setInstallationHome(testInstall.getHome()).build();
+        ProvisionEnvironment env = ProvisionEnvironment.create().setEnvironmentHome(testInstall.getHome()).build();
         try {
             ProvisionTool.apply(env, archive);
             fail("install didn't fail");
@@ -65,7 +65,7 @@ public class InstallOverConflictingContentTestCase extends ApplicationTestBase {
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), true);
 
         env = ProvisionEnvironment.create()
-                .setInstallationHome(testInstall.getHome())
+                .setEnvironmentHome(testInstall.getHome())
                 .setDefaultUnitUpdatePolicy(UnitUpdatePolicy.FORCED).build();
         ProvisionTool.apply(env, archive);
 
