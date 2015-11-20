@@ -34,13 +34,13 @@ import org.jboss.provision.ProvisionErrors;
  *
  * @author Alexey Loubyansky
  */
-public interface ProvisionUnitContentInfo extends ProvisionUnitInfo {
+public abstract class ProvisionUnitContentInfo extends ProvisionUnitInfo {
 
-    class Builder {
+    public static Builder forUnit(String name, String version) {
+        return new Builder(name, version);
+    }
 
-        public static Builder forUnit(String name, String version) {
-            return new Builder(name, version);
-        }
+    public static class Builder {
 
         private final String name;
         private final String version;
@@ -68,34 +68,27 @@ public interface ProvisionUnitContentInfo extends ProvisionUnitInfo {
         }
 
         public ProvisionUnitContentInfo build() {
-            return new ProvisionUnitContentInfo() {
-                public String getName() {
-                    return name;
-                }
-
-                public String getVersion() {
-                    return version;
-                }
-
-                public Set<ContentPath> getPaths() {
-                    return content.keySet();
-                }
-
-                public ContentItemInfo getContentInfo(ContentPath path) {
-                    assert path != null : ProvisionErrors.nullArgument("path");
-                    return content.get(path);
-                }
-
-                public Collection<ContentItemInfo> getContentInfo() {
-                    return content.values();
-                }
-            };
+            return new ProvisionUnitContentInfo(name, version, content) {};
         }
     };
 
-    Set<ContentPath> getPaths();
+    protected final Map<ContentPath, ContentItemInfo> content;
 
-    Collection<ContentItemInfo> getContentInfo();
+    protected ProvisionUnitContentInfo(String name, String version, Map<ContentPath, ContentItemInfo> content) {
+        super(name, version);
+        this.content = content;
+    }
 
-    ContentItemInfo getContentInfo(ContentPath path);
+    public Set<ContentPath> getPaths() {
+        return content.keySet();
+    }
+
+    public Collection<ContentItemInfo> getContentInfo() {
+        return content.values();
+    }
+
+    public ContentItemInfo getContentInfo(ContentPath path) {
+        assert path != null : ProvisionErrors.nullArgument("path");
+        return content.get(path);
+    }
 }

@@ -21,39 +21,81 @@
  */
 package org.jboss.provision.info;
 
+import org.jboss.provision.ProvisionErrors;
+
 
 /**
  * Represents target installation.
  *
  * @author Alexey Loubyansky
  */
-public interface ProvisionUnitInfo {
+public abstract class ProvisionUnitInfo {
 
-    ProvisionUnitInfo UNDEFINED = new ProvisionUnitInfo() {
-        String UNDEFINED_STR = "UNDEFINED";
+    public static final String UNDEFINED_NAME = "UNDEFINED";
+    public static final String UNDEFINED_VERSION = UNDEFINED_NAME;
 
-        @Override
-        public String getName() {
-            return UNDEFINED_STR;
-        }
+    public static final ProvisionUnitInfo UNDEFINED_INFO = createInfo(UNDEFINED_NAME, UNDEFINED_VERSION);
 
-        @Override
-        public String getVersion() {
-            return UNDEFINED_STR;
-        }
-    };
+    public static ProvisionUnitInfo createInfo(String name, String version) {
+        return new ProvisionUnitInfo(name, version) {};
+    }
 
+    protected final String name;
+    protected final String version;
+
+    protected ProvisionUnitInfo(String name, String version) {
+        assert name != null : ProvisionErrors.nullArgument("name");
+        //assert version != null : ProvisionErrors.nullArgument("version");
+        this.name = name;
+        this.version = version;
+    }
     /**
      * Name of the unit.
      *
      * @return  unit name
      */
-    String getName();
+    public String getName() {
+        return name;
+    }
 
     /**
      * Version of the unit.
      *
      * @return  unit version
      */
-    String getVersion();
+    public String getVersion() {
+        return version;
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((name == null) ? 0 : name.hashCode());
+        result = prime * result + ((version == null) ? 0 : version.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        ProvisionUnitInfo other = (ProvisionUnitInfo) obj;
+        if (name == null) {
+            if (other.name != null)
+                return false;
+        } else if (!name.equals(other.name))
+            return false;
+        if (version == null) {
+            if (other.version != null)
+                return false;
+        } else if (!version.equals(other.version)) {
+            return false;
+        }
+        return true;
+    }
 }

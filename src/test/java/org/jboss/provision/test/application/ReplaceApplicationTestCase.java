@@ -83,7 +83,7 @@ public class ReplaceApplicationTestCase {
             .buildUpdate();
 
         AssertUtil.assertNotIdentical(original.getHome(), next.getHome(), true);
-        final ProvisionEnvironment env = ProvisionEnvironment.Builder.create().setInstallationHome(original.getHome()).build();
+        final ProvisionEnvironment env = ProvisionEnvironment.create().setInstallationHome(original.getHome()).build();
         ProvisionTool.apply(env, archive);
 
         AssertUtil.assertIdentical(next.getHome(), original.getHome(), true);

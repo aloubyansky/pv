@@ -190,4 +190,8 @@ public class ProvisionErrors {
     public static ProvisionException unknownEnvironmentProperty(String prop) {
         return new ProvisionException("Unknown provision environment property: " + prop);
     }
+
+    public static ProvisionException unknownUnit(String unitName) {
+        return new ProvisionException("Unknown unit " + unitName);
+    }
 }

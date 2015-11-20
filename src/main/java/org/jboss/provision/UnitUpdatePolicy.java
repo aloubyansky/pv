@@ -45,6 +45,11 @@ public abstract class UnitUpdatePolicy {
             .setDefaultContentPolicy(UpdatePolicy.FORCED)
             .build();
 
+    public static final UnitUpdatePolicy CONDITIONED = UnitUpdatePolicy.newBuilder()
+            .setUnitPolicy(UpdatePolicy.CONDITIONED)
+            .setDefaultContentPolicy(UpdatePolicy.CONDITIONED)
+            .build();
+
     public static Builder newBuilder() {
         return new Builder();
     }
@@ -116,5 +121,37 @@ public abstract class UnitUpdatePolicy {
         }
         final UpdatePolicy policy = pathPolicy.get(path);
         return policy == null ? defaultContentPolicy : policy;
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((defaultContentPolicy == null) ? 0 : defaultContentPolicy.hashCode());
+        result = prime * result + ((pathPolicy == null) ? 0 : pathPolicy.hashCode());
+        result = prime * result + ((unitPolicy == null) ? 0 : unitPolicy.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        UnitUpdatePolicy other = (UnitUpdatePolicy) obj;
+        if (defaultContentPolicy != other.defaultContentPolicy)
+            return false;
+        if (pathPolicy == null) {
+            if (other.pathPolicy != null)
+                return false;
+        } else if (!pathPolicy.equals(other.pathPolicy))
+            return false;
+        if (unitPolicy != other.unitPolicy) {
+            return false;
+        }
+        return true;
     }
 }

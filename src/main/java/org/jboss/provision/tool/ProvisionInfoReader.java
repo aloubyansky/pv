@@ -42,12 +42,12 @@ public class ProvisionInfoReader {
     }
 
     public static ProvisionUnitContentInfo readContentInfo(File root) throws ProvisionException {
-        return readContentInfo(ProvisionUnitInfo.UNDEFINED.getName(), ProvisionUnitInfo.UNDEFINED.getVersion(), root);
+        return readContentInfo(ProvisionUnitInfo.UNDEFINED_INFO.getName(), ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), root);
     }
 
     public static ProvisionUnitContentInfo readContentInfo(String name, String version, File root) throws ProvisionException {
 
-        final ProvisionUnitContentInfo.Builder builder = ProvisionUnitContentInfo.Builder.forUnit(name, version);
+        final ProvisionUnitContentInfo.Builder builder = ProvisionUnitContentInfo.forUnit(name, version);
         if(root.exists()) {
             readContentInfo(builder, root, root.getAbsolutePath().length() + 1);
         }

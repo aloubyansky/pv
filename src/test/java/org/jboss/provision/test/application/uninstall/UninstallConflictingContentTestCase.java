@@ -81,7 +81,7 @@ public class UninstallConflictingContentTestCase extends ApplicationTestBase {
         AssertUtil.assertExpectedContentInTarget(temp, testInstall.getHome(), false);
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
 
-        ProvisionEnvironment env = ProvisionEnvironment.Builder.create().setInstallationHome(testInstall.getHome()).build();
+        ProvisionEnvironment env = ProvisionEnvironment.create().setInstallationHome(testInstall.getHome()).build();
         try {
             ProvisionTool.apply(env, archive);
             Assert.fail("Modified content uninstalled");
@@ -92,7 +92,7 @@ public class UninstallConflictingContentTestCase extends ApplicationTestBase {
         AssertUtil.assertExpectedContentInTarget(temp, testInstall.getHome(), false);
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
 
-        env = ProvisionEnvironment.Builder.create()
+        env = ProvisionEnvironment.create()
                 .setInstallationHome(testInstall.getHome())
                 .setDefaultUnitUpdatePolicy(UnitUpdatePolicy.FORCED).build();
         ProvisionTool.apply(env, archive);

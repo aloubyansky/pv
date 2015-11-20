@@ -150,7 +150,7 @@ class ApplicationContextImpl implements ApplicationContext {
 
     private void assertCanApplyUnit() throws ProvisionException {
 
-        final UnitUpdatePolicy updatePolicy = env.getUnitUpdatePolicy(this.unitName);
+        final UnitUpdatePolicy updatePolicy = env.resolveUnitPolicy(this.unitName);
         if (updatePolicy.getUnitPolicy() == UpdatePolicy.IGNORED) {
             return;
         }

@@ -103,13 +103,13 @@ public class PatchPackagingTestCase extends PackagingTestBase {
         }
 
         assertNotNull(instruction);
-        assertEquals(Collections.singleton(ProvisionUnitInfo.UNDEFINED.getName()), instruction.getUnitNames());
-        final ProvisionUnitInstruction unit = instruction.getUnitInstruction(ProvisionUnitInfo.UNDEFINED.getName());
+        assertEquals(Collections.singleton(ProvisionUnitInfo.UNDEFINED_INFO.getName()), instruction.getUnitNames());
+        final ProvisionUnitInstruction unit = instruction.getUnitInstruction(ProvisionUnitInfo.UNDEFINED_INFO.getName());
         assertNotNull(unit);
 
-        assertEquals(ProvisionUnitInfo.UNDEFINED.getName(), unit.getName());
-        assertEquals(ProvisionUnitInfo.UNDEFINED.getVersion(), unit.getVersion());
-        assertEquals(ProvisionUnitInfo.UNDEFINED.getVersion(), unit.getReplacedVersion());
+        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getName(), unit.getName());
+        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), unit.getVersion());
+        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), unit.getReplacedVersion());
         assertEquals("patch1", unit.getId());
 
         assertEquals(1, unit.getConditions().size());  // version check condition

@@ -26,9 +26,12 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionEnvironment.Builder;
@@ -36,6 +39,7 @@ import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.UnitUpdatePolicy;
 import org.jboss.provision.info.ContentPath;
+import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
 import org.jboss.provision.tool.instruction.UpdatePolicy;
 import org.jboss.provision.util.HashUtils;
@@ -45,7 +49,7 @@ import org.jboss.provision.util.IoUtils;
  *
  * @author Alexey Loubyansky
  */
-class AuditUtil {
+public class AuditUtil {
 
     private static final String CONTENT_POLICY = ".content";
     private static final String DOT = ".";
@@ -53,14 +57,15 @@ class AuditUtil {
     private static final String FALSE = "false";
     private static final String HASH = "hash";
     private static final String INSTALLATION_HOME = "installation-home";
-    private static final String LOCATION = "location";
-    private static final String POLICY = "policy.";
+    private static final String LOCATION = "location.";
+    private static final String POLICY = ".policy";
     private static final String RELATIVE_PATH = "relative-path";
     private static final String REPLACED_HASH = "replaced-hash";
     private static final String REQUIRED = "required";
     private static final String TRUE = "true";
-    private static final String UNIT_HOME = "home.";
+    private static final String UNIT_HOME = ".home";
     private static final String UNIT_POLICY = ".unit";
+    private static final String VERSION = ".version";
 
     static void record(ContentItemInstruction instruction, File f) throws ProvisionException {
 
@@ -131,7 +136,7 @@ class AuditUtil {
         return builder.setRequired(TRUE.equals(props.getProperty(REQUIRED))).build();
     }
 
-    static void record(ProvisionEnvironment env, File f) throws ProvisionException {
+    public static void record(ProvisionEnvironment env, File f) throws ProvisionException {
 
         assert env != null : ProvisionErrors.nullArgument("env");
         assert f != null : ProvisionErrors.nullArgument("file");
@@ -143,7 +148,7 @@ class AuditUtil {
         final Properties props = new Properties();
         props.setProperty(INSTALLATION_HOME, env.getInstallationHome().getAbsolutePath());
 
-        final UnitUpdatePolicy defaultPolicy = env.getDefaultUnitUpdatePolicy();
+        final UnitUpdatePolicy defaultPolicy = env.getDefaultUnitPolicy();
         props.setProperty(DEFAULT_POLICY + UNIT_POLICY, defaultPolicy.getUnitPolicy().name());
         props.setProperty(DEFAULT_POLICY + CONTENT_POLICY, defaultPolicy.getDefaultContentPolicy().name());
         for(String path : defaultPolicy.getPaths()) {
@@ -151,21 +156,26 @@ class AuditUtil {
         }
 
         for(String unitName : env.getUnitNames()) {
+            props.setProperty(unitName + VERSION, env.getUnitInfo(unitName).getVersion());
             final File unitHome = env.getUnitHome(unitName);
             if(unitHome != null) {
-                props.setProperty(UNIT_HOME + unitName, unitHome.getAbsolutePath());
+                props.setProperty(unitName + UNIT_HOME, unitHome.getAbsolutePath());
             }
-            final UnitUpdatePolicy updatePolicy = env.getUnitUpdatePolicy(unitName);
+            final UnitUpdatePolicy updatePolicy = env.getUnitPolicy(unitName);
             if(updatePolicy != null) {
-                props.setProperty(POLICY + unitName + UNIT_POLICY, updatePolicy.getUnitPolicy().name());
-                props.setProperty(POLICY + unitName + CONTENT_POLICY, updatePolicy.getDefaultContentPolicy().name());
+                props.setProperty(unitName + POLICY + UNIT_POLICY, updatePolicy.getUnitPolicy().name());
+                props.setProperty(unitName + POLICY + CONTENT_POLICY, updatePolicy.getDefaultContentPolicy().name());
                 for(String path : updatePolicy.getPaths()) {
                     final UpdatePolicy pathPolicy = updatePolicy.getContentPolicy(path);
                     if(pathPolicy != null) {
-                        props.setProperty(POLICY + unitName + DOT + path, pathPolicy.name());
+                        props.setProperty(unitName + POLICY + DOT + path, pathPolicy.name());
                     }
                 }
             }
+        }
+
+        for(String name : env.getLocationNames()) {
+            props.setProperty(LOCATION + name, env.resolveNamedLocation(name).getAbsolutePath());
         }
 
         try {
@@ -175,7 +185,7 @@ class AuditUtil {
         }
     }
 
-    static ProvisionEnvironment loadEnv(File f) throws ProvisionException {
+    public static ProvisionEnvironment loadEnv(File f) throws ProvisionException {
 
         assert f != null : ProvisionErrors.nullArgument("file");
 
@@ -190,9 +200,10 @@ class AuditUtil {
             throw ProvisionErrors.failedToLoadEnvironmentAuditRecord(e);
         }
 
-        final Builder envBuilder = ProvisionEnvironment.Builder.create();
+        final Builder envBuilder = ProvisionEnvironment.create();
         UnitUpdatePolicy.Builder defPolicy = null;
         Map<String, UnitUpdatePolicy.Builder> unitPolicies = null;
+        Set<String> addedUnits = Collections.emptySet();
         for(String prop : props.stringPropertyNames()) {
             if(prop.equals(INSTALLATION_HOME)) {
                 envBuilder.setInstallationHome(new File(props.getProperty(prop)));
@@ -208,34 +219,49 @@ class AuditUtil {
                     final String path = prop.substring(DEFAULT_POLICY.length() + 1);
                     defPolicy.setPolicy(path, UpdatePolicy.valueOf(props.getProperty(prop)));
                 }
-            } else if(prop.startsWith(UNIT_HOME)) {
-                final String unitName = prop.substring(UNIT_HOME.length());
-                envBuilder.setUnitHome(unitName, new File(props.getProperty(prop)));
-            } else if(prop.startsWith(POLICY)) {
-                if(unitPolicies == null) {
-                    unitPolicies = new HashMap<String, UnitUpdatePolicy.Builder>();
+            } else if(prop.startsWith(LOCATION)) {
+                final String name = prop.substring(LOCATION.length());
+                envBuilder.nameLocation(name, new File(props.getProperty(prop)));
+            } else {
+                int i = prop.indexOf('.');
+                if(i <= 0) {
+                    throw ProvisionErrors.unknownEnvironmentProperty(prop);
                 }
-                int i = prop.indexOf(UNIT_POLICY);
-                if(i > 0) {
-                    final String unitName = prop.substring(POLICY.length(), i);
-                    getPolicyBuilder(unitPolicies, unitName).setUnitPolicy(UpdatePolicy.valueOf(props.getProperty(prop)));
-                } else {
-                    i = prop.indexOf(CONTENT_POLICY);
-                    if(i > 0) {
-                        final String unitName = prop.substring(POLICY.length(), i);
-                        getPolicyBuilder(unitPolicies, unitName).setDefaultContentPolicy(UpdatePolicy.valueOf(props.getProperty(prop)));
+                final String unitName = prop.substring(0, i);
+                if(!addedUnits.contains(unitName)) {
+                    envBuilder.addUnit(unitName, ProvisionUnitInfo.UNDEFINED_INFO.getVersion());
+                    switch(addedUnits.size()) {
+                        case 0:
+                            addedUnits = Collections.singleton(unitName);
+                            break;
+                        case 1:
+                            addedUnits = new HashSet<String>(addedUnits);
+                        default:
+                            addedUnits.add(unitName);
+                    }
+                }
+
+                if (prop.startsWith(UNIT_HOME, i)) {
+                    envBuilder.setUnitHome(unitName, new File(props.getProperty(prop)));
+                } else if (prop.startsWith(POLICY, i)) {
+                    if (unitPolicies == null) {
+                        unitPolicies = new HashMap<String, UnitUpdatePolicy.Builder>();
+                    }
+                    i += POLICY.length();
+                    if(prop.startsWith(UNIT_POLICY, i)) {
+                        getPolicyBuilder(unitPolicies, unitName).setUnitPolicy(UpdatePolicy.valueOf(props.getProperty(prop)));
+                    } else if(prop.startsWith(CONTENT_POLICY, i)) {
+                            getPolicyBuilder(unitPolicies, unitName).setDefaultContentPolicy(
+                                    UpdatePolicy.valueOf(props.getProperty(prop)));
                     } else {
-                        i = prop.indexOf('.', POLICY.length() + 1);
-                        if(i < 0) {
-                            throw ProvisionErrors.unknownEnvironmentProperty(prop);
-                        }
-                        final String unitName = prop.substring(POLICY.length(), i);
                         final String path = prop.substring(i + 1);
                         getPolicyBuilder(unitPolicies, unitName).setPolicy(path, UpdatePolicy.valueOf(props.getProperty(prop)));
                     }
+                } else if(prop.startsWith(VERSION, i)) {
+                    envBuilder.addUnit(unitName, props.getProperty(prop));
+                } else {
+                    throw ProvisionErrors.unknownEnvironmentProperty(prop);
                 }
-            } else {
-                throw ProvisionErrors.unknownEnvironmentProperty(prop);
             }
         }
 

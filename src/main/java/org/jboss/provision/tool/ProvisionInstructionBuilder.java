@@ -45,7 +45,7 @@ public class ProvisionInstructionBuilder {
 
     public static ProvisionUnitInstruction install(ProvisionUnitContentInfo unitInfo) {
 
-        final ProvisionUnitInstruction.Builder builder = ProvisionUnitInstruction.Builder.installUnit(unitInfo.getName(), unitInfo.getVersion());
+        final ProvisionUnitInstruction.Builder builder = ProvisionUnitInstruction.installUnit(unitInfo.getName(), unitInfo.getVersion());
         for(ContentItemInfo content : unitInfo.getContentInfo()) {
             builder.addContentInstruction(ContentItemInstruction.Builder.addContent(content.getPath(), content.getContentHash()).build());
         }
@@ -54,7 +54,7 @@ public class ProvisionInstructionBuilder {
 
     public static ProvisionUnitInstruction uninstall(ProvisionUnitContentInfo unitInfo) {
 
-        final ProvisionUnitInstruction.Builder builder = ProvisionUnitInstruction.Builder.uninstallUnit(unitInfo.getName(), unitInfo.getVersion());
+        final ProvisionUnitInstruction.Builder builder = ProvisionUnitInstruction.uninstallUnit(unitInfo.getName(), unitInfo.getVersion());
         for(ContentItemInfo content : unitInfo.getContentInfo()) {
             builder.addContentInstruction(ContentItemInstruction.Builder.removeContent(content.getPath(), content.getContentHash()).build());
         }
@@ -76,12 +76,12 @@ public class ProvisionInstructionBuilder {
             if(!nextUnit.getVersion().equals(replacedUnit.getVersion())) {
                 throw ProvisionErrors.patchCantChangeVersion();
             }
-            builder = ProvisionUnitInstruction.Builder.patchUnit(nextUnit.getName(), replacedUnit.getVersion(), patchId);
+            builder = ProvisionUnitInstruction.patchUnit(nextUnit.getName(), replacedUnit.getVersion(), patchId);
         } else {
             if(nextUnit.getVersion().equals(replacedUnit.getVersion())) {
                 throw ProvisionErrors.patchIdMissing();
             }
-            builder = ProvisionUnitInstruction.Builder.replaceUnit(nextUnit.getName(), replacedUnit.getVersion(), nextUnit.getVersion());
+            builder = ProvisionUnitInstruction.replaceUnit(nextUnit.getName(), replacedUnit.getVersion(), nextUnit.getVersion());
         }
 
         final Set<ContentPath> commonPaths = new HashSet<ContentPath>();

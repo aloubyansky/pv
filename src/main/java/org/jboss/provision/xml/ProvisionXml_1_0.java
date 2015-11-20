@@ -187,7 +187,7 @@ class ProvisionXml_1_0 implements XMLStreamConstants, XMLElementReader<ParsingRe
             ParseUtils.missingRequiredAttributes(reader, Attribute.VERSION.name);
         }
 
-        final Builder builder = ProvisionUnitInstruction.Builder.installUnit(name, version);
+        final Builder builder = ProvisionUnitInstruction.installUnit(name, version);
         readContentInstructions(reader, builder);
         return builder.build();
     }
@@ -214,7 +214,7 @@ class ProvisionXml_1_0 implements XMLStreamConstants, XMLElementReader<ParsingRe
             ParseUtils.missingRequiredAttributes(reader, Attribute.VERSION.name);
         }
 
-        final Builder builder = ProvisionUnitInstruction.Builder.uninstallUnit(name, version);
+        final Builder builder = ProvisionUnitInstruction.uninstallUnit(name, version);
         readContentInstructions(reader, builder);
         return builder.build();
     }
@@ -247,7 +247,7 @@ class ProvisionXml_1_0 implements XMLStreamConstants, XMLElementReader<ParsingRe
             ParseUtils.missingRequiredAttributes(reader, Attribute.TO.name);
         }
 
-        final Builder builder = ProvisionUnitInstruction.Builder.replaceUnit(name, to, from);
+        final Builder builder = ProvisionUnitInstruction.replaceUnit(name, to, from);
         readContentInstructions(reader, builder);
         return builder.build();
     }
@@ -280,7 +280,7 @@ class ProvisionXml_1_0 implements XMLStreamConstants, XMLElementReader<ParsingRe
             ParseUtils.missingRequiredAttributes(reader, Attribute.PATCH_ID.name);
         }
 
-        final Builder builder = ProvisionUnitInstruction.Builder.patchUnit(name, version, patchId);
+        final Builder builder = ProvisionUnitInstruction.patchUnit(name, version, patchId);
         readContentInstructions(reader, builder);
         return builder.build();
     }

@@ -55,8 +55,8 @@ public class UnitContentInfoTestCase extends TestWithInstallationBuilder {
 
         final ProvisionUnitContentInfo unitInfo = ProvisionInfoReader.readContentInfo(home.getHome());
         assertNotNull(unitInfo);
-        assertEquals(ProvisionUnitInfo.UNDEFINED.getName(), unitInfo.getName());
-        assertEquals(ProvisionUnitInfo.UNDEFINED.getVersion(), unitInfo.getVersion());
+        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getName(), unitInfo.getName());
+        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), unitInfo.getVersion());
 
         final Collection<ContentItemInfo> contentInfo = unitInfo.getContentInfo();
         assertEquals(3, contentInfo.size());

@@ -87,7 +87,7 @@ public class ReplaceConflictingContentTestCase extends ApplicationTestBase {
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
         AssertUtil.assertExpectedFilesNotInTarget(nextOriginal.getHome(), testInstall.getHome(), false);
 
-        ProvisionEnvironment env = ProvisionEnvironment.Builder.create()
+        ProvisionEnvironment env = ProvisionEnvironment.create()
                 .setInstallationHome(testInstall.getHome()).build();
         try {
             ProvisionTool.apply(env, archive);
@@ -99,7 +99,7 @@ public class ReplaceConflictingContentTestCase extends ApplicationTestBase {
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
         AssertUtil.assertExpectedFilesNotInTarget(nextOriginal.getHome(), testInstall.getHome(), false);
 
-        env = ProvisionEnvironment.Builder.create()
+        env = ProvisionEnvironment.create()
                 .setInstallationHome(testInstall.getHome())
                 .setDefaultUnitUpdatePolicy(UnitUpdatePolicy.FORCED).build();
         ProvisionTool.apply(env, archive);
