@@ -37,6 +37,7 @@ import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionEnvironment.Builder;
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
+import org.jboss.provision.ProvisionUnitEnvironment;
 import org.jboss.provision.UnitUpdatePolicy;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionUnitInfo;
@@ -156,12 +157,13 @@ public class AuditUtil {
         }
 
         for(String unitName : env.getUnitNames()) {
-            props.setProperty(unitName + VERSION, env.getUnitInfo(unitName).getVersion());
-            final ContentPath unitHome = env.getUnitHome(unitName);
+            final ProvisionUnitEnvironment unitEnv = env.getUnitEnvironment(unitName);
+            props.setProperty(unitName + VERSION, unitEnv.getUnitInfo().getVersion());
+            final ContentPath unitHome = unitEnv.getHomePath();
             if(unitHome != null) {
                 props.setProperty(unitName + UNIT_HOME, unitHome.toString());
             }
-            final UnitUpdatePolicy updatePolicy = env.getUnitPolicy(unitName);
+            final UnitUpdatePolicy updatePolicy = unitEnv.getUpdatePolicy();
             if(updatePolicy != null) {
                 props.setProperty(unitName + POLICY + UNIT_POLICY, updatePolicy.getUnitPolicy().name());
                 props.setProperty(unitName + POLICY + CONTENT_POLICY, updatePolicy.getDefaultContentPolicy().name());
@@ -200,7 +202,7 @@ public class AuditUtil {
             throw ProvisionErrors.failedToLoadEnvironmentAuditRecord(e);
         }
 
-        final Builder envBuilder = ProvisionEnvironment.create();
+        final Builder envBuilder = ProvisionEnvironment.forUndefinedUnit();
         UnitUpdatePolicy.Builder defPolicy = null;
         Map<String, UnitUpdatePolicy.Builder> unitPolicies = null;
         Set<String> addedUnits = Collections.emptySet();

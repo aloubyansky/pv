@@ -41,12 +41,12 @@ import org.jboss.provision.ApplicationContext;
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
+import org.jboss.provision.ProvisionUnitEnvironment;
 import org.jboss.provision.UnitUpdatePolicy;
 import org.jboss.provision.audit.AuditRecord;
 import org.jboss.provision.audit.AuditSession;
 import org.jboss.provision.audit.AuditSessionFactory;
 import org.jboss.provision.info.ContentPath;
-import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
 import org.jboss.provision.tool.instruction.InstructionCondition;
 import org.jboss.provision.tool.instruction.ProvisionPackageInstruction;
@@ -62,8 +62,7 @@ import org.jboss.provision.xml.ProvisionXml;
 class ApplicationContextImpl implements ApplicationContext {
 
     private final ProvisionEnvironment env;
-    private String unitName;
-    private File unitHome;
+    private ProvisionUnitEnvironment unitEnv;
     private ProvisionUnitInstruction unitInstruction;
     private FSPaths fsPaths = new FSPaths();
 
@@ -125,7 +124,7 @@ class ApplicationContextImpl implements ApplicationContext {
 
     private void revertPerformedInstructions(AuditSession session) throws ProvisionException {
         for(AuditRecord record : session.getRecorded()) {
-            final File targetFile = resolvePath(record.getInstruction().getPath());
+            final File targetFile = unitEnv.resolvePath(record.getInstruction().getPath()); // TODO THIS IS BROKEN
             if(record.getBackupFile() == null) {
                 IoUtils.recursiveDelete(targetFile);
             } else {
@@ -141,8 +140,10 @@ class ApplicationContextImpl implements ApplicationContext {
     private void assertCanApply(ProvisionPackageInstruction instructions) throws ProvisionException {
 
         for (String unitName : instructions.getUnitNames()) {
-            this.unitName = unitName;
-            this.unitHome = env.getEnvironmentHome();
+            this.unitEnv = env.getUnitEnvironment(unitName);
+            if(unitEnv == null) {
+                throw ProvisionErrors.unknownUnit(unitName);
+            }
             this.unitInstruction = instructions.getUnitInstruction(unitName);
             assertCanApplyUnit();
         }
@@ -150,7 +151,7 @@ class ApplicationContextImpl implements ApplicationContext {
 
     private void assertCanApplyUnit() throws ProvisionException {
 
-        final UnitUpdatePolicy updatePolicy = env.resolveUnitPolicy(this.unitName);
+        final UnitUpdatePolicy updatePolicy = unitEnv.resolveUpdatePolicy();
         if (updatePolicy.getUnitPolicy() == UpdatePolicy.IGNORED) {
             return;
         }
@@ -189,44 +190,8 @@ class ApplicationContextImpl implements ApplicationContext {
      * @see org.jboss.provision.tool.instruction.ProvisionEnvironment#getUnitContentInfo(java.lang.String)
      */
     @Override
-    public ProvisionUnitInfo getUnitInfo() {
-        return unitInstruction;
-    }
-
-    /* (non-Javadoc)
-     * @see org.jboss.provision.tool.instruction.ApplicationContext#getUnitHome()
-     */
-    @Override
-    public File getUnitHome() {
-        return unitHome;
-    }
-
-    /* (non-Javadoc)
-     * @see org.jboss.provision.tool.instruction.ApplicationContext#getEnvironment()
-     */
-    @Override
-    public ProvisionEnvironment getEnvironment() {
-        return env;
-    }
-
-    /* (non-Javadoc)
-     * @see org.jboss.provision.tool.instruction.ApplicationContext#resolvePath(org.jboss.provision.info.ContentPath)
-     */
-    @Override
-    public File resolvePath(ContentPath path) throws ProvisionException {
-
-        File f;
-        final String namedLocation = path.getLocationName();
-        if(namedLocation != null) {
-            f = env.resolveNamedLocation(namedLocation);
-        } else {
-            f = unitHome;
-        }
-        String relativePath = path.getRelativePath();
-        if(File.separatorChar == '\\') {
-            relativePath = relativePath.replace('/', '\\');
-        }
-        return new File(f, relativePath);
+    public ProvisionUnitEnvironment getUnitEnvironment() {
+        return unitEnv;
     }
 
     private ProvisionPackageInstruction readInstructions(File pvnPackage) throws ProvisionException {
@@ -258,62 +223,68 @@ class ApplicationContextImpl implements ApplicationContext {
          *  files or directories. If the parent dir is empty it will also be deleted
          *  and then its parent directory will checked, etc. This will trigger a cascading delete
          *  of empty parent directories up to the unit home directory */
-        private Map<ContentPath, ContentItemInstruction> deleteWithDirs = Collections.emptyMap();
+        private Map<String, ScheduledInstruction> deleteWithDirs = Collections.emptyMap();
 
         /** Unlike the previous map, deleting paths from this map won't trigger deleting empty parent directories.
          *  The logic is that these paths could be outside of the unit home branch. */
-        private Map<ContentPath, ContentItemInstruction> delete = Collections.emptyMap();
+        private Map<String, ScheduledInstruction> delete = Collections.emptyMap();
 
-        private Map<ContentPath, ContentItemInstruction> copy = Collections.emptyMap();
+        private Map<String, ScheduledInstruction> copy = Collections.emptyMap();
 
         void scheduleDelete(ContentItemInstruction item) throws ProvisionException {
 
             final ContentPath path = item.getPath();
-            if(copy.containsKey(path)) {
+            final File resolvedPath = unitEnv.resolvePath(path);
+            if(copy.containsKey(resolvedPath.getAbsolutePath())) {
                 throw ProvisionErrors.pathCopiedAndDeleted(path);
             }
 
-            if (path.getLocationName() == null) {
+            final ContentPath homePath = unitEnv.getHomePath();
+            if (homePath != null) {
                 switch (deleteWithDirs.size()) {
                     case 0:
-                        deleteWithDirs = Collections.singletonMap(path, item);
+                        deleteWithDirs = Collections.singletonMap(resolvedPath.getAbsolutePath(),
+                                new ScheduledInstruction(resolvedPath, item, unitEnv.getEnvironmentHome()));
                         break;
                     case 1:
-                        deleteWithDirs = new HashMap<ContentPath, ContentItemInstruction>(deleteWithDirs);
+                        deleteWithDirs = new HashMap<String, ScheduledInstruction>(deleteWithDirs);
                     default:
-                        deleteWithDirs.put(path, item);
+                        deleteWithDirs.put(resolvedPath.getAbsolutePath(),
+                                new ScheduledInstruction(resolvedPath, item, unitEnv.getEnvironmentHome()));
                 }
             } else {
                 switch (delete.size()) {
                     case 0:
-                        delete = Collections.singletonMap(path, item);
+                        delete = Collections.singletonMap(resolvedPath.getAbsolutePath(), new ScheduledInstruction(resolvedPath, item, null));
                         break;
                     case 1:
-                        delete = new HashMap<ContentPath, ContentItemInstruction>(delete);
+                        delete = new HashMap<String, ScheduledInstruction>(delete);
                     default:
-                        delete.put(path, item);
+                        delete.put(resolvedPath.getAbsolutePath(), new ScheduledInstruction(resolvedPath, item, unitEnv.getEnvironmentHome()));
                 }
             }
         }
 
         void scheduleCopy(ContentItemInstruction item) throws ProvisionException {
 
-            if(deleteWithDirs.containsKey(item.getPath())) {
-                throw ProvisionErrors.pathCopiedAndDeleted(item.getPath());
+            final ContentPath path = item.getPath();
+            final File resolvedPath = unitEnv.resolvePath(path);
+            if(deleteWithDirs.containsKey(resolvedPath.getAbsolutePath())) {
+                throw ProvisionErrors.pathCopiedAndDeleted(path);
             }
-            if(delete.containsKey(item.getPath())) {
-                throw ProvisionErrors.pathCopiedAndDeleted(item.getPath());
+            if(delete.containsKey(resolvedPath.getAbsolutePath())) {
+                throw ProvisionErrors.pathCopiedAndDeleted(path);
             }
 
             switch(copy.size()) {
                 case 0:
-                    copy = Collections.singletonMap(item.getPath(), item);
+                    copy = Collections.singletonMap(resolvedPath.getAbsolutePath(), new ScheduledInstruction(resolvedPath, item, unitEnv.getEnvironmentHome()));
                     break;
                 case 1:
-                    copy = new HashMap<ContentPath, ContentItemInstruction>(copy);
+                    copy = new HashMap<String, ScheduledInstruction>(copy);
                 default:
-                    if(copy.put(item.getPath(), item) != null) {
-                        throw ProvisionErrors.pathCopiedMoreThanOnce(item.getPath());
+                    if(copy.put(resolvedPath.getAbsolutePath(), new ScheduledInstruction(resolvedPath, item, unitEnv.getEnvironmentHome())) != null) {
+                        throw ProvisionErrors.pathCopiedMoreThanOnce(path);
                     }
             }
         }
@@ -323,17 +294,17 @@ class ApplicationContextImpl implements ApplicationContext {
             delete(session, delete, false);
         }
 
-        private void delete(AuditSession session, Map<ContentPath, ContentItemInstruction> delete, boolean withDirs) throws ProvisionException {
-            for (ContentItemInstruction item : delete.values()) {
-                File targetFile = resolvePath(item.getPath());
-                session.record(item, targetFile);
+        private void delete(AuditSession session, Map<String, ScheduledInstruction> delete, boolean withDirs) throws ProvisionException {
+            for (ScheduledInstruction scheduled : delete.values()) {
+                File targetFile = scheduled.targetFile;
+                session.record(scheduled.instruction, targetFile);
                 if (!IoUtils.recursiveDelete(targetFile)) {
                     throw ProvisionErrors.deleteFailed(targetFile);
                 }
                 if (withDirs) {
                     targetFile = targetFile.getParentFile();
                     while (targetFile.list().length == 0) {
-                        if(targetFile.equals(unitHome)) {
+                        if(targetFile.getAbsolutePath().equals(scheduled.unitDir.getAbsolutePath())) {
                             IoUtils.recursiveDelete(targetFile);
                             break;
                         }
@@ -347,10 +318,9 @@ class ApplicationContextImpl implements ApplicationContext {
         }
 
         void copy(AuditSession session) throws ProvisionException {
-            for (ContentItemInstruction item : copy.values()) {
-                final ContentPath path = item.getPath();
-                final File targetFile = resolvePath(path);
-                session.record(item, targetFile);
+            for (ScheduledInstruction scheduled : copy.values()) {
+                final File targetFile = scheduled.targetFile;
+                session.record(scheduled.instruction, targetFile);
                 if(!targetFile.getParentFile().exists()) {
                     if(!targetFile.getParentFile().mkdirs()) {
                         throw new ProvisionException(ProvisionErrors.couldNotCreateDir(targetFile.getParentFile()));
@@ -359,16 +329,29 @@ class ApplicationContextImpl implements ApplicationContext {
                 InputStream is = null;
                 FileOutputStream os = null;
                 try {
-                    is = zip.getInputStream(new ZipEntry(path.getRelativePath()));
+                    is = zip.getInputStream(new ZipEntry(scheduled.instruction.getPath().getRelativePath())); // TODO THIS NEEDS A BETTER PATH BINDING
                     os = new FileOutputStream(targetFile);
                     IoUtils.copyStream(is, os);
                 } catch(IOException e) {
-                    throw ProvisionErrors.failedToCopyContentFromZIP(path, targetFile, e);
+                    throw ProvisionErrors.failedToCopyContentFromZIP(scheduled.instruction.getPath(), targetFile, e);
                 } finally {
                     IoUtils.safeClose(is);
                     IoUtils.safeClose(os);
                 }
             }
+        }
+    }
+
+    private static class ScheduledInstruction {
+
+        final File targetFile;
+        final ContentItemInstruction instruction;
+        final File unitDir;
+
+        ScheduledInstruction(File targetFile, ContentItemInstruction instruction, File rootDir) {
+            this.targetFile = targetFile;
+            this.instruction = instruction;
+            this.unitDir = rootDir;
         }
     }
 }

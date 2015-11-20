@@ -194,4 +194,8 @@ public class ProvisionErrors {
     public static ProvisionException unknownUnit(String unitName) {
         return new ProvisionException("Unknown unit " + unitName);
     }
+
+    public static ProvisionException environmentHasNoUnits() {
+        return new ProvisionException("Environment has not units");
+    }
 }

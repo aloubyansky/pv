@@ -35,22 +35,25 @@ import org.jboss.provision.info.ContentPath;
  *
  * @author Alexey Loubyansky
  */
-abstract class BasicProvisionEnvironment {
+abstract class ProvisionEnvironmentBase {
 
-    private final BasicProvisionEnvironment parentEnv;
+    private final ProvisionEnvironmentBase parentEnv;
     private final Map<String, ContentPath> namedLocations;
     private final UnitUpdatePolicy updatePolicy;
 
-    BasicProvisionEnvironment(Map<String, ContentPath> namedLocations, UnitUpdatePolicy updatePolicy) {
+    ProvisionEnvironmentBase(Map<String, ContentPath> namedLocations, UnitUpdatePolicy updatePolicy) {
         this(null, namedLocations, updatePolicy);
     }
 
-    BasicProvisionEnvironment(BasicProvisionEnvironment parentEnv, Map<String, ContentPath> namedLocations, UnitUpdatePolicy updatePolicy) {
+    ProvisionEnvironmentBase(ProvisionEnvironmentBase parentEnv, Map<String, ContentPath> namedLocations, UnitUpdatePolicy updatePolicy) {
         assert namedLocations != null : ProvisionErrors.nullArgument("namedLocations");
-        assert updatePolicy != null : ProvisionErrors.nullArgument("updatePolicy");
         this.parentEnv = parentEnv;
         this.namedLocations = namedLocations;
         this.updatePolicy = updatePolicy;
+    }
+
+    protected ProvisionEnvironmentBase getParentEnv() {
+        return parentEnv;
     }
 
     public abstract File getEnvironmentHome() throws ProvisionException;
@@ -126,10 +129,14 @@ abstract class BasicProvisionEnvironment {
     }
 
     public UnitUpdatePolicy getUpdatePolicy() {
+        return updatePolicy;
+    }
+
+    public UnitUpdatePolicy resolveUpdatePolicy() {
         if(updatePolicy != null) {
             return updatePolicy;
         }
-        return parentEnv == null ? null : parentEnv.getUpdatePolicy();
+        return parentEnv == null ? null : parentEnv.resolveUpdatePolicy();
     }
 
     @Override
@@ -140,7 +147,7 @@ abstract class BasicProvisionEnvironment {
         } catch (ProvisionException e) {
             throw new IllegalStateException("Failed to calculate hash", e);
         }
-        final UnitUpdatePolicy updatePolicy = getUpdatePolicy();
+        final UnitUpdatePolicy updatePolicy = resolveUpdatePolicy();
         final Map<String, ContentPath> namedLocations = getNamedLocations();
 
         final int prime = 31;
@@ -159,10 +166,10 @@ abstract class BasicProvisionEnvironment {
         if (obj == null) {
             return false;
         }
-        if (!(obj instanceof BasicProvisionEnvironment)) {
+        if (!(obj instanceof ProvisionEnvironmentBase)) {
             return false;
         }
-        BasicProvisionEnvironment other = (BasicProvisionEnvironment) obj;
+        ProvisionEnvironmentBase other = (ProvisionEnvironmentBase) obj;
 
         try {
             final File envHome = getEnvironmentHome();
@@ -186,13 +193,15 @@ abstract class BasicProvisionEnvironment {
             return false;
         }
 
-        final UnitUpdatePolicy updatePolicy = getUpdatePolicy();
-        final UnitUpdatePolicy otherUpdatePolicy = other.getUpdatePolicy();
+        final UnitUpdatePolicy updatePolicy = resolveUpdatePolicy();
+        final UnitUpdatePolicy otherUpdatePolicy = other.resolveUpdatePolicy();
         if (updatePolicy == null) {
-            if (otherUpdatePolicy != null)
+            if (otherUpdatePolicy != null) {
                 return false;
-        } else if (!updatePolicy.equals(otherUpdatePolicy))
+            }
+        } else if (!updatePolicy.equals(otherUpdatePolicy)) {
             return false;
+        }
         return true;
     }
 

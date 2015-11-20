@@ -43,7 +43,7 @@ class UnitVersionCondition implements InstructionCondition {
 
     @Override
     public boolean isSatisfied(ApplicationContext ctx) throws ProvisionException {
-        final ProvisionUnitInfo unitInfo = ctx.getUnitInfo();
+        final ProvisionUnitInfo unitInfo = ctx.getUnitEnvironment().getUnitInfo();
         if(version == null) {
             if(unitInfo != null) {
                 throw ProvisionErrors.unitAlreadyInstalled(unitInfo.getName(), unitInfo.getVersion());

@@ -22,22 +22,11 @@
 
 package org.jboss.provision;
 
-import java.io.File;
-
-import org.jboss.provision.info.ContentPath;
-import org.jboss.provision.info.ProvisionUnitInfo;
-
 /**
  *
  * @author Alexey Loubyansky
  */
 public interface ApplicationContext {
 
-    ProvisionUnitInfo getUnitInfo();
-
-    File getUnitHome();
-
-    ProvisionEnvironment getEnvironment();
-
-    File resolvePath(ContentPath path) throws ProvisionException;
+    ProvisionUnitEnvironment getUnitEnvironment();
 }

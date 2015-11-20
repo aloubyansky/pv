@@ -48,7 +48,7 @@ class ContentHashCondition implements InstructionCondition {
 
     @Override
     public boolean isSatisfied(ApplicationContext ctx) throws ProvisionException {
-        final File targetFile = ctx.resolvePath(path);
+        final File targetFile = ctx.getUnitEnvironment().resolvePath(path);
         if(expectedHash == null) {
             if(targetFile.exists()) {
                 throw ProvisionErrors.pathAlreadyExists(targetFile);
