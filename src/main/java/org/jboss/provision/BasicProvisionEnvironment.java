@@ -46,6 +46,8 @@ abstract class BasicProvisionEnvironment {
     }
 
     BasicProvisionEnvironment(BasicProvisionEnvironment parentEnv, Map<String, ContentPath> namedLocations, UnitUpdatePolicy updatePolicy) {
+        assert namedLocations != null : ProvisionErrors.nullArgument("namedLocations");
+        assert updatePolicy != null : ProvisionErrors.nullArgument("updatePolicy");
         this.parentEnv = parentEnv;
         this.namedLocations = namedLocations;
         this.updatePolicy = updatePolicy;
@@ -168,7 +170,12 @@ abstract class BasicProvisionEnvironment {
                 if (other.getEnvironmentHome() != null) {
                     return false;
                 }
-            } else if (!envHome.equals(other.getEnvironmentHome())) {
+            }
+            final File otherHome = other.getEnvironmentHome();
+            if(otherHome == null) {
+                return false;
+            }
+            if (!envHome.getAbsolutePath().equals(otherHome.getAbsolutePath())) {
                 return false;
             }
         } catch (ProvisionException e) {

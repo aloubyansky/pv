@@ -35,7 +35,7 @@ import org.jboss.provision.info.ProvisionUnitInfo;
  *
  * @author Alexey Loubyansky
  */
-public abstract class ProvisionEnvironment {
+public abstract class ProvisionEnvironment extends BasicProvisionEnvironment {
 
     public static Builder create() {
         return new Builder();
@@ -134,22 +134,17 @@ public abstract class ProvisionEnvironment {
     }
 
     protected ProvisionEnvironment(Builder builder) {
+        super(builder.namedLocations, builder.defaultUnitUpdatePolicy);
         assert builder.envHome != null : ProvisionErrors.nullArgument("envHome");
-        assert builder.namedLocations != null : ProvisionErrors.nullArgument("namedLocations");
         assert builder.unitHomes != null : ProvisionErrors.nullArgument("unitHome");
-        assert builder.defaultUnitUpdatePolicy != null : ProvisionErrors.nullArgument("defaultUnitUpdatePolicy");
         assert builder.unitUpdatePolicies != null : ProvisionErrors.nullArgument("unitUpdatePolicies");
         this.envHome = builder.envHome;
-        this.namedLocations = builder.namedLocations;
         this.unitHomes = builder.unitHomes;
-        this.defaultUnitPolicy = builder.defaultUnitUpdatePolicy;
         this.unitUpdatePolicies = builder.unitUpdatePolicies;
         this.unitInfos = builder.unitInfos;
     }
 
     private final File envHome;
-    private final Map<String, ContentPath> namedLocations;
-    private final UnitUpdatePolicy defaultUnitPolicy;
     private final Map<String, ContentPath> unitHomes;
     private final Map<String, UnitUpdatePolicy> unitUpdatePolicies;
     private final Map<String, ProvisionUnitInfo> unitInfos;
@@ -174,40 +169,6 @@ public abstract class ProvisionEnvironment {
         return unitHomes.get(unitName);
     }
 
-    public Set<String> getLocationNames() {
-        return namedLocations.keySet();
-    }
-
-    public ContentPath getNamedLocation(String namedLocation) {
-        return namedLocations.get(namedLocation);
-    }
-
-    public File resolveNamedLocation(String namedLocation) throws ProvisionException {
-        ContentPath path = namedLocations.get(namedLocation);
-        if(path == null) {
-            throw ProvisionErrors.undefinedNamedLocation(namedLocation);
-        }
-
-        File f = envHome;
-        if(path.getLocationName() != null) {
-            f = resolveNamedLocation(path.getLocationName());
-        }
-
-        String relativePath = path.getRelativePath();
-        if(relativePath == null) {
-            return f;
-        }
-        if(File.separatorChar == '\\') {
-            relativePath = relativePath.replace('/', '\\');
-        }
-
-        return new File(f, relativePath);
-    }
-
-    public UnitUpdatePolicy getDefaultUnitPolicy() {
-        return defaultUnitPolicy;
-    }
-
     public UnitUpdatePolicy getUnitPolicy(String unitName) {
         assert unitName != null : ProvisionErrors.nullArgument("unitName");
         return unitUpdatePolicies.get(unitName);
@@ -215,16 +176,13 @@ public abstract class ProvisionEnvironment {
 
     public UnitUpdatePolicy resolveUnitPolicy(String unitName) {
         final UnitUpdatePolicy unitPolicy = getUnitPolicy(unitName);
-        return unitPolicy == null ? defaultUnitPolicy : unitPolicy;
+        return unitPolicy == null ? getUpdatePolicy() : unitPolicy;
     }
 
     @Override
     public int hashCode() {
         final int prime = 31;
-        int result = 1;
-        result = prime * result + ((defaultUnitPolicy == null) ? 0 : defaultUnitPolicy.hashCode());
-        result = prime * result + ((envHome == null) ? 0 : envHome.hashCode());
-        result = prime * result + ((namedLocations == null) ? 0 : namedLocations.hashCode());
+        int result = super.hashCode();
         result = prime * result + ((unitHomes == null) ? 0 : unitHomes.hashCode());
         result = prime * result + ((unitInfos == null) ? 0 : unitInfos.hashCode());
         result = prime * result + ((unitUpdatePolicies == null) ? 0 : unitUpdatePolicies.hashCode());
@@ -235,34 +193,16 @@ public abstract class ProvisionEnvironment {
     public boolean equals(Object obj) {
         if (this == obj)
             return true;
-        if (obj == null)
+        if (!super.equals(obj))
             return false;
         if (!(obj instanceof ProvisionEnvironment))
             return false;
         ProvisionEnvironment other = (ProvisionEnvironment) obj;
-        if (defaultUnitPolicy == null) {
-            if (other.defaultUnitPolicy != null)
-                return false;
-        } else if (!defaultUnitPolicy.equals(other.defaultUnitPolicy))
-            return false;
-        if (envHome == null) {
-            if (other.envHome != null)
-                return false;
-        } else if (!envHome.getAbsolutePath().equals(other.envHome.getAbsolutePath())) {
-            return false;
-        }
-        if (namedLocations == null) {
-            if (other.namedLocations != null)
-                return false;
-        } else if (!namedLocations.equals(other.namedLocations)) {
-            return false;
-        }
         if (unitHomes == null) {
             if (other.unitHomes != null)
                 return false;
-        } else if(!unitHomes.equals(other.unitHomes)) {
+        } else if (!unitHomes.equals(other.unitHomes))
             return false;
-        }
         if (unitInfos == null) {
             if (other.unitInfos != null)
                 return false;
@@ -271,9 +211,8 @@ public abstract class ProvisionEnvironment {
         if (unitUpdatePolicies == null) {
             if (other.unitUpdatePolicies != null)
                 return false;
-        } else if (!unitUpdatePolicies.equals(other.unitUpdatePolicies)) {
+        } else if (!unitUpdatePolicies.equals(other.unitUpdatePolicies))
             return false;
-        }
         return true;
     }
 }

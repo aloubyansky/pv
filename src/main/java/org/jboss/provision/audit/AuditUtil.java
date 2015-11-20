@@ -148,7 +148,7 @@ public class AuditUtil {
         final Properties props = new Properties();
         props.setProperty(ENV_HOME, env.getEnvironmentHome().getAbsolutePath());
 
-        final UnitUpdatePolicy defaultPolicy = env.getDefaultUnitPolicy();
+        final UnitUpdatePolicy defaultPolicy = env.getUpdatePolicy();
         props.setProperty(DEFAULT_POLICY + UNIT_POLICY, defaultPolicy.getUnitPolicy().name());
         props.setProperty(DEFAULT_POLICY + CONTENT_POLICY, defaultPolicy.getDefaultContentPolicy().name());
         for(String path : defaultPolicy.getPaths()) {
