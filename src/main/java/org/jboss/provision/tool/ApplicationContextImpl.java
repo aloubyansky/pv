@@ -216,7 +216,7 @@ class ApplicationContextImpl implements ApplicationContext {
     public File resolvePath(ContentPath path) throws ProvisionException {
 
         File f;
-        final String namedLocation = path.getNamedLocation();
+        final String namedLocation = path.getLocationName();
         if(namedLocation != null) {
             f = env.resolveNamedLocation(namedLocation);
         } else {
@@ -273,7 +273,7 @@ class ApplicationContextImpl implements ApplicationContext {
                 throw ProvisionErrors.pathCopiedAndDeleted(path);
             }
 
-            if (path.getNamedLocation() == null) {
+            if (path.getLocationName() == null) {
                 switch (deleteWithDirs.size()) {
                     case 0:
                         deleteWithDirs = Collections.singletonMap(path, item);

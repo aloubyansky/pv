@@ -447,8 +447,8 @@ class ProvisionXml_1_0 implements XMLStreamConstants, XMLElementReader<ParsingRe
         writer.writeAttribute(Attribute.HASH.name, HashUtils.bytesToHexString(hash));
 
         final ContentPath path = item.getPath();
-        if(path.getNamedLocation() != null) {
-            writer.writeAttribute(Attribute.LOCATION.name, path.getNamedLocation());
+        if(path.getLocationName() != null) {
+            writer.writeAttribute(Attribute.LOCATION.name, path.getLocationName());
         }
         writer.writeAttribute(Attribute.PATH.name, path.getRelativePath());
         writer.writeEndElement();

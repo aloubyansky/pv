@@ -42,17 +42,17 @@ public abstract class ContentPath {
         return new ContentPath(namedLocation, relativePath){};
     }
 
-    private final String namedLocation;
+    private final String locationName;
     private final String relativePath;
 
-    protected ContentPath(String namedLocation, String relativePath) {
-        assert relativePath != null || namedLocation != null : ProvisionErrors.nullArgument("relativePath && namedLocation");
-        this.namedLocation = namedLocation;
+    protected ContentPath(String locationName, String relativePath) {
+        assert relativePath != null || locationName != null : ProvisionErrors.nullArgument("relativePath && locationName");
+        this.locationName = locationName;
         this.relativePath = relativePath;
     }
 
-    public String getNamedLocation() {
-        return namedLocation;
+    public String getLocationName() {
+        return locationName;
     }
 
     public String getRelativePath() {
@@ -63,7 +63,7 @@ public abstract class ContentPath {
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ((namedLocation == null) ? 0 : namedLocation.hashCode());
+        result = prime * result + ((locationName == null) ? 0 : locationName.hashCode());
         result = prime * result + ((relativePath == null) ? 0 : relativePath.hashCode());
         return result;
     }
@@ -77,10 +77,10 @@ public abstract class ContentPath {
         if (!(obj instanceof ContentPath))
             return false;
         ContentPath other = (ContentPath) obj;
-        if (namedLocation == null) {
-            if (other.namedLocation != null)
+        if (locationName == null) {
+            if (other.locationName != null)
                 return false;
-        } else if (!namedLocation.equals(other.namedLocation))
+        } else if (!locationName.equals(other.locationName))
             return false;
         if (relativePath == null) {
             if (other.relativePath != null)
@@ -92,11 +92,11 @@ public abstract class ContentPath {
 
     @Override
     public String toString() {
-        if(namedLocation == null) {
+        if(locationName == null) {
             return relativePath;
         }
         final StringBuilder buf = new StringBuilder();
-        buf.append('$').append(namedLocation);
+        buf.append('$').append(locationName);
         if(relativePath == null) {
             return buf.toString();
         }

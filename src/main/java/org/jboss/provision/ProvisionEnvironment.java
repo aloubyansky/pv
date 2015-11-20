@@ -149,8 +149,8 @@ public abstract class ProvisionEnvironment {
 
     private final File envHome;
     private final Map<String, ContentPath> namedLocations;
-    private final Map<String, ContentPath> unitHomes;
     private final UnitUpdatePolicy defaultUnitPolicy;
+    private final Map<String, ContentPath> unitHomes;
     private final Map<String, UnitUpdatePolicy> unitUpdatePolicies;
     private final Map<String, ProvisionUnitInfo> unitInfos;
 
@@ -189,8 +189,8 @@ public abstract class ProvisionEnvironment {
         }
 
         File f = envHome;
-        if(path.getNamedLocation() != null) {
-            f = resolveNamedLocation(path.getNamedLocation());
+        if(path.getLocationName() != null) {
+            f = resolveNamedLocation(path.getLocationName());
         }
 
         String relativePath = path.getRelativePath();

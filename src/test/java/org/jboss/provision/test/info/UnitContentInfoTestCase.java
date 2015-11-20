@@ -69,7 +69,7 @@ public class UnitContentInfoTestCase extends TestWithInstallationBuilder {
     private void assertContent(final ProvisionUnitContentInfo unitInfo, String relativePath) throws IOException {
         ContentItemInfo itemInfo = unitInfo.getContentInfo(ContentPath.forPath(relativePath));
         assertNotNull(itemInfo);
-        assertNull(itemInfo.getPath().getNamedLocation());
+        assertNull(itemInfo.getPath().getLocationName());
         assertEquals(relativePath, itemInfo.getPath().getRelativePath());
         Assert.assertArrayEquals(HashUtils.hashFile(home.resolvePath(relativePath)), itemInfo.getContentHash());
     }

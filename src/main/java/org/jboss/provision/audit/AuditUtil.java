@@ -78,8 +78,8 @@ public class AuditUtil {
 
         final Properties props = new Properties();
         props.setProperty(REQUIRED, instruction.isRequired() ? TRUE : FALSE);
-        if(instruction.getPath().getNamedLocation() != null) {
-            props.setProperty(LOCATION, instruction.getPath().getNamedLocation());
+        if(instruction.getPath().getLocationName() != null) {
+            props.setProperty(LOCATION, instruction.getPath().getLocationName());
         }
         props.setProperty(RELATIVE_PATH, instruction.getPath().getRelativePath());
         if(instruction.getContentHash() != null) {
