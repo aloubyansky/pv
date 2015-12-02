@@ -22,6 +22,8 @@
 
 package org.jboss.provision.info;
 
+import java.io.File;
+
 import org.jboss.provision.ProvisionErrors;
 
 /**
@@ -29,6 +31,13 @@ import org.jboss.provision.ProvisionErrors;
  * @author Alexey Loubyansky
  */
 public abstract class ContentPath {
+
+    public static ContentPath forFSPath(String relativePath) {
+        if(File.separatorChar == '\\' && !relativePath.isEmpty()) {
+            relativePath = relativePath.replace('\\', '/');
+        }
+        return forPath(relativePath);
+    }
 
     public static ContentPath forPath(final String relativePath) {
         return create(null, relativePath);
@@ -57,6 +66,13 @@ public abstract class ContentPath {
 
     public String getRelativePath() {
         return relativePath;
+    }
+
+    public String getFSRelativePath() {
+        if(relativePath == null) {
+            return null;
+        }
+        return File.separatorChar == '\\' ? relativePath.replace('/', '\\') : relativePath;
     }
 
     @Override

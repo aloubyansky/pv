@@ -128,7 +128,7 @@ class ApplicationContextImpl implements ApplicationContext {
 
     private void revertPerformedInstructions(AuditSession session) throws ProvisionException {
         for(AuditRecord record : session.getRecorded()) {
-            final File targetFile = unitEnv.resolvePath(record.getInstruction().getPath()); // TODO THIS IS BROKEN
+            final File targetFile = unitEnv.resolvePath(record.getInstruction().getPath());
             if(record.getBackupFile() == null) {
                 if(!IoUtils.recursiveDelete(targetFile)) {
                     throw ProvisionErrors.failedToDelete(targetFile);

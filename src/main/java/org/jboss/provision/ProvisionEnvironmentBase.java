@@ -98,12 +98,9 @@ abstract class ProvisionEnvironmentBase {
         if(path.getLocationName() != null) {
             f = resolveNamedLocation(path.getLocationName());
         }
-        String relativePath = path.getRelativePath();
+        final String relativePath = path.getFSRelativePath();
         if(relativePath == null) {
             return f;
-        }
-        if(File.separatorChar == '\\') {
-            relativePath = relativePath.replace('/', '\\');
         }
         return new File(f, relativePath);
     }
@@ -111,19 +108,16 @@ abstract class ProvisionEnvironmentBase {
     public File resolvePath(ContentPath path) throws ProvisionException {
         final String locationName = path.getLocationName();
         if(locationName == null) {
-            return new File(getEnvironmentHome(), path.getRelativePath());
+            return new File(getEnvironmentHome(), path.getFSRelativePath());
         }
         final ContentPath namedPath = getNamedLocation(locationName);
         if(namedPath == null) {
             throw ProvisionErrors.undefinedNamedLocation(locationName);
         }
         final File f = resolvePath(namedPath);
-        String relativePath = path.getRelativePath();
+        String relativePath = path.getFSRelativePath();
         if(relativePath == null) {
             return f;
-        }
-        if(File.separatorChar == '\\') {
-            relativePath = relativePath.replace('/', '\\');
         }
         return new File(f, relativePath);
     }

@@ -28,6 +28,7 @@ import java.io.IOException;
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.info.ContentItemInfo;
+import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionUnitContentInfo;
 import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.util.HashUtils;
@@ -68,10 +69,7 @@ public class ProvisionInfoReader {
                 throw ProvisionErrors.hashCalculationFailed(file, e);
             }
             String relativePath = file.getAbsolutePath().substring(rootPathOffset);
-            if(File.separatorChar == '\\' && !relativePath.isEmpty()) {
-                relativePath = relativePath.replace('\\', '/');
-            }
-            builder.add(ContentItemInfo.BUILDER.build(relativePath, fileHash));
+            builder.add(ContentItemInfo.BUILDER.build(ContentPath.forFSPath(relativePath), fileHash));
         }
     }
 

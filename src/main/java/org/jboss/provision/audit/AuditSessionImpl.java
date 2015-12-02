@@ -120,12 +120,7 @@ class AuditSessionImpl implements AuditSession {
             }
             final File f = new File(instructionsDir, name);
             final ContentItemInstruction instruction = AuditUtil.load(f);
-
-            String relativePath = instruction.getPath().getRelativePath();
-            if(File.separatorChar == '\\') {
-                relativePath = relativePath.replace('/', '\\');
-            }
-            File backupFile = new File(contentDir, relativePath);
+            File backupFile = new File(contentDir, instruction.getPath().getFSRelativePath());
             if(!backupFile.exists()) {
                 backupFile = null;
             }
@@ -161,11 +156,7 @@ class AuditSessionImpl implements AuditSession {
 
         File backup = null;
         if (replacedFile.exists()) {
-            String relativePath = instruction.getPath().getRelativePath();
-            if (File.separatorChar == '\\') {
-                relativePath = relativePath.replace('/', '\\');
-            }
-            backup = new File(contentDir, relativePath);
+            backup = new File(contentDir, instruction.getPath().getFSRelativePath());
             if (!backup.getParentFile().exists() && !backup.getParentFile().mkdirs()) {
                 throw new ProvisionException(ProvisionErrors.couldNotCreateDir(backup.getParentFile()));
             }

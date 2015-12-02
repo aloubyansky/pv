@@ -158,11 +158,7 @@ public class ProvisionPackage {
                     if (itemInfo.getContentHash() == null) {
                         continue;
                     }
-                    String relativePath = itemInfo.getPath().getRelativePath();
-                    if (File.separatorChar == '\\') {
-                        relativePath = relativePath.replace('/', '\\');
-                    }
-                    final File itemFile = new File(src, relativePath);
+                    final File itemFile = new File(src, itemInfo.getPath().getFSRelativePath());
                     if (!itemFile.exists()) {
                         throw ProvisionErrors.pathDoesNotExist(itemFile);
                     }
