@@ -91,8 +91,12 @@ class ApplicationContextImpl implements ApplicationContext {
         } catch(ProvisionException|RuntimeException|Error e) {
             discardBackup = false;
             if(auditSession != null) {
-                revertPerformedInstructions(auditSession);
-                discardBackup = true;
+                try {
+                    revertPerformedInstructions(auditSession);
+                    discardBackup = true;
+                } catch(Throwable t) {
+                    // ignore;
+                }
             }
             throw e;
         } finally {
@@ -126,7 +130,9 @@ class ApplicationContextImpl implements ApplicationContext {
         for(AuditRecord record : session.getRecorded()) {
             final File targetFile = unitEnv.resolvePath(record.getInstruction().getPath()); // TODO THIS IS BROKEN
             if(record.getBackupFile() == null) {
-                IoUtils.recursiveDelete(targetFile);
+                if(!IoUtils.recursiveDelete(targetFile)) {
+                    throw ProvisionErrors.failedToDelete(targetFile);
+                }
             } else {
                 try {
                     IoUtils.copyFile(record.getBackupFile(), targetFile);

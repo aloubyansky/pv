@@ -131,26 +131,22 @@ public class IoUtils {
         }
     }
 
-    public static byte[] copy(final InputStream is, final File target) throws IOException {
+    public static void copy(final InputStream is, final File target) throws IOException {
         if(! target.getParentFile().exists()) {
             target.getParentFile().mkdirs(); // Hmm
         }
         final OutputStream os = new FileOutputStream(target);
         try {
-            byte[] nh = HashUtils.copyAndGetHash(is, os);
-            os.close();
-            return nh;
+            IoUtils.copyStream(is, os);
         } finally {
             safeClose(os);
         }
     }
 
-    public static byte[] copy(File source, File target) throws IOException {
+    public static void copy(File source, File target) throws IOException {
         final FileInputStream is = new FileInputStream(source);
         try {
-            byte[] backupHash = copy(is, target);
-            is.close();
-            return backupHash;
+            copy(is, target);
         } finally {
             safeClose(is);
         }

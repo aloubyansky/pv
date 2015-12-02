@@ -183,6 +183,10 @@ public class ProvisionErrors {
         return new ProvisionException("Failed to copy " + path + " to " + target.getAbsolutePath());
     }
 
+    public static ProvisionException failedToDelete(File target) {
+        return new ProvisionException("Failed to delete " + target.getAbsolutePath());
+    }
+
     public static ProvisionException failedToCopyContentFromZIP(ContentPath path, File targetFile, IOException e) {
         return new ProvisionException("Failed to copy content from ZIP path " + path.getRelativePath() + " to " + targetFile.getAbsolutePath(), e);
     }
