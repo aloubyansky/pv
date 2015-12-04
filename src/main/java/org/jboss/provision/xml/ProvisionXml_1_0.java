@@ -30,7 +30,7 @@ import javax.xml.stream.XMLStreamException;
 
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
-import org.jboss.provision.tool.instruction.ProvisionPackageInstruction;
+import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
 import org.jboss.provision.tool.instruction.ProvisionUnitInstruction;
 import org.jboss.provision.tool.instruction.ProvisionUnitInstruction.Builder;
 import org.jboss.provision.util.HashUtils;
@@ -44,7 +44,7 @@ import org.jboss.staxmapper.XMLExtendedStreamWriter;
  *
  * @author Alexey Loubyansky
  */
-class ProvisionXml_1_0 implements XMLStreamConstants, XMLElementReader<ParsingResult>, XMLElementWriter<ProvisionPackageInstruction> {
+class ProvisionXml_1_0 implements XMLStreamConstants, XMLElementReader<ParsingResult>, XMLElementWriter<ProvisionEnvironmentInstruction> {
 
     static final ProvisionXml_1_0 INSTANCE = new ProvisionXml_1_0();
 
@@ -121,7 +121,7 @@ class ProvisionXml_1_0 implements XMLStreamConstants, XMLElementReader<ParsingRe
     }
 
     @Override
-    public void writeContent(XMLExtendedStreamWriter writer, ProvisionPackageInstruction instructions) throws XMLStreamException {
+    public void writeContent(XMLExtendedStreamWriter writer, ProvisionEnvironmentInstruction instructions) throws XMLStreamException {
 
         writer.writeStartDocument();
         writer.writeStartElement(Element.PROVISION.name);
@@ -138,7 +138,7 @@ class ProvisionXml_1_0 implements XMLStreamConstants, XMLElementReader<ParsingRe
     @Override
     public void readElement(XMLExtendedStreamReader reader, ParsingResult result) throws XMLStreamException {
 
-        final ProvisionPackageInstruction.Builder builder = ProvisionPackageInstruction.Builder.newPackage();
+        final ProvisionEnvironmentInstruction.Builder builder = ProvisionEnvironmentInstruction.Builder.newPackage();
         while (reader.hasNext() && reader.nextTag() != END_ELEMENT) {
             final String localName = reader.getLocalName();
             final Element element = Element.forName(localName);

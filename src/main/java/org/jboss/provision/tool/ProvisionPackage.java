@@ -39,7 +39,7 @@ import org.jboss.provision.ProvisionException;
 import org.jboss.provision.info.ProvisionUnitContentInfo;
 import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
-import org.jboss.provision.tool.instruction.ProvisionPackageInstruction;
+import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
 import org.jboss.provision.tool.instruction.ProvisionUnitInstruction;
 import org.jboss.provision.util.HashUtils;
 import org.jboss.provision.util.IoUtils;
@@ -107,7 +107,7 @@ public class ProvisionPackage {
             final ProvisionUnitContentInfo currentContent = ProvisionInfoReader.readContentInfo(ProvisionUnitInfo.UNDEFINED_INFO.getName(), ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), curDir);
             final ProvisionUnitContentInfo targetContent = ProvisionInfoReader.readContentInfo(ProvisionUnitInfo.UNDEFINED_INFO.getName(), ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), targetDir);
             final ProvisionUnitInstruction replaceInstruction = ProvisionInstructionBuilder.patch(patchId, currentContent, targetContent);
-            ProvisionPackage.build(ProvisionPackageInstruction.Builder.newPackage().add(replaceInstruction).build(), targetDir, pkgFile);
+            ProvisionPackage.build(ProvisionEnvironmentInstruction.Builder.newPackage().add(replaceInstruction).build(), targetDir, pkgFile);
         }
 
         public void buildInstall() throws ProvisionException {
@@ -118,7 +118,7 @@ public class ProvisionPackage {
             assertExists(targetDir, "targetInstallationDir");
             final ProvisionUnitContentInfo contentInfo = ProvisionInfoReader.readContentInfo(ProvisionUnitInfo.UNDEFINED_INFO.getName(), ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), targetDir);
             final ProvisionUnitInstruction installInstruction = ProvisionInstructionBuilder.install(contentInfo);
-            ProvisionPackage.build(ProvisionPackageInstruction.Builder.newPackage().add(installInstruction).build(), targetDir, pkgFile);
+            ProvisionPackage.build(ProvisionEnvironmentInstruction.Builder.newPackage().add(installInstruction).build(), targetDir, pkgFile);
         }
 
         public void buildUninstall() throws ProvisionException {
@@ -129,7 +129,7 @@ public class ProvisionPackage {
             assertExists(curDir, "currentInstallationDir");
             final ProvisionUnitContentInfo contentInfo = ProvisionInfoReader.readContentInfo(ProvisionUnitInfo.UNDEFINED_INFO.getName(), ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), curDir);
             final ProvisionUnitInstruction uninstallInstruction = ProvisionInstructionBuilder.uninstall(contentInfo);
-            ProvisionPackage.build(ProvisionPackageInstruction.Builder.newPackage().add(uninstallInstruction).build(), curDir, pkgFile);
+            ProvisionPackage.build(ProvisionEnvironmentInstruction.Builder.newPackage().add(uninstallInstruction).build(), curDir, pkgFile);
         }
 
         private void assertExists(File f, String argName) throws ProvisionException {
@@ -142,7 +142,7 @@ public class ProvisionPackage {
         }
     }
 
-    public static void build(ProvisionPackageInstruction instructions, File src, File packageFile) throws ProvisionException {
+    public static void build(ProvisionEnvironmentInstruction instructions, File src, File packageFile) throws ProvisionException {
 
         ZipOutputStream zos = null;
         try {

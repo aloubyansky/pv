@@ -36,7 +36,7 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
 
-import org.jboss.provision.tool.instruction.ProvisionPackageInstruction;
+import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
 import org.jboss.staxmapper.XMLElementWriter;
 import org.jboss.staxmapper.XMLMapper;
 
@@ -88,29 +88,29 @@ public class ProvisionXml {
     private ProvisionXml() {
     }
 
-    public static void marshal(final Writer writer, final ProvisionPackageInstruction instructions) throws XMLStreamException {
+    public static void marshal(final Writer writer, final ProvisionEnvironmentInstruction instructions) throws XMLStreamException {
         final XMLOutputFactory outputFactory = OUTPUT_FACTORY;
         final XMLStreamWriter streamWriter = outputFactory.createXMLStreamWriter(writer);
         MAPPER.deparseDocument((XMLElementWriter<?>) ProvisionXml_1_0.INSTANCE, instructions, streamWriter);
         streamWriter.close();
     }
 
-    public static void marshal(final OutputStream os, final ProvisionPackageInstruction instructions) throws XMLStreamException {
+    public static void marshal(final OutputStream os, final ProvisionEnvironmentInstruction instructions) throws XMLStreamException {
         final XMLOutputFactory outputFactory = OUTPUT_FACTORY;
         final XMLStreamWriter streamWriter = outputFactory.createXMLStreamWriter(os);
         MAPPER.deparseDocument((XMLElementWriter<?>) ProvisionXml_1_0.INSTANCE, instructions, streamWriter);
         streamWriter.close();
     }
 
-    public static ProvisionPackageInstruction parse(final Reader input) throws XMLStreamException {
+    public static ProvisionEnvironmentInstruction parse(final Reader input) throws XMLStreamException {
         return parse(getXMLInputFactory().createXMLStreamReader(input));
     }
 
-    public static ProvisionPackageInstruction parse(final InputStream input) throws XMLStreamException {
+    public static ProvisionEnvironmentInstruction parse(final InputStream input) throws XMLStreamException {
         return parse(getXMLInputFactory().createXMLStreamReader(input));
     }
 
-    protected static ProvisionPackageInstruction parse(final XMLStreamReader reader) throws XMLStreamException {
+    protected static ProvisionEnvironmentInstruction parse(final XMLStreamReader reader) throws XMLStreamException {
         try {
             final ParsingResult result = new ParsingResult();
             MAPPER.parseDocument(result, reader);
@@ -135,13 +135,13 @@ public class ProvisionXml {
 
     public static class ParsingResult {
 
-        private ProvisionPackageInstruction result;
+        private ProvisionEnvironmentInstruction result;
 
-        public ProvisionPackageInstruction getResult() {
+        public ProvisionEnvironmentInstruction getResult() {
             return result;
         }
 
-        public void setResult(ProvisionPackageInstruction result) {
+        public void setResult(ProvisionEnvironmentInstruction result) {
             this.result = result;
         }
     }

@@ -30,7 +30,7 @@ import java.io.StringWriter;
 
 import org.jboss.provision.tool.ProvisionInfoReader;
 import org.jboss.provision.tool.ProvisionInstructionBuilder;
-import org.jboss.provision.tool.instruction.ProvisionPackageInstruction;
+import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
 import org.jboss.provision.xml.ProvisionXml;
 import org.junit.Test;
 
@@ -44,7 +44,7 @@ public class XmlWriterTestCase {
     public void testXmlWriter() throws Exception {
 
         final File root = new File("/home/olubyans/git/pv/");
-        final ProvisionPackageInstruction pkg = ProvisionPackageInstruction.Builder.newPackage()
+        final ProvisionEnvironmentInstruction pkg = ProvisionEnvironmentInstruction.Builder.newPackage()
                 .add(ProvisionInstructionBuilder.install(ProvisionInfoReader.readContentInfo("test", "x.x.x", root)))
                 .add(ProvisionInstructionBuilder.uninstall(ProvisionInfoReader.readContentInfo("test2", "y.y.y", root)))
                 .build();
@@ -53,7 +53,7 @@ public class XmlWriterTestCase {
         ProvisionXml.marshal(writer, pkg);
         final String xml = writer.getBuffer().toString();
 
-        final ProvisionPackageInstruction parsedPkg = ProvisionXml.parse(new StringReader(xml));
+        final ProvisionEnvironmentInstruction parsedPkg = ProvisionXml.parse(new StringReader(xml));
         assertEquals(pkg, parsedPkg);
         //ProvisionPackageBuilder.build(installUnit, root, new File(root, "package.pvn"));
     }

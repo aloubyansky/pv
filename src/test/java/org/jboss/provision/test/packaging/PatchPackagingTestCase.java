@@ -39,7 +39,7 @@ import org.jboss.provision.test.util.AssertUtil;
 import org.jboss.provision.test.util.InstallationBuilder;
 import org.jboss.provision.tool.ProvisionPackage;
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
-import org.jboss.provision.tool.instruction.ProvisionPackageInstruction;
+import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
 import org.jboss.provision.tool.instruction.ProvisionUnitInstruction;
 import org.jboss.provision.util.IoUtils;
 import org.jboss.provision.xml.ProvisionXml;
@@ -93,7 +93,7 @@ public class PatchPackagingTestCase extends PackagingTestBase {
         expectedPaths.put("provision.xml", NA);
         assertFilesContent(unzipDir, expectedPaths);
 
-        ProvisionPackageInstruction instruction = null;
+        ProvisionEnvironmentInstruction instruction = null;
         Reader reader = null;
         try {
             reader = new FileReader(new File(unzipDir, "provision.xml"));

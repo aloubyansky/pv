@@ -33,7 +33,7 @@ import org.jboss.provision.ProvisionErrors;
  *
  * @author Alexey Loubyansky
  */
-public interface ProvisionPackageInstruction {
+public interface ProvisionEnvironmentInstruction {
 
     Set<String> getUnitNames();
 
@@ -41,7 +41,7 @@ public interface ProvisionPackageInstruction {
 
     class Builder {
 
-        private final class ProvisionPackageImpl implements ProvisionPackageInstruction {
+        private final class ProvisionPackageImpl implements ProvisionEnvironmentInstruction {
             private final Map<String, ProvisionUnitInstruction> units;
 
             public ProvisionPackageImpl(Map<String, ProvisionUnitInstruction> units) {
@@ -94,7 +94,7 @@ public interface ProvisionPackageInstruction {
             return new Builder();
         }
 
-        public ProvisionPackageInstruction build() {
+        public ProvisionEnvironmentInstruction build() {
             return new ProvisionPackageImpl(units);
         }
 

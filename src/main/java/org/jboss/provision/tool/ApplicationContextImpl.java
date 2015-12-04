@@ -51,7 +51,7 @@ import org.jboss.provision.audit.ProvisionEnvironmentJournal;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
 import org.jboss.provision.tool.instruction.InstructionCondition;
-import org.jboss.provision.tool.instruction.ProvisionPackageInstruction;
+import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
 import org.jboss.provision.tool.instruction.ProvisionUnitInstruction;
 import org.jboss.provision.tool.instruction.UpdatePolicy;
 import org.jboss.provision.util.IoUtils;
@@ -80,7 +80,7 @@ class ApplicationContextImpl implements ApplicationContext {
         if (!pkgFile.exists()) {
             throw ProvisionErrors.pathDoesNotExist(pkgFile);
         }
-        final ProvisionPackageInstruction instructions = readInstructions(pkgFile);
+        final ProvisionEnvironmentInstruction instructions = readInstruction(pkgFile);
         ProvisionEnvironmentJournal envJournal = null;
         boolean discardBackup = true;
         try {
@@ -146,7 +146,7 @@ class ApplicationContextImpl implements ApplicationContext {
         }
     }
 
-    private void scheduleTasks(ProvisionPackageInstruction instructions) throws ProvisionException {
+    private void scheduleTasks(ProvisionEnvironmentInstruction instructions) throws ProvisionException {
         for (String unitName : instructions.getUnitNames()) {
             this.unitEnv = env.getUnitEnvironment(unitName);
             if(unitEnv == null) {
@@ -199,7 +199,7 @@ class ApplicationContextImpl implements ApplicationContext {
         return unitEnv;
     }
 
-    private ProvisionPackageInstruction readInstructions(File pvnPackage) throws ProvisionException {
+    private ProvisionEnvironmentInstruction readInstruction(File pvnPackage) throws ProvisionException {
         InputStream is = null;
         try {
             if (pvnPackage.isDirectory()) {
