@@ -23,8 +23,6 @@
 package org.jboss.provision.audit;
 
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -43,8 +41,8 @@ import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
 import org.jboss.provision.tool.instruction.UpdatePolicy;
+import org.jboss.provision.util.FileUtils;
 import org.jboss.provision.util.HashUtils;
-import org.jboss.provision.util.IoUtils;
 
 /**
  *
@@ -91,7 +89,7 @@ public class AuditUtil {
         }
 
         try {
-            writeProperties(f, props);
+            FileUtils.writeProperties(f, props);
         } catch (IOException e) {
             throw ProvisionErrors.failedToAuditInstruction(instruction, e);
         }
@@ -107,7 +105,7 @@ public class AuditUtil {
 
         Properties props;
         try {
-            props = loadProperties(f);
+            props = FileUtils.loadProperties(f);
         } catch (IOException e) {
             throw ProvisionErrors.failedToLoadInstructionAuditRecord(e);
         }
@@ -181,7 +179,7 @@ public class AuditUtil {
         }
 
         try {
-            writeProperties(f, props);
+            FileUtils.writeProperties(f, props);
         } catch (IOException e) {
             throw ProvisionErrors.failedToAuditEnvironment(e);
         }
@@ -197,7 +195,7 @@ public class AuditUtil {
 
         Properties props;
         try {
-            props = loadProperties(f);
+            props = FileUtils.loadProperties(f);
         } catch (IOException e) {
             throw ProvisionErrors.failedToLoadEnvironmentAuditRecord(e);
         }
@@ -286,27 +284,5 @@ public class AuditUtil {
             unitPolicies.put(unitName, policyBuilder);
         }
         return policyBuilder;
-    }
-
-    private static void writeProperties(File f, final Properties props) throws IOException {
-        FileWriter writer = null;
-        try {
-            writer = new FileWriter(f);
-            props.store(writer, null);
-        } finally {
-            IoUtils.safeClose(writer);
-        }
-    }
-
-    private static Properties loadProperties(File f) throws IOException {
-        final Properties props = new Properties();
-        FileReader reader = null;
-        try {
-            reader = new FileReader(f);
-            props.load(reader);
-        } finally {
-            IoUtils.safeClose(reader);
-        }
-        return props;
     }
 }

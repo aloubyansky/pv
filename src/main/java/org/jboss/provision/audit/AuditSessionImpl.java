@@ -27,11 +27,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
+import org.jboss.provision.ProvisionUnitEnvironment;
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
 import org.jboss.provision.util.IoUtils;
 
@@ -49,8 +52,7 @@ class AuditSessionImpl implements AuditSession {
 
     //private final ProvisionEnvironment env;
     private final File auditHome;
-    private final File instructionsDir;
-    private final File contentDir;
+    private Map<String, File> unitAuditDirs = Collections.emptyMap();
 
     private List<AuditRecord> recorded = Collections.emptyList();
 
@@ -78,12 +80,8 @@ class AuditSessionImpl implements AuditSession {
     }
 
     private AuditSessionImpl(ProvisionEnvironment env) throws ProvisionException {
-
         assert env != null : ProvisionErrors.nullArgument("env");
-
         auditHome = new File(env.getEnvironmentHome(), AUDIT_DIR);
-        instructionsDir = new File(auditHome, INSTR_DIR);
-        contentDir = new File(auditHome, CONTENT_DIR);
     }
 
     void start() throws ProvisionException {
@@ -92,42 +90,35 @@ class AuditSessionImpl implements AuditSession {
         } else if (!auditHome.mkdirs()) {
             throw ProvisionErrors.auditSessionInitFailed(ProvisionErrors.couldNotCreateDir(auditHome));
         }
-
-        if(!instructionsDir.mkdir()) {
-            throw ProvisionErrors.auditSessionInitFailed(ProvisionErrors.couldNotCreateDir(instructionsDir));
-        }
-        if(!contentDir.mkdir()) {
-            throw ProvisionErrors.auditSessionInitFailed(ProvisionErrors.couldNotCreateDir(contentDir));
-        }
         active = true;
     }
 
     void load() throws ProvisionException {
 
         assertDirToLoad(auditHome);
-        assertDirToLoad(instructionsDir);
-        assertDirToLoad(contentDir);
-
         final ProvisionEnvironment prevEnv = AuditUtil.loadEnv(new File(auditHome, ENV_PROPS));
 
-        final List<String> names = Arrays.asList(instructionsDir.list());
-        Collections.sort(names);
+        recorded = new ArrayList<AuditRecord>();
+        for(String unitName : prevEnv.getUnitNames()) {
+            final File unitAuditDir = getUnitAuditDir(unitName);
+            final File instructionsDir = new File(unitAuditDir, INSTR_DIR);
+            final File contentDir = new File(unitAuditDir, CONTENT_DIR);
+            final List<String> names = Arrays.asList(instructionsDir.list());
+            Collections.sort(names);
+            for(String name : names) {
+                if(!name.endsWith(INSTR_FILE_SUFFIX)) {
+                    continue;
+                }
+                final File f = new File(instructionsDir, name);
+                final ContentItemInstruction instruction = AuditUtil.load(f);
+                File backupFile = new File(contentDir, instruction.getPath().getFSRelativePath());
+                if(!backupFile.exists()) {
+                    backupFile = null;
+                }
 
-        recorded = new ArrayList<AuditRecord>(names.size());
-        for(String name : names) {
-            if(!name.endsWith(INSTR_FILE_SUFFIX)) {
-                continue;
+                recorded.add(new AuditRecordImpl(instruction, backupFile));
             }
-            final File f = new File(instructionsDir, name);
-            final ContentItemInstruction instruction = AuditUtil.load(f);
-            File backupFile = new File(contentDir, instruction.getPath().getFSRelativePath());
-            if(!backupFile.exists()) {
-                backupFile = null;
-            }
-
-            recorded.add(new AuditRecordImpl(instruction, backupFile));
         }
-
         active = false;
     }
 
@@ -148,15 +139,16 @@ class AuditSessionImpl implements AuditSession {
      * @see org.jboss.provision.backup.BackupSession#record(org.jboss.provision.tool.instruction.ContentItemInstruction, java.io.File)
      */
     @Override
-    public void record(ContentItemInstruction instruction, File replacedFile) throws ProvisionException {
+    public void record(ProvisionUnitEnvironment unitEnv, ContentItemInstruction instruction, File replacedFile) throws ProvisionException {
 
         if(!active) {
             throw ProvisionErrors.auditSessionNotActive();
         }
 
+        final File unitAuditDir = getUnitAuditDir(unitEnv.getUnitInfo().getName());
         File backup = null;
         if (replacedFile.exists()) {
-            backup = new File(contentDir, instruction.getPath().getFSRelativePath());
+            backup = IoUtils.newFile(unitAuditDir, CONTENT_DIR, instruction.getPath().getFSRelativePath());
             if (!backup.getParentFile().exists() && !backup.getParentFile().mkdirs()) {
                 throw new ProvisionException(ProvisionErrors.couldNotCreateDir(backup.getParentFile()));
             }
@@ -178,7 +170,7 @@ class AuditSessionImpl implements AuditSession {
                 recorded.add(record);
         }
 
-        AuditUtil.record(instruction, new File(instructionsDir, recorded.size() + INSTR_FILE_SUFFIX));
+        AuditUtil.record(instruction, IoUtils.newFile(unitAuditDir, INSTR_DIR, recorded.size() + INSTR_FILE_SUFFIX));
     }
 
     /* (non-Javadoc)
@@ -200,6 +192,27 @@ class AuditSessionImpl implements AuditSession {
     @Override
     public void close() throws ProvisionException {
         active = false;
+    }
+
+    protected File getUnitAuditDir(String unitName) throws ProvisionException {
+        assert unitName != null : ProvisionErrors.nullArgument("unitName");
+        File dir = unitAuditDirs.get(unitName);
+        if(dir != null) {
+            return dir;
+        }
+        dir = IoUtils.newFile(auditHome, unitName);
+        if(!dir.exists() && !dir.mkdirs()) {
+            throw new ProvisionException(ProvisionErrors.couldNotCreateDir(dir));
+        }
+        switch(unitAuditDirs.size()) {
+            case 0:
+                unitAuditDirs = Collections.singletonMap(unitName, dir);
+            case 1:
+                unitAuditDirs = new HashMap<String, File>(unitAuditDirs);
+            default:
+                unitAuditDirs.put(unitName, dir);
+        }
+        return dir;
     }
 
     private static class AuditRecordImpl implements AuditRecord {

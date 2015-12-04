@@ -22,11 +22,38 @@
 
 package org.jboss.provision.history;
 
+import java.io.File;
+
+import org.jboss.provision.ProvisionErrors;
+import org.jboss.provision.ProvisionException;
+
 /**
  *
  * @author Alexey Loubyansky
  */
-public interface EnvironmentHistory {
+public class ProvisionEnvironmentHistory {
 
+    private static final String PKG_HISTORY_DIR = "packages";
+    private static final String UNITS_HISTORY_DIR = "units";
 
+    public static ProvisionEnvironmentHistory create(File dir) {
+        return new ProvisionEnvironmentHistory(dir);
+    }
+
+    private final File pkgHistory;
+    private final File unitsHistory;
+
+    private ProvisionEnvironmentHistory(File dir) {
+        assert dir != null : ProvisionErrors.nullArgument("dir");
+        this.pkgHistory = new File(dir, PKG_HISTORY_DIR);
+        this.unitsHistory = new File(dir, UNITS_HISTORY_DIR);
+    }
+
+    public AppliedPackage getLastAppliedPackage() throws ProvisionException {
+        return AppliedPackage.loadLastAppliedPackage(pkgHistory);
+    }
+
+    public AppliedUnitUpdate getLastAppliedUnitUpdate(String unitName) throws ProvisionException {
+        return AppliedUnitUpdate.loadLastAppliedUpdate(unitsHistory, unitName);
+    }
 }

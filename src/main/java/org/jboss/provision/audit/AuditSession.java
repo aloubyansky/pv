@@ -27,6 +27,7 @@ import java.util.List;
 
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionException;
+import org.jboss.provision.ProvisionUnitEnvironment;
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
 
 /**
@@ -39,7 +40,7 @@ public interface AuditSession {
 
     void record(ProvisionEnvironment env) throws ProvisionException;
 
-    void record(ContentItemInstruction instruction, File replacedFile) throws ProvisionException;
+    void record(ProvisionUnitEnvironment unitEnv, ContentItemInstruction instruction, File replacedFile) throws ProvisionException;
 
     List<AuditRecord> getRecorded();
 

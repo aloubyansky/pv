@@ -303,7 +303,7 @@ class ApplicationContextImpl implements ApplicationContext {
         private void delete(AuditSession session, Map<String, ScheduledInstruction> delete, boolean withDirs) throws ProvisionException {
             for (ScheduledInstruction scheduled : delete.values()) {
                 File targetFile = scheduled.targetFile;
-                session.record(scheduled.instruction, targetFile);
+                session.record(unitEnv, scheduled.instruction, targetFile);
                 if (!IoUtils.recursiveDelete(targetFile)) {
                     throw ProvisionErrors.deleteFailed(targetFile);
                 }
@@ -326,7 +326,7 @@ class ApplicationContextImpl implements ApplicationContext {
         void copy(AuditSession session) throws ProvisionException {
             for (ScheduledInstruction scheduled : copy.values()) {
                 final File targetFile = scheduled.targetFile;
-                session.record(scheduled.instruction, targetFile);
+                session.record(unitEnv, scheduled.instruction, targetFile);
                 if(!targetFile.getParentFile().exists()) {
                     if(!targetFile.getParentFile().mkdirs()) {
                         throw new ProvisionException(ProvisionErrors.couldNotCreateDir(targetFile.getParentFile()));
