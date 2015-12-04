@@ -23,16 +23,23 @@
 package org.jboss.provision.audit;
 
 import java.io.File;
+import java.util.List;
 
+import org.jboss.provision.ProvisionException;
+import org.jboss.provision.ProvisionUnitEnvironment;
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public interface AuditRecord {
+public interface ProvisionUnitJournal {
 
-    ContentItemInstruction getInstruction();
+    ProvisionUnitEnvironment getUnitEnvironment();
 
-    File getBackupFile();
+    void record(ContentItemInstruction instruction, File replacedFile) throws ProvisionException;
+
+    List<UnitJournalRecord> getRecorded();
+
+    void load() throws ProvisionException;
 }

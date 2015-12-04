@@ -22,27 +22,37 @@
 
 package org.jboss.provision.audit;
 
-import java.io.File;
+import java.util.Collection;
 
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionException;
+import org.jboss.provision.ProvisionUnitEnvironment;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-class AuditSessionFactoryImpl extends AuditSessionFactory {
+public interface ProvisionEnvironmentJournal {
 
-    /* (non-Javadoc)
-     * @see org.jboss.provision.audit.AuditSessionFactory#startSession(org.jboss.provision.ProvisionEnvironment)
-     */
-    @Override
-    public AuditSession startSession(ProvisionEnvironment env) throws ProvisionException {
-        return AuditSessionImpl.start(env);
+    class Factory {
+        public static ProvisionEnvironmentJournal startSession(ProvisionEnvironment env) throws ProvisionException {
+            return EnvironmentJournalImpl.start(env);
+        }
+
+        public static ProvisionEnvironmentJournal loadCrushedSession(ProvisionEnvironment env) throws ProvisionException {
+            return EnvironmentJournalImpl.load(env);
+        }
     }
 
-    @Override
-    public AuditSession loadCrushedSession(ProvisionEnvironment env) throws ProvisionException {
-        return AuditSessionImpl.load(env);
-    }
+    boolean isRecording();
+
+    void record(ProvisionEnvironment env) throws ProvisionException;
+
+    ProvisionUnitJournal getUnitJournal(ProvisionUnitEnvironment unitEnv) throws ProvisionException;
+
+    Collection<ProvisionUnitJournal> getUnitJournals();
+
+    void discardBackup() throws ProvisionException;
+
+    void close() throws ProvisionException;
 }

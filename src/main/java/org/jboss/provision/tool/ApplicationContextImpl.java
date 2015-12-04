@@ -28,9 +28,11 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
@@ -43,9 +45,9 @@ import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.ProvisionUnitEnvironment;
 import org.jboss.provision.UnitUpdatePolicy;
-import org.jboss.provision.audit.AuditRecord;
-import org.jboss.provision.audit.AuditSession;
-import org.jboss.provision.audit.AuditSessionFactory;
+import org.jboss.provision.audit.ProvisionUnitJournal;
+import org.jboss.provision.audit.UnitJournalRecord;
+import org.jboss.provision.audit.ProvisionEnvironmentJournal;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
 import org.jboss.provision.tool.instruction.InstructionCondition;
@@ -63,8 +65,7 @@ class ApplicationContextImpl implements ApplicationContext {
 
     private final ProvisionEnvironment env;
     private ProvisionUnitEnvironment unitEnv;
-    private ProvisionUnitInstruction unitInstruction;
-    private FSPaths fsPaths = new FSPaths();
+    private EnvironmentTasks envTasks = new EnvironmentTasks();
 
     private ZipFile zip;
 
@@ -80,19 +81,19 @@ class ApplicationContextImpl implements ApplicationContext {
             throw ProvisionErrors.pathDoesNotExist(pkgFile);
         }
         final ProvisionPackageInstruction instructions = readInstructions(pkgFile);
-        AuditSession auditSession = null;
+        ProvisionEnvironmentJournal envJournal = null;
         boolean discardBackup = true;
         try {
-            assertCanApply(instructions);
-            auditSession = AuditSessionFactory.newInstance().startSession(env);
-            auditSession.record(env);
-            fsPaths.copy(auditSession);
-            fsPaths.delete(auditSession);
+            scheduleTasks(instructions);
+            unitEnv = null;
+            envJournal = ProvisionEnvironmentJournal.Factory.startSession(env);
+            envJournal.record(env);
+            envTasks.execute(envJournal);
         } catch(ProvisionException|RuntimeException|Error e) {
             discardBackup = false;
-            if(auditSession != null) {
+            if(envJournal != null) {
                 try {
-                    revertPerformedInstructions(auditSession);
+                    revertPerformedInstructions(envJournal);
                     discardBackup = true;
                 } catch(Throwable t) {
                     // ignore;
@@ -101,17 +102,17 @@ class ApplicationContextImpl implements ApplicationContext {
             throw e;
         } finally {
             IoUtils.safeClose(zip);
-            if(auditSession != null) {
+            if(envJournal != null) {
                 if(discardBackup) {
-                    auditSession.discardBackup();
+                    envJournal.discardBackup();
                 }
-                auditSession.close();
+                envJournal.close();
             }
         }
     }
 
     void revertPerformedInstructions() throws ProvisionException {
-        final AuditSession auditSession = AuditSessionFactory.newInstance().loadCrushedSession(env);
+        final ProvisionEnvironmentJournal auditSession = ProvisionEnvironmentJournal.Factory.loadCrushedSession(env);
         boolean discardBackup = true;
         try {
             revertPerformedInstructions(auditSession);
@@ -126,52 +127,51 @@ class ApplicationContextImpl implements ApplicationContext {
         }
     }
 
-    private void revertPerformedInstructions(AuditSession session) throws ProvisionException {
-        for(AuditRecord record : session.getRecorded()) {
-            final File targetFile = unitEnv.resolvePath(record.getInstruction().getPath());
-            if(record.getBackupFile() == null) {
-                if(!IoUtils.recursiveDelete(targetFile)) {
-                    throw ProvisionErrors.failedToDelete(targetFile);
-                }
-            } else {
-                try {
-                    IoUtils.copyFile(record.getBackupFile(), targetFile);
-                } catch (IOException e) {
-                    throw ProvisionErrors.failedToCopy(record.getInstruction().getPath(), targetFile);
+    private void revertPerformedInstructions(ProvisionEnvironmentJournal envJournal) throws ProvisionException {
+        for(ProvisionUnitJournal unitJournal : envJournal.getUnitJournals()) {
+            for(UnitJournalRecord record : unitJournal.getRecorded()) {
+                final File targetFile = unitJournal.getUnitEnvironment().resolvePath(record.getInstruction().getPath());
+                if(record.getBackupFile() == null) {
+                    if(!IoUtils.recursiveDelete(targetFile)) {
+                        throw ProvisionErrors.failedToDelete(targetFile);
+                    }
+                } else {
+                    try {
+                        IoUtils.copyFile(record.getBackupFile(), targetFile);
+                    } catch (IOException e) {
+                        throw ProvisionErrors.failedToCopy(record.getInstruction().getPath(), targetFile);
+                    }
                 }
             }
         }
     }
 
-    private void assertCanApply(ProvisionPackageInstruction instructions) throws ProvisionException {
-
+    private void scheduleTasks(ProvisionPackageInstruction instructions) throws ProvisionException {
         for (String unitName : instructions.getUnitNames()) {
             this.unitEnv = env.getUnitEnvironment(unitName);
             if(unitEnv == null) {
                 throw ProvisionErrors.unknownUnit(unitName);
             }
-            this.unitInstruction = instructions.getUnitInstruction(unitName);
-            assertCanApplyUnit();
+            scheduleTasks(instructions.getUnitInstruction(unitName));
         }
     }
 
-    private void assertCanApplyUnit() throws ProvisionException {
+    private void scheduleTasks(ProvisionUnitInstruction instructions) throws ProvisionException {
 
         final UnitUpdatePolicy updatePolicy = unitEnv.resolveUpdatePolicy();
         if (updatePolicy.getUnitPolicy() == UpdatePolicy.IGNORED) {
             return;
         }
-
         if (updatePolicy.getUnitPolicy() == UpdatePolicy.CONDITIONED) {
-            for (InstructionCondition condition : unitInstruction.getConditions()) {
+            for (InstructionCondition condition : instructions.getConditions()) {
                 if(!condition.isSatisfied(this)) {
                     return;
                 }
             }
         }
 
-        for(ContentItemInstruction item : unitInstruction.getContentInstructions()) {
-
+        final EnvironmentTasks.UnitTasks unitTasks = envTasks.createUnitTasks(unitEnv);
+        for(ContentItemInstruction item : instructions.getContentInstructions()) {
             final UpdatePolicy contentPolicy = updatePolicy.getContentPolicy(item.getPath().getRelativePath());
             if(contentPolicy == UpdatePolicy.IGNORED) {
                 continue;
@@ -183,11 +183,10 @@ class ApplicationContextImpl implements ApplicationContext {
                     }
                 }
             }
-
             if(item.getContentHash() == null) {
-                fsPaths.scheduleDelete(item);
+                unitTasks.scheduleDelete(item);
             } else {
-                fsPaths.scheduleCopy(item);
+                unitTasks.scheduleCopy(item);
             }
         }
     }
@@ -223,141 +222,192 @@ class ApplicationContextImpl implements ApplicationContext {
         }
     }
 
-    private class FSPaths {
+    private class EnvironmentTasks {
 
-        /** After a path from this map is deleted, its parent dir will be checked for containing other
-         *  files or directories. If the parent dir is empty it will also be deleted
-         *  and then its parent directory will checked, etc. This will trigger a cascading delete
-         *  of empty parent directories up to the unit home directory */
-        private Map<String, ScheduledInstruction> deleteWithDirs = Collections.emptyMap();
+        private Set<String> deletedPaths = Collections.emptySet();
+        private Set<String> copiedPaths = Collections.emptySet();
 
-        /** Unlike the previous map, deleting paths from this map won't trigger deleting empty parent directories.
-         *  The logic is that these paths could be outside of the unit home branch. */
-        private Map<String, ScheduledInstruction> delete = Collections.emptyMap();
+        private List<UnitTasks> unitTasks = Collections.emptyList();
 
-        private Map<String, ScheduledInstruction> copy = Collections.emptyMap();
-
-        void scheduleDelete(ContentItemInstruction item) throws ProvisionException {
-
-            final ContentPath path = item.getPath();
-            final File resolvedPath = unitEnv.resolvePath(path);
-            if(copy.containsKey(resolvedPath.getAbsolutePath())) {
-                throw ProvisionErrors.pathCopiedAndDeleted(path);
-            }
-
-            final ContentPath homePath = unitEnv.getHomePath();
-            if (homePath != null) {
-                switch (deleteWithDirs.size()) {
-                    case 0:
-                        deleteWithDirs = Collections.singletonMap(resolvedPath.getAbsolutePath(),
-                                new ScheduledInstruction(resolvedPath, item, unitEnv.getEnvironmentHome()));
-                        break;
-                    case 1:
-                        deleteWithDirs = new HashMap<String, ScheduledInstruction>(deleteWithDirs);
-                    default:
-                        deleteWithDirs.put(resolvedPath.getAbsolutePath(),
-                                new ScheduledInstruction(resolvedPath, item, unitEnv.getEnvironmentHome()));
-                }
-            } else {
-                switch (delete.size()) {
-                    case 0:
-                        delete = Collections.singletonMap(resolvedPath.getAbsolutePath(), new ScheduledInstruction(resolvedPath, item, null));
-                        break;
-                    case 1:
-                        delete = new HashMap<String, ScheduledInstruction>(delete);
-                    default:
-                        delete.put(resolvedPath.getAbsolutePath(), new ScheduledInstruction(resolvedPath, item, unitEnv.getEnvironmentHome()));
-                }
-            }
-        }
-
-        void scheduleCopy(ContentItemInstruction item) throws ProvisionException {
-
-            final ContentPath path = item.getPath();
-            final File resolvedPath = unitEnv.resolvePath(path);
-            if(deleteWithDirs.containsKey(resolvedPath.getAbsolutePath())) {
-                throw ProvisionErrors.pathCopiedAndDeleted(path);
-            }
-            if(delete.containsKey(resolvedPath.getAbsolutePath())) {
-                throw ProvisionErrors.pathCopiedAndDeleted(path);
-            }
-
-            switch(copy.size()) {
+        UnitTasks createUnitTasks(ProvisionUnitEnvironment unitEnv) {
+            UnitTasks unitTasks = new UnitTasks(unitEnv);
+            switch(this.unitTasks.size()) {
                 case 0:
-                    copy = Collections.singletonMap(resolvedPath.getAbsolutePath(), new ScheduledInstruction(resolvedPath, item, unitEnv.getEnvironmentHome()));
+                    this.unitTasks = Collections.singletonList(unitTasks);
                     break;
                 case 1:
-                    copy = new HashMap<String, ScheduledInstruction>(copy);
+                    this.unitTasks = new ArrayList<UnitTasks>(this.unitTasks);
                 default:
-                    if(copy.put(resolvedPath.getAbsolutePath(), new ScheduledInstruction(resolvedPath, item, unitEnv.getEnvironmentHome())) != null) {
-                        throw ProvisionErrors.pathCopiedMoreThanOnce(path);
-                    }
+                    this.unitTasks.add(unitTasks);
+            }
+            return unitTasks;
+        }
+
+        void execute(ProvisionEnvironmentJournal envJournal) throws ProvisionException {
+            for(UnitTasks unitTasks : this.unitTasks) {
+                final ProvisionUnitJournal unitJournal = envJournal.getUnitJournal(unitTasks.unitEnv);
+                unitTasks.delete(unitJournal);
+                unitTasks.copy(unitJournal);
             }
         }
 
-        void delete(AuditSession session) throws ProvisionException {
-            delete(session, deleteWithDirs, true);
-            delete(session, delete, false);
-        }
+        private class UnitTasks {
 
-        private void delete(AuditSession session, Map<String, ScheduledInstruction> delete, boolean withDirs) throws ProvisionException {
-            for (ScheduledInstruction scheduled : delete.values()) {
-                File targetFile = scheduled.targetFile;
-                session.record(unitEnv, scheduled.instruction, targetFile);
-                if (!IoUtils.recursiveDelete(targetFile)) {
-                    throw ProvisionErrors.deleteFailed(targetFile);
+            final ProvisionUnitEnvironment unitEnv;
+
+            /**
+             * After a path from this map is deleted, its parent dir will be checked for containing other files or directories.
+             * If the parent dir is empty it will also be deleted and then its parent directory will checked, etc. This will
+             * trigger a cascading delete of empty parent directories up to the unit home directory
+             */
+            private List<ScheduledInstruction> deleteWithDirs = Collections.emptyList();
+
+            /**
+             * Unlike the previous map, deleting paths from this map won't trigger deleting empty parent directories. The logic
+             * is that these paths could be outside of the unit home branch.
+             */
+            private List<ScheduledInstruction> delete = Collections.emptyList();
+
+            private List<ScheduledInstruction> copy = Collections.emptyList();
+
+            UnitTasks(ProvisionUnitEnvironment unitEnv) {
+                this.unitEnv = unitEnv;
+            }
+
+            void scheduleDelete(ContentItemInstruction item) throws ProvisionException {
+
+                final ContentPath path = item.getPath();
+                final File resolvedPath = unitEnv.resolvePath(path);
+                if (copiedPaths.contains(resolvedPath.getAbsolutePath())) {
+                    throw ProvisionErrors.pathCopiedAndDeleted(path);
                 }
-                if (withDirs) {
-                    targetFile = targetFile.getParentFile();
-                    while (targetFile.list().length == 0) {
-                        if(targetFile.getAbsolutePath().equals(scheduled.unitDir.getAbsolutePath())) {
-                            IoUtils.recursiveDelete(targetFile);
+
+                final ContentPath homePath = unitEnv.getHomePath();
+                if (homePath != null) {
+                    switch (deleteWithDirs.size()) {
+                        case 0:
+                            deleteWithDirs = Collections.singletonList(new ScheduledInstruction(resolvedPath, item));
                             break;
-                        }
-                        if (!IoUtils.recursiveDelete(targetFile)) {
+                        case 1:
+                            deleteWithDirs = new ArrayList<ScheduledInstruction>(deleteWithDirs);
+                        default:
+                            deleteWithDirs.add(new ScheduledInstruction(resolvedPath, item));
+                    }
+                } else {
+                    switch (delete.size()) {
+                        case 0:
+                            delete = Collections.singletonList(new ScheduledInstruction(resolvedPath, item));
                             break;
+                        case 1:
+                            delete = new ArrayList<ScheduledInstruction>(delete);
+                        default:
+                            delete.add(new ScheduledInstruction(resolvedPath, item));
+                    }
+                }
+                switch (deletedPaths.size()) {
+                    case 0:
+                        deletedPaths = Collections.singleton(resolvedPath.getAbsolutePath());
+                        break;
+                    case 1:
+                        deletedPaths = new HashSet<String>(deletedPaths);
+                    default:
+                        deletedPaths.add(resolvedPath.getAbsolutePath());
+                }
+            }
+
+            void scheduleCopy(ContentItemInstruction item) throws ProvisionException {
+
+                final ContentPath path = item.getPath();
+                final File resolvedPath = unitEnv.resolvePath(path);
+                if (deletedPaths.contains(resolvedPath.getAbsolutePath())) {
+                    throw ProvisionErrors.pathCopiedAndDeleted(path);
+                }
+
+                switch (copy.size()) {
+                    case 0:
+                        copy = Collections.singletonList(new ScheduledInstruction(resolvedPath, item));
+                        break;
+                    case 1:
+                        copy = new ArrayList<ScheduledInstruction>(copy);
+                    default:
+                        if (copiedPaths.contains(resolvedPath.getAbsolutePath())) {
+                            throw ProvisionErrors.pathCopiedMoreThanOnce(path);
                         }
+                        copy.add(new ScheduledInstruction(resolvedPath, item));
+                }
+                switch (copiedPaths.size()) {
+                    case 0:
+                        copiedPaths = Collections.singleton(resolvedPath.getAbsolutePath());
+                        break;
+                    case 1:
+                        copiedPaths = new HashSet<String>(copiedPaths);
+                    default:
+                        copiedPaths.add(resolvedPath.getAbsolutePath());
+                }
+            }
+
+            void delete(ProvisionUnitJournal unitJournal) throws ProvisionException {
+                delete(unitJournal, deleteWithDirs, true);
+                delete(unitJournal, delete, false);
+            }
+
+            private void delete(ProvisionUnitJournal unitJournal, List<ScheduledInstruction> delete, boolean withDirs)
+                    throws ProvisionException {
+                final String unitHomePath = withDirs ? unitEnv.getEnvironmentHome().getAbsolutePath() : null;
+                for (ScheduledInstruction scheduled : delete) {
+                    File targetFile = scheduled.targetFile;
+                    unitJournal.record(scheduled.instruction, targetFile);
+                    if (!IoUtils.recursiveDelete(targetFile)) {
+                        throw ProvisionErrors.deleteFailed(targetFile);
+                    }
+                    if (unitHomePath != null) {
                         targetFile = targetFile.getParentFile();
+                        while (targetFile.list().length == 0) {
+                            if (targetFile.getAbsolutePath().equals(unitHomePath)) {
+                                IoUtils.recursiveDelete(targetFile);
+                                break;
+                            }
+                            if (!IoUtils.recursiveDelete(targetFile)) {
+                                break;
+                            }
+                            targetFile = targetFile.getParentFile();
+                        }
                     }
                 }
             }
-        }
 
-        void copy(AuditSession session) throws ProvisionException {
-            for (ScheduledInstruction scheduled : copy.values()) {
-                final File targetFile = scheduled.targetFile;
-                session.record(unitEnv, scheduled.instruction, targetFile);
-                if(!targetFile.getParentFile().exists()) {
-                    if(!targetFile.getParentFile().mkdirs()) {
-                        throw new ProvisionException(ProvisionErrors.couldNotCreateDir(targetFile.getParentFile()));
+            void copy(ProvisionUnitJournal unitJournal) throws ProvisionException {
+                for (ScheduledInstruction scheduled : copy) {
+                    final File targetFile = scheduled.targetFile;
+                    unitJournal.record(scheduled.instruction, targetFile);
+                    if (!targetFile.getParentFile().exists()) {
+                        if (!targetFile.getParentFile().mkdirs()) {
+                            throw new ProvisionException(ProvisionErrors.couldNotCreateDir(targetFile.getParentFile()));
+                        }
                     }
-                }
-                InputStream is = null;
-                FileOutputStream os = null;
-                try {
-                    is = zip.getInputStream(new ZipEntry(scheduled.instruction.getPath().getRelativePath())); // TODO THIS NEEDS A BETTER PATH BINDING
-                    os = new FileOutputStream(targetFile);
-                    IoUtils.copyStream(is, os);
-                } catch(IOException e) {
-                    throw ProvisionErrors.failedToCopyContentFromZIP(scheduled.instruction.getPath(), targetFile, e);
-                } finally {
-                    IoUtils.safeClose(is);
-                    IoUtils.safeClose(os);
+                    InputStream is = null;
+                    FileOutputStream os = null;
+                    try {
+                        is = zip.getInputStream(new ZipEntry(scheduled.instruction.getPath().getRelativePath())); // TODO THIS NEEDS A BETTER PATH BINDING
+                        os = new FileOutputStream(targetFile);
+                        IoUtils.copyStream(is, os);
+                    } catch (IOException e) {
+                        throw ProvisionErrors.failedToCopyContentFromZIP(scheduled.instruction.getPath(), targetFile, e);
+                    } finally {
+                        IoUtils.safeClose(is);
+                        IoUtils.safeClose(os);
+                    }
                 }
             }
         }
     }
 
     private static class ScheduledInstruction {
-
         final File targetFile;
         final ContentItemInstruction instruction;
-        final File unitDir;
-
-        ScheduledInstruction(File targetFile, ContentItemInstruction instruction, File rootDir) {
+        ScheduledInstruction(File targetFile, ContentItemInstruction instruction) {
             this.targetFile = targetFile;
             this.instruction = instruction;
-            this.unitDir = rootDir;
         }
     }
 }

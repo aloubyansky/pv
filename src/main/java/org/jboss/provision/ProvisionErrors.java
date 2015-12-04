@@ -143,8 +143,12 @@ public class ProvisionErrors {
         return new ProvisionException("Failed to store provision environment", t);
     }
 
-    public static ProvisionException auditSessionNotActive() {
-        return new ProvisionException("Audit session is not active");
+    public static ProvisionException auditJournalIsNotRecording() {
+        return new ProvisionException("Audit journal is not recording");
+    }
+
+    public static ProvisionException auditJournalIsRecording() {
+        return new ProvisionException("Audit journal is in the recording mode");
     }
 
     public static ProvisionException cantStartNewAuditSessionOverExistingOne() {
