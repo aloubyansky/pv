@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.util;
+package org.jboss.provision.io;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;

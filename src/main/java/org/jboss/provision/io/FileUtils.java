@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.util;
+package org.jboss.provision.io;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -31,6 +31,7 @@ import java.io.StringWriter;
 import java.util.Properties;
 
 import org.jboss.provision.ProvisionErrors;
+import org.jboss.provision.util.Utils;
 
 /**
  *
@@ -83,6 +84,19 @@ public class FileUtils {
         try {
             writer = new FileWriter(f);
             props.store(writer, null);
+        } finally {
+            IoUtils.safeClose(writer);
+        }
+    }
+
+    public static void writeFile(File f, final String content) throws IOException {
+        if(!f.getParentFile().exists() && !f.getParentFile().mkdirs()) {
+            throw new IOException(ProvisionErrors.couldNotCreateDir(f.getParentFile()));
+        }
+        FileWriter writer = null;
+        try {
+            writer = new FileWriter(f);
+            writer.write(content);
         } finally {
             IoUtils.safeClose(writer);
         }

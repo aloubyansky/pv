@@ -21,8 +21,8 @@
  */
 package org.jboss.provision.test;
 
+import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.test.util.InstallationBuilder;
-import org.jboss.provision.util.IoUtils;
 import org.junit.After;
 import org.junit.Before;
 

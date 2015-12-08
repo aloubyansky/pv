@@ -27,7 +27,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.UUID;
 
-import org.jboss.provision.util.IoUtils;
+import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.util.Utils;
 
 /**

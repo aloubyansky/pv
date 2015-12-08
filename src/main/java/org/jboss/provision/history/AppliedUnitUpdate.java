@@ -27,8 +27,10 @@ import java.io.IOException;
 
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
-import org.jboss.provision.util.FileUtils;
-import org.jboss.provision.util.IoUtils;
+import org.jboss.provision.io.FileTask;
+import org.jboss.provision.io.FileTaskList;
+import org.jboss.provision.io.FileUtils;
+import org.jboss.provision.io.IoUtils;
 
 /**
  *
@@ -47,7 +49,13 @@ class AppliedUnitUpdate {
         if(!lastUpdateDir.exists()) {
             throw ProvisionErrors.pathDoesNotExist(lastUpdateDir);
         }
-        return new AppliedUnitUpdate(unitName, lastUpdateDir);
+        String pkgDirName;
+        try {
+            pkgDirName = FileUtils.readFile(IoUtils.newFile(lastUpdateDir, PKG_DIR_TXT));
+        } catch (IOException e) {
+            throw ProvisionErrors.readError(IoUtils.newFile(lastUpdateDir, PKG_DIR_TXT), e);
+        }
+        return new AppliedUnitUpdate(unitName, lastUpdateDir, pkgDirName);
     }
 
     static File getLastAppliedUpdateDir(final File unitHistoryDir, final String unitName) throws ProvisionException {
@@ -62,13 +70,75 @@ class AppliedUnitUpdate {
         return new File(unitHistoryDir, dirName);
     }
 
+    static void addLastAppliedUnitUpdate(AppliedUnitUpdate unitUpdate) throws ProvisionException {
+        assert unitUpdate != null : ProvisionErrors.nullArgument("unitUpdate");
+        if(unitUpdate.dir.exists()) {
+            if(!unitUpdate.dir.isDirectory()) {
+                throw new ProvisionException(ProvisionErrors.notADir(unitUpdate.dir));
+            }
+        } else if(!unitUpdate.dir.mkdirs()) {
+            throw new ProvisionException(ProvisionErrors.couldNotCreateDir(unitUpdate.dir));
+        }
+        final File pkgDirTxt = new File(unitUpdate.dir, PKG_DIR_TXT);
+        if(pkgDirTxt.exists()) {
+            throw ProvisionErrors.pathAlreadyExists(pkgDirTxt);
+        }
+        final File prevUpdateTxt = new File(unitUpdate.dir, PREV_UPDATE_TXT);
+        if(prevUpdateTxt.exists()) {
+            throw ProvisionErrors.pathAlreadyExists(prevUpdateTxt);
+        }
+        final FileTaskList tasks = new FileTaskList();
+        try {
+            tasks.add(FileTask.write(pkgDirTxt, unitUpdate.getPackageDirName()));
+            if(unitUpdate.getPrevUpdateDir() != null) {
+                tasks.add(FileTask.write(prevUpdateTxt, unitUpdate.getPrevUpdateDir()));
+            }
+            tasks.add(FileTask.override(IoUtils.newFile(unitUpdate.dir.getParentFile(), LAST_UPDATE_TXT), unitUpdate.dir.getName()));
+            tasks.safeExecute();
+        } catch (IOException e) {
+            throw ProvisionErrors.failedToUpdatePackageHistory(e);
+        }
+    }
+
+    private static final String NONE = "none";
+
     private final String unitName;
     private final File dir;
+    private final String pkgDirName;
+    private String prevUpdate;
 
-    AppliedUnitUpdate(String unitName, File dir) {
+    AppliedUnitUpdate(String unitName, File dir, String pkgDirName) {
         assert unitName != null : ProvisionErrors.nullArgument("unitName");
         assert dir != null : ProvisionErrors.nullArgument("dir");
+        assert pkgDirName != null : ProvisionErrors.nullArgument("pkgDirName");
         this.unitName = unitName;
         this.dir = dir;
+        this.pkgDirName = pkgDirName;
+    }
+
+    public String getUnitName() {
+        return unitName;
+    }
+    public String getPackageDirName() {
+        return pkgDirName;
+    }
+
+    public String getPrevUpdateDir() throws ProvisionException {
+        if(prevUpdate == null) {
+            loadPrevUpdateDir();
+        }
+        return prevUpdate == NONE ? null : prevUpdate;
+    }
+
+    private void loadPrevUpdateDir() throws ProvisionException {
+        final File f = new File(dir, PREV_UPDATE_TXT);
+        if(!f.exists()) {
+            prevUpdate = NONE;
+        }
+        try {
+            prevUpdate = FileUtils.readFile(f);
+        } catch (IOException e) {
+            throw ProvisionErrors.readError(f, e);
+        }
     }
 }

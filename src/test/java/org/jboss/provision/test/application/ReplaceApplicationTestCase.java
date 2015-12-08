@@ -25,12 +25,12 @@ package org.jboss.provision.test.application;
 import java.io.File;
 
 import org.jboss.provision.ProvisionEnvironment;
+import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.test.util.AssertUtil;
 import org.jboss.provision.test.util.FSUtils;
 import org.jboss.provision.test.util.InstallationBuilder;
 import org.jboss.provision.tool.ProvisionPackage;
 import org.jboss.provision.tool.ProvisionTool;
-import org.jboss.provision.util.IoUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

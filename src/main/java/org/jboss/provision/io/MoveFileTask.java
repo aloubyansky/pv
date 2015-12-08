@@ -19,45 +19,31 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.provision.test.application;
+
+package org.jboss.provision.io;
 
 import java.io.File;
-
-import org.jboss.provision.io.IoUtils;
-import org.jboss.provision.test.util.FSUtils;
-import org.jboss.provision.test.util.InstallationBuilder;
-import org.junit.After;
-import org.junit.Before;
+import java.io.IOException;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public class ApplicationTestBase {
-
-    protected InstallationBuilder originalInstall;
-    protected InstallationBuilder testInstall;
-    protected File archive;
-
-    @Before
-    public void init() throws Exception {
-        originalInstall = InstallationBuilder.create();
-        testInstall = InstallationBuilder.create();
-        archive = FSUtils.newTmpFile("archive.tst");
-        doInit();
+class MoveFileTask extends CopyFileTask {
+    MoveFileTask(File src, String name) {
+        super(src, new File(src.getParentFile(), name));
     }
-
-    protected void doInit() {
+    MoveFileTask(File src, File trg) {
+        super(src, trg);
     }
-
-    @After
-    public void cleanup() throws Exception {
-        IoUtils.recursiveDelete(originalInstall.getHome());
-        IoUtils.recursiveDelete(archive);
-        IoUtils.recursiveDelete(testInstall.getHome());
-        doCleanUp();
+    @Override
+    void execute() throws IOException {
+        super.execute();
+        IoUtils.recursiveDelete(src);
     }
-
-    protected void doCleanUp() {
+    @Override
+    void rollback() throws IOException {
+        IoUtils.copy(trg, src);
+        super.rollback();
     }
 }

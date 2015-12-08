@@ -27,8 +27,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.UUID;
 
+import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.util.HashUtils;
-import org.jboss.provision.util.IoUtils;
 
 /**
  *

@@ -49,12 +49,12 @@ import org.jboss.provision.audit.ProvisionUnitJournal;
 import org.jboss.provision.audit.UnitJournalRecord;
 import org.jboss.provision.audit.ProvisionEnvironmentJournal;
 import org.jboss.provision.info.ContentPath;
+import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
 import org.jboss.provision.tool.instruction.InstructionCondition;
 import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
 import org.jboss.provision.tool.instruction.ProvisionUnitInstruction;
 import org.jboss.provision.tool.instruction.UpdatePolicy;
-import org.jboss.provision.util.IoUtils;
 import org.jboss.provision.xml.ProvisionXml;
 
 /**

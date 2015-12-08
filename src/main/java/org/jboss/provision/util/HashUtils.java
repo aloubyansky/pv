@@ -34,6 +34,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.jboss.provision.io.IoUtils;
+
 /**
  *
  * @author Emanuel Muckenhuber

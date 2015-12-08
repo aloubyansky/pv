@@ -39,9 +39,9 @@ import org.jboss.provision.ProvisionUnitEnvironment;
 import org.jboss.provision.UnitUpdatePolicy;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionUnitInfo;
+import org.jboss.provision.io.FileUtils;
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
 import org.jboss.provision.tool.instruction.UpdatePolicy;
-import org.jboss.provision.util.FileUtils;
 import org.jboss.provision.util.HashUtils;
 
 /**

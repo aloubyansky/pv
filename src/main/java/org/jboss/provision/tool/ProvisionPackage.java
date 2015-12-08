@@ -38,11 +38,11 @@ import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.info.ProvisionUnitContentInfo;
 import org.jboss.provision.info.ProvisionUnitInfo;
+import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
 import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
 import org.jboss.provision.tool.instruction.ProvisionUnitInstruction;
 import org.jboss.provision.util.HashUtils;
-import org.jboss.provision.util.IoUtils;
 import org.jboss.provision.xml.ProvisionXml;
 
 /**

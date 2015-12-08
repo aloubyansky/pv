@@ -19,45 +19,27 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.provision.test.application;
+
+package org.jboss.provision.io;
 
 import java.io.File;
-
-import org.jboss.provision.io.IoUtils;
-import org.jboss.provision.test.util.FSUtils;
-import org.jboss.provision.test.util.InstallationBuilder;
-import org.junit.After;
-import org.junit.Before;
+import java.io.IOException;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public class ApplicationTestBase {
-
-    protected InstallationBuilder originalInstall;
-    protected InstallationBuilder testInstall;
-    protected File archive;
-
-    @Before
-    public void init() throws Exception {
-        originalInstall = InstallationBuilder.create();
-        testInstall = InstallationBuilder.create();
-        archive = FSUtils.newTmpFile("archive.tst");
-        doInit();
+class DeleteFileTask extends FileTask {
+    private final File f;
+    DeleteFileTask(File f) {
+        this.f = f;
     }
-
-    protected void doInit() {
+    @Override
+    void execute() throws IOException {
+        IoUtils.recursiveDelete(f);
     }
-
-    @After
-    public void cleanup() throws Exception {
-        IoUtils.recursiveDelete(originalInstall.getHome());
-        IoUtils.recursiveDelete(archive);
-        IoUtils.recursiveDelete(testInstall.getHome());
-        doCleanUp();
-    }
-
-    protected void doCleanUp() {
+    @Override
+    void rollback() throws IOException {
+        throw new UnsupportedOperationException();
     }
 }

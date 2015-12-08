@@ -33,8 +33,10 @@ import java.util.Properties;
 
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
-import org.jboss.provision.util.FileUtils;
-import org.jboss.provision.util.IoUtils;
+import org.jboss.provision.io.FileTask;
+import org.jboss.provision.io.FileTaskList;
+import org.jboss.provision.io.FileUtils;
+import org.jboss.provision.io.IoUtils;
 
 /**
  *
@@ -70,6 +72,38 @@ public class AppliedPackage {
         return new File(pkgHistoryDir, dirName);
     }
 
+    static void addLastAppliedPackage(AppliedPackage appliedPkg) throws ProvisionException {
+        assert appliedPkg != null : ProvisionErrors.nullArgument("appliedPackage");
+        if(appliedPkg.dir.exists()) {
+            if(!appliedPkg.dir.isDirectory()) {
+                throw new ProvisionException(ProvisionErrors.notADir(appliedPkg.dir));
+            }
+        } else if(!appliedPkg.dir.mkdirs()) {
+            throw new ProvisionException(ProvisionErrors.couldNotCreateDir(appliedPkg.dir));
+        }
+        final File unitsProps = new File(appliedPkg.dir, UNITS_PROPS);
+        if(unitsProps.exists()) {
+            throw ProvisionErrors.pathAlreadyExists(unitsProps);
+        }
+        final File prevPkg = new File(appliedPkg.dir, PREV_PKG_TXT);
+        if(prevPkg.exists()) {
+            throw ProvisionErrors.pathAlreadyExists(prevPkg);
+        }
+        final Properties props = new Properties();
+        props.putAll(appliedPkg.getUnits());
+        final FileTaskList tasks = new FileTaskList();
+        try {
+            tasks.add(FileTask.write(unitsProps, props));
+            if(appliedPkg.getPrevPackageDirName() != null) {
+                tasks.add(FileTask.write(prevPkg, appliedPkg.prevPkgDir));
+            }
+            tasks.add(FileTask.override(IoUtils.newFile(appliedPkg.dir.getParentFile(), LAST_PKG_TXT), appliedPkg.dir.getName()));
+            tasks.safeExecute();
+        } catch (IOException e) {
+            throw ProvisionErrors.failedToUpdatePackageHistory(e);
+        }
+    }
+
     private static Map<String, String> propsToMap(Properties props) {
         if(props.isEmpty()) {
             return Collections.emptyMap();
@@ -87,6 +121,8 @@ public class AppliedPackage {
         return map;
     }
 
+    private static final String NONE = "none";
+
     private final File dir;
     private Map<String, String> units;
     private String prevPkgDir;
@@ -97,32 +133,37 @@ public class AppliedPackage {
     }
 
     public Collection<String> getUnitNames() throws ProvisionException {
-        if(units == null) {
-            loadUnits();
-        }
-        return units.keySet();
+        return getUnits().keySet();
     }
 
     public String getUnitDirName(String unitName) throws ProvisionException {
-        if(units == null) {
-            loadUnits();
-        }
-        return units.get(unitName);
+        return getUnits().get(unitName);
     }
 
     public String getPrevPackageDirName() throws ProvisionException {
         if(prevPkgDir == null) {
             loadPrevPackageDir();
         }
-        return prevPkgDir;
+        return prevPkgDir == NONE ? null : prevPkgDir;
     }
 
     protected void loadPrevPackageDir() throws ProvisionException {
-        try {
-            prevPkgDir = FileUtils.readFile(IoUtils.newFile(dir, PREV_PKG_TXT));
-        } catch (IOException e) {
-            throw ProvisionErrors.readError(IoUtils.newFile(dir, PREV_PKG_TXT), e);
+        final File f = IoUtils.newFile(dir, PREV_PKG_TXT);
+        if(!f.exists()) {
+            prevPkgDir = NONE;
         }
+        try {
+            prevPkgDir = FileUtils.readFile(f);
+        } catch (IOException e) {
+            throw ProvisionErrors.readError(f, e);
+        }
+    }
+
+    private Map<String, String> getUnits() throws ProvisionException {
+        if(units == null) {
+            loadUnits();
+        }
+        return units;
     }
 
     protected void loadUnits() throws ProvisionException {

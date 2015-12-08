@@ -28,11 +28,11 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
 
+import org.jboss.provision.io.IoUtils;
+import org.jboss.provision.io.ZipUtils;
 import org.jboss.provision.test.util.FSUtils;
 import org.jboss.provision.test.util.InstallationBuilder;
 import org.jboss.provision.util.HashUtils;
-import org.jboss.provision.util.IoUtils;
-import org.jboss.provision.util.ZipUtils;
 import org.junit.After;
 import org.junit.Before;
 

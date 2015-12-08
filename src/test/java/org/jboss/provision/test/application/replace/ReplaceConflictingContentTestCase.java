@@ -25,12 +25,12 @@ package org.jboss.provision.test.application.replace;
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.UnitUpdatePolicy;
+import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
 import org.jboss.provision.test.util.InstallationBuilder;
 import org.jboss.provision.tool.ProvisionPackage;
 import org.jboss.provision.tool.ProvisionTool;
-import org.jboss.provision.util.IoUtils;
 import org.junit.Assert;
 import org.junit.Test;
 

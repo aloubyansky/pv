@@ -80,7 +80,11 @@ public class ProvisionErrors {
     }
 
     public static ProvisionException readError(File f, IOException e) {
-        return new ProvisionException("Failed to read " + f.getAbsolutePath(), e);
+        return new ProvisionException("Failed to read from " + f.getAbsolutePath(), e);
+    }
+
+    public static ProvisionException writeError(File f, IOException e) {
+        return new ProvisionException("Failed to write to " + f.getAbsolutePath(), e);
     }
 
     public static ProvisionException failedToParse(String xml, XMLStreamException e) {
@@ -205,5 +209,9 @@ public class ProvisionErrors {
 
     public static ProvisionException environmentHasNoUnits() {
         return new ProvisionException("Environment has not units");
+    }
+
+    public static ProvisionException failedToUpdatePackageHistory(Throwable t) {
+        return new ProvisionException("Failed to update applied package history", t);
     }
 }
