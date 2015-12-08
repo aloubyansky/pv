@@ -23,9 +23,13 @@
 package org.jboss.provision.history;
 
 import java.io.File;
+import java.util.UUID;
 
+import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
+import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
+import org.jboss.provision.tool.instruction.ProvisionUnitInstruction;
 
 /**
  *
@@ -55,5 +59,26 @@ public class ProvisionEnvironmentHistory {
 
     public AppliedUnitUpdate getLastAppliedUnitUpdate(String unitName) throws ProvisionException {
         return AppliedUnitUpdate.loadLastAppliedUpdate(unitsHistory, unitName);
+    }
+
+    public void addLastAppliedPackage(ProvisionEnvironmentInstruction instruction) throws ProvisionException {
+        assert instruction != null : ProvisionErrors.nullArgument("instruction");
+
+        final File pkgDir = new File(pkgHistory, UUID.randomUUID().toString());
+        if(pkgDir.exists()) {
+            throw ProvisionErrors.pathAlreadyExists(pkgDir);
+        }
+        final AppliedPackage pkg = new AppliedPackage(pkgDir);
+
+        if(instruction.getUnitNames().isEmpty()) {
+            throw ProvisionErrors.packageDoesNotAffectUnits();
+        }
+        for(String unitName : instruction.getUnitNames()) {
+            final ProvisionUnitInstruction unitInstr = instruction.getUnitInstruction(unitName);
+        }
+    }
+
+    public void addAppliedInstruction(ProvisionEnvironment env, ProvisionEnvironmentInstruction instruction) throws ProvisionException {
+        final AppliedEnvironmentInstruction appliedInstr = AppliedEnvironmentInstruction.create(env, instruction);
     }
 }

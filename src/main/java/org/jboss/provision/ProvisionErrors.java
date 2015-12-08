@@ -211,7 +211,11 @@ public class ProvisionErrors {
         return new ProvisionException("Environment has not units");
     }
 
-    public static ProvisionException failedToUpdatePackageHistory(Throwable t) {
-        return new ProvisionException("Failed to update applied package history", t);
+    public static ProvisionException failedToUpdateHistory(Throwable t) {
+        return new ProvisionException("Failed to update environment history", t);
+    }
+
+    public static ProvisionException packageDoesNotAffectUnits() {
+        return new ProvisionException("Package does not affect any unit.");
     }
 }

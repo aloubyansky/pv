@@ -96,7 +96,7 @@ class AppliedUnitUpdate {
             tasks.add(FileTask.override(IoUtils.newFile(unitUpdate.dir.getParentFile(), LAST_UPDATE_TXT), unitUpdate.dir.getName()));
             tasks.safeExecute();
         } catch (IOException e) {
-            throw ProvisionErrors.failedToUpdatePackageHistory(e);
+            throw ProvisionErrors.failedToUpdateHistory(e);
         }
     }
 

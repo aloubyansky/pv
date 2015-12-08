@@ -39,6 +39,7 @@ import org.jboss.provision.ProvisionUnitEnvironment;
 import org.jboss.provision.UnitUpdatePolicy;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionUnitInfo;
+import org.jboss.provision.io.FileTask;
 import org.jboss.provision.io.FileUtils;
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
 import org.jboss.provision.tool.instruction.UpdatePolicy;
@@ -136,50 +137,8 @@ public class AuditUtil {
     }
 
     public static void record(ProvisionEnvironment env, File f) throws ProvisionException {
-
-        assert env != null : ProvisionErrors.nullArgument("env");
-        assert f != null : ProvisionErrors.nullArgument("file");
-
-        if(f.exists()) {
-            throw ProvisionErrors.pathAlreadyExists(f);
-        }
-
-        final Properties props = new Properties();
-        props.setProperty(ENV_HOME, env.getEnvironmentHome().getAbsolutePath());
-
-        final UnitUpdatePolicy defaultPolicy = env.getUpdatePolicy();
-        props.setProperty(DEFAULT_POLICY + UNIT_POLICY, defaultPolicy.getUnitPolicy().name());
-        props.setProperty(DEFAULT_POLICY + CONTENT_POLICY, defaultPolicy.getDefaultContentPolicy().name());
-        for(String path : defaultPolicy.getPaths()) {
-            props.setProperty(DEFAULT_POLICY + DOT + path, defaultPolicy.getContentPolicy(path).name());
-        }
-
-        for(String unitName : env.getUnitNames()) {
-            final ProvisionUnitEnvironment unitEnv = env.getUnitEnvironment(unitName);
-            props.setProperty(unitName + VERSION, unitEnv.getUnitInfo().getVersion());
-            final ContentPath unitHome = unitEnv.getHomePath();
-            if(unitHome != null) {
-                props.setProperty(unitName + UNIT_HOME, unitHome.toString());
-            }
-            final UnitUpdatePolicy updatePolicy = unitEnv.getUpdatePolicy();
-            if(updatePolicy != null) {
-                props.setProperty(unitName + POLICY + UNIT_POLICY, updatePolicy.getUnitPolicy().name());
-                props.setProperty(unitName + POLICY + CONTENT_POLICY, updatePolicy.getDefaultContentPolicy().name());
-                for(String path : updatePolicy.getPaths()) {
-                    final UpdatePolicy pathPolicy = updatePolicy.getContentPolicy(path);
-                    if(pathPolicy != null) {
-                        props.setProperty(unitName + POLICY + DOT + path, pathPolicy.name());
-                    }
-                }
-            }
-        }
-
-        for(String name : env.getLocationNames()) {
-            props.setProperty(LOCATION + name, env.getNamedLocation(name).toString());
-        }
-
         try {
-            FileUtils.writeProperties(f, props);
+            FileUtils.writeProperties(f, toProperties(env, f));
         } catch (IOException e) {
             throw ProvisionErrors.failedToAuditEnvironment(e);
         }
@@ -274,6 +233,55 @@ public class AuditUtil {
             }
         }
         return envBuilder.build();
+    }
+
+    public static FileTask createRecordTask(ProvisionEnvironment env, File f) throws ProvisionException {
+        final Properties props = toProperties(env, f);
+        return FileTask.write(f, props);
+    }
+
+    protected static Properties toProperties(ProvisionEnvironment env, File f) throws ProvisionException {
+        assert env != null : ProvisionErrors.nullArgument("env");
+        assert f != null : ProvisionErrors.nullArgument("file");
+
+        if(f.exists()) {
+            throw ProvisionErrors.pathAlreadyExists(f);
+        }
+
+        final Properties props = new Properties();
+        props.setProperty(ENV_HOME, env.getEnvironmentHome().getAbsolutePath());
+
+        final UnitUpdatePolicy defaultPolicy = env.getUpdatePolicy();
+        props.setProperty(DEFAULT_POLICY + UNIT_POLICY, defaultPolicy.getUnitPolicy().name());
+        props.setProperty(DEFAULT_POLICY + CONTENT_POLICY, defaultPolicy.getDefaultContentPolicy().name());
+        for(String path : defaultPolicy.getPaths()) {
+            props.setProperty(DEFAULT_POLICY + DOT + path, defaultPolicy.getContentPolicy(path).name());
+        }
+
+        for(String unitName : env.getUnitNames()) {
+            final ProvisionUnitEnvironment unitEnv = env.getUnitEnvironment(unitName);
+            props.setProperty(unitName + VERSION, unitEnv.getUnitInfo().getVersion());
+            final ContentPath unitHome = unitEnv.getHomePath();
+            if(unitHome != null) {
+                props.setProperty(unitName + UNIT_HOME, unitHome.toString());
+            }
+            final UnitUpdatePolicy updatePolicy = unitEnv.getUpdatePolicy();
+            if(updatePolicy != null) {
+                props.setProperty(unitName + POLICY + UNIT_POLICY, updatePolicy.getUnitPolicy().name());
+                props.setProperty(unitName + POLICY + CONTENT_POLICY, updatePolicy.getDefaultContentPolicy().name());
+                for(String path : updatePolicy.getPaths()) {
+                    final UpdatePolicy pathPolicy = updatePolicy.getContentPolicy(path);
+                    if(pathPolicy != null) {
+                        props.setProperty(unitName + POLICY + DOT + path, pathPolicy.name());
+                    }
+                }
+            }
+        }
+
+        for(String name : env.getLocationNames()) {
+            props.setProperty(LOCATION + name, env.getNamedLocation(name).toString());
+        }
+        return props;
     }
 
     private static UnitUpdatePolicy.Builder getPolicyBuilder(Map<String, UnitUpdatePolicy.Builder> unitPolicies,

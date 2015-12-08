@@ -100,7 +100,7 @@ public class AppliedPackage {
             tasks.add(FileTask.override(IoUtils.newFile(appliedPkg.dir.getParentFile(), LAST_PKG_TXT), appliedPkg.dir.getName()));
             tasks.safeExecute();
         } catch (IOException e) {
-            throw ProvisionErrors.failedToUpdatePackageHistory(e);
+            throw ProvisionErrors.failedToUpdateHistory(e);
         }
     }
 
@@ -127,7 +127,7 @@ public class AppliedPackage {
     private Map<String, String> units;
     private String prevPkgDir;
 
-    private AppliedPackage(File dir) throws ProvisionException {
+    AppliedPackage(File dir) throws ProvisionException {
         assert dir != null : ProvisionErrors.nullArgument("dir");
         this.dir = dir;
     }

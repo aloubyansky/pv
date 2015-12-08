@@ -23,39 +23,43 @@
 package org.jboss.provision.io;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Properties;
+
+import javax.xml.stream.XMLStreamException;
 
 import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
+import org.jboss.provision.xml.ProvisionXml;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public abstract class FileTask {
+class WriteProvisionXmlTask extends FileTask {
 
-    public static FileTask override(File target, String content) throws IOException {
-        return new OverrideFileContentTask(target, content, true);
-    }
-    public static FileTask write(File target, String content) {
-        return new WriteFileTask(target, content);
-    }
-    public static FileTask write(File target, Properties props) {
-        return new WritePropertiesFileTask(target, props);
-    }
-    public static FileTask writeProvisionXml(File target, ProvisionEnvironmentInstruction instruction) {
-        return new WriteProvisionXmlTask(target, instruction);
+    protected final File target;
+    protected final ProvisionEnvironmentInstruction instruction;
+
+    WriteProvisionXmlTask(File target, ProvisionEnvironmentInstruction instruction) {
+        this.target = target;
+        this.instruction = instruction;
     }
 
-    abstract void execute() throws IOException;
-    abstract void rollback() throws IOException;
-    void safeRollback() {
+    @Override
+    void execute() throws IOException {
+        FileWriter writer = null;
         try {
-            rollback();
-        } catch(RuntimeException | Error | IOException e) {
-            // ignore
+            writer = new FileWriter(target);
+            ProvisionXml.marshal(writer, instruction);
+        } catch (XMLStreamException e) {
+            throw new IOException(e);
+        } finally {
+            IoUtils.safeClose(writer);
         }
     }
-    public void cleanup() throws IOException {
+
+    @Override
+    void rollback() throws IOException {
+        IoUtils.recursiveDelete(target);
     }
 }

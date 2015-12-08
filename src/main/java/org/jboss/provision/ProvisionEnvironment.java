@@ -102,6 +102,18 @@ public abstract class ProvisionEnvironment extends ProvisionEnvironmentBase {
             return this;
         }
 
+        public Builder copyUnit(ProvisionUnitEnvironment unitEnv) throws ProvisionException {
+            addUnit(unitEnv.getUnitInfo());
+            final String unitName = unitEnv.getUnitInfo().getName();
+            if(unitEnv.getHomePath() != null) {
+                setUnitHome(unitName, unitEnv.getHomePath());
+            }
+            if(unitEnv.getUpdatePolicy() != null) {
+                setUnitUpdatePolicy(unitName, unitEnv.getUpdatePolicy());
+            }
+            return this;
+        }
+
         public Builder setUnitHome(String unitName, ContentPath unitHome) throws ProvisionException {
             if(!unitInfos.containsKey(unitName)) {
                 throw ProvisionErrors.unknownUnit(unitName);

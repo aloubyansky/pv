@@ -80,11 +80,11 @@ class ApplicationContextImpl implements ApplicationContext {
         if (!pkgFile.exists()) {
             throw ProvisionErrors.pathDoesNotExist(pkgFile);
         }
-        final ProvisionEnvironmentInstruction instructions = readInstruction(pkgFile);
+        final ProvisionEnvironmentInstruction instruction = readInstruction(pkgFile);
         ProvisionEnvironmentJournal envJournal = null;
         boolean discardBackup = true;
         try {
-            scheduleTasks(instructions);
+            scheduleTasks(instruction);
             unitEnv = null;
             envJournal = ProvisionEnvironmentJournal.Factory.startSession(env);
             envJournal.record(env);
