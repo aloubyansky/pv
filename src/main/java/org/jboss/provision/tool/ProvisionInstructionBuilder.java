@@ -81,7 +81,7 @@ public class ProvisionInstructionBuilder {
             if(nextUnit.getVersion().equals(replacedUnit.getVersion())) {
                 throw ProvisionErrors.patchIdMissing();
             }
-            builder = ProvisionUnitInstruction.replaceUnit(nextUnit.getName(), replacedUnit.getVersion(), nextUnit.getVersion());
+            builder = ProvisionUnitInstruction.replaceUnit(nextUnit.getName(), nextUnit.getVersion(), replacedUnit.getVersion());
         }
 
         final Set<ContentPath> commonPaths = new HashSet<ContentPath>();

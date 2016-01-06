@@ -165,10 +165,9 @@ public abstract class ProvisionEnvironment extends ProvisionEnvironmentBase {
         this.envHome = builder.envHome;
 
         if(builder.unitInfos.isEmpty()) {
-            throw ProvisionErrors.environmentHasNoUnits();
-        }
-
-        if(builder.unitInfos.size() == 1) {
+            //throw ProvisionErrors.environmentHasNoUnits();
+            unitEnvs = Collections.emptyMap();
+        } else if(builder.unitInfos.size() == 1) {
             final String unitName = builder.unitInfos.keySet().iterator().next();
             unitEnvs = Collections.singletonMap(unitName, new ProvisionUnitEnvironment(this,
                     builder.unitInfos.get(unitName), builder.unitHomes.get(unitName),

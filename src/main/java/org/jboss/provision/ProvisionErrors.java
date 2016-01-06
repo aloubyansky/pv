@@ -208,7 +208,7 @@ public class ProvisionErrors {
     }
 
     public static ProvisionException environmentHasNoUnits() {
-        return new ProvisionException("Environment has not units");
+        return new ProvisionException("Environment has no units");
     }
 
     public static ProvisionException failedToUpdateHistory(Throwable t) {

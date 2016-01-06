@@ -23,6 +23,7 @@
 package org.jboss.provision;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.Map;
 
 import org.jboss.provision.info.ContentPath;
@@ -36,6 +37,10 @@ public class ProvisionUnitEnvironment extends ProvisionEnvironmentBase {
 
     private final ContentPath unitHome;
     private final ProvisionUnitInfo unitInfo;
+
+    public static ProvisionUnitEnvironment create(ProvisionEnvironment parentEnv, ProvisionUnitInfo info, ContentPath unitHome) {
+        return new ProvisionUnitEnvironment(parentEnv, info, unitHome, Collections.<String, ContentPath>emptyMap(), null);
+    }
 
     ProvisionUnitEnvironment(ProvisionEnvironment parentEnv, ProvisionUnitInfo unitInfo, ContentPath unitHome,
             Map<String, ContentPath> namedLocations, UnitUpdatePolicy updatePolicy) {

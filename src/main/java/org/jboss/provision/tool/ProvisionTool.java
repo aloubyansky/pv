@@ -36,9 +36,8 @@ public class ProvisionTool {
     private ProvisionTool() {
     }
 
-    public static void apply(ProvisionEnvironment env, File packageFile) throws ProvisionException {
-
+    public static ProvisionEnvironment apply(ProvisionEnvironment env, File packageFile) throws ProvisionException {
         final ApplicationContextImpl appCtx = new ApplicationContextImpl(env);
-        appCtx.processPackage(packageFile);
+        return appCtx.processPackage(packageFile);
     }
 }

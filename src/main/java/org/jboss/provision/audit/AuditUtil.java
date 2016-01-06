@@ -159,7 +159,7 @@ public class AuditUtil {
             throw ProvisionErrors.failedToLoadEnvironmentAuditRecord(e);
         }
 
-        final Builder envBuilder = ProvisionEnvironment.forUndefinedUnit();
+        final Builder envBuilder = ProvisionEnvironment.newBuilder();
         UnitUpdatePolicy.Builder defPolicy = null;
         Map<String, UnitUpdatePolicy.Builder> unitPolicies = null;
         Set<String> addedUnits = Collections.emptySet();

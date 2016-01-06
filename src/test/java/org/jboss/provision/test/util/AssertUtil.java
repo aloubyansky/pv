@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.jboss.provision.history.ProvisionEnvironmentHistory;
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
 import org.jboss.provision.util.HashUtils;
 import org.junit.Assert;
@@ -109,15 +110,25 @@ public class AssertUtil {
                 }
             }
             if(!targetNames.isEmpty()) {
-                if(ignoreEmptyDirs) {
-                    List<String> emptyDirs = new ArrayList<String>();
-                    for (String t : targetNames) {
-                        final File tFile = new File(target, t);
-                        if (tFile.isDirectory() && FSUtils.isEmptyDirBranch(tFile)) {
-                            emptyDirs.add(t);
+                List<String> ignoredDirs = Collections.emptyList();
+                for (String t : targetNames) {
+                    final File tFile = new File(target, t);
+                    if (tFile.isDirectory()) {
+                        if(t.equals(ProvisionEnvironmentHistory.DEF_HISTORY_DIR) ||
+                                ignoreEmptyDirs && FSUtils.isEmptyDirBranch(tFile)) {
+                            switch(ignoredDirs.size()) {
+                                case 0:
+                                    ignoredDirs = Collections.singletonList(t);
+                                case 1:
+                                    ignoredDirs = new ArrayList<String>(ignoredDirs);
+                                default:
+                                    ignoredDirs.add(t);
+                            }
                         }
                     }
-                    targetNames.removeAll(emptyDirs);
+                }
+                if(!ignoredDirs.isEmpty()) {
+                    targetNames.removeAll(ignoredDirs);
                 }
                 if(!targetNames.isEmpty()) {
                     return target.getAbsolutePath() + " contains unexpected children " + targetNames;

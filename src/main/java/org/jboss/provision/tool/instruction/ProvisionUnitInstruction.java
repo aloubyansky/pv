@@ -44,7 +44,7 @@ public abstract class ProvisionUnitInstruction extends ProvisionUnitInfo {
     }
 
     public static Builder replaceUnit(String name, String version, String replacedVersion) {
-        return new Builder(name, version, version, null);
+        return new Builder(name, version, replacedVersion, null);
     }
 
     public static Builder patchUnit(String name, String version, String patchId) {

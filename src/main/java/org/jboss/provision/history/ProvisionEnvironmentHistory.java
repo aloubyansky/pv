@@ -23,13 +23,12 @@
 package org.jboss.provision.history;
 
 import java.io.File;
-import java.util.UUID;
 
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
+import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
-import org.jboss.provision.tool.instruction.ProvisionUnitInstruction;
 
 /**
  *
@@ -37,48 +36,41 @@ import org.jboss.provision.tool.instruction.ProvisionUnitInstruction;
  */
 public class ProvisionEnvironmentHistory {
 
-    private static final String PKG_HISTORY_DIR = "packages";
-    private static final String UNITS_HISTORY_DIR = "units";
+    public static final String DEF_HISTORY_DIR = ".pvh";
 
-    public static ProvisionEnvironmentHistory create(File dir) {
-        return new ProvisionEnvironmentHistory(dir);
+    public static ProvisionEnvironmentHistory getInstance(ProvisionEnvironment env) {
+        assert env != null : ProvisionErrors.nullArgument("env");
+        return new ProvisionEnvironmentHistory(new File(env.getEnvironmentHome(), DEF_HISTORY_DIR));
     }
 
-    private final File pkgHistory;
-    private final File unitsHistory;
-
-    private ProvisionEnvironmentHistory(File dir) {
-        assert dir != null : ProvisionErrors.nullArgument("dir");
-        this.pkgHistory = new File(dir, PKG_HISTORY_DIR);
-        this.unitsHistory = new File(dir, UNITS_HISTORY_DIR);
+    public static ProvisionEnvironmentHistory getInstance(File historyHome) {
+        return new ProvisionEnvironmentHistory(historyHome);
     }
 
-    public AppliedPackage getLastAppliedPackage() throws ProvisionException {
-        return AppliedPackage.loadLastAppliedPackage(pkgHistory);
+    public static ProvisionEnvironmentHistory forEnvironment(File envHome) {
+        return new ProvisionEnvironmentHistory(new File(envHome, DEF_HISTORY_DIR));
     }
 
-    public AppliedUnitUpdate getLastAppliedUnitUpdate(String unitName) throws ProvisionException {
-        return AppliedUnitUpdate.loadLastAppliedUpdate(unitsHistory, unitName);
+    private final File historyHome;
+
+    private ProvisionEnvironmentHistory(File historyHome) {
+        assert historyHome != null : ProvisionErrors.nullArgument("historyHome");
+        this.historyHome = historyHome;
     }
 
-    public void addLastAppliedPackage(ProvisionEnvironmentInstruction instruction) throws ProvisionException {
-        assert instruction != null : ProvisionErrors.nullArgument("instruction");
-
-        final File pkgDir = new File(pkgHistory, UUID.randomUUID().toString());
-        if(pkgDir.exists()) {
-            throw ProvisionErrors.pathAlreadyExists(pkgDir);
+    public ProvisionEnvironment update(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction) throws ProvisionException {
+        final AppliedEnvironmentInstruction appliedInstr = AppliedEnvironmentInstruction.create(currentEnv, instruction);
+        final ProvisionEnvironment updatedEnv = appliedInstr.getUpdatedEnvironment();
+        if(updatedEnv.getUnitNames().isEmpty()) { // delete the history when the environment is uninstalled
+            IoUtils.recursiveDelete(historyHome);
+        } else {
+            AppliedEnvironmentInstruction.persist(appliedInstr, historyHome);
         }
-        final AppliedPackage pkg = new AppliedPackage(pkgDir);
-
-        if(instruction.getUnitNames().isEmpty()) {
-            throw ProvisionErrors.packageDoesNotAffectUnits();
-        }
-        for(String unitName : instruction.getUnitNames()) {
-            final ProvisionUnitInstruction unitInstr = instruction.getUnitInstruction(unitName);
-        }
+        return updatedEnv;
     }
 
-    public void addAppliedInstruction(ProvisionEnvironment env, ProvisionEnvironmentInstruction instruction) throws ProvisionException {
-        final AppliedEnvironmentInstruction appliedInstr = AppliedEnvironmentInstruction.create(env, instruction);
+    public ProvisionEnvironment getCurrentEnvironment() throws ProvisionException {
+        final AppliedEnvironmentInstruction appliedInstr = AppliedEnvironmentInstruction.loadLast(historyHome);
+        return appliedInstr == null ? null : appliedInstr.getUpdatedEnvironment();
     }
 }

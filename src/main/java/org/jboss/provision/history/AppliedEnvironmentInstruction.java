@@ -23,15 +23,21 @@
 package org.jboss.provision.history;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+
+import javax.xml.stream.XMLStreamException;
 
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionEnvironment.Builder;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.audit.AuditUtil;
+import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.io.FileTask;
 import org.jboss.provision.io.FileTaskList;
 import org.jboss.provision.io.FileUtils;
@@ -44,45 +50,53 @@ import org.jboss.provision.xml.ProvisionXml;
  *
  * @author Alexey Loubyansky
  */
-public abstract class AppliedEnvironmentInstruction {
+class AppliedEnvironmentInstruction {
 
     private static final String ENV_FILE = "env.properties";
     private static final String LAST_INSTR_TXT = "last.txt";
     private static final String PREV_INSTR_TXT = "prev.txt";
 
-    public static AppliedEnvironmentInstruction create(ProvisionEnvironment previousEnv, ProvisionEnvironmentInstruction instruction) throws ProvisionException {
+    public static AppliedEnvironmentInstruction create(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction) throws ProvisionException {
         final Builder envBuilder = ProvisionEnvironment.newBuilder();
 
         //env home
-        envBuilder.setEnvironmentHome(previousEnv.getEnvironmentHome());
+        envBuilder.setEnvironmentHome(currentEnv.getEnvironmentHome());
 
         // named locations
-        for(String locationName : previousEnv.getLocationNames(false)) {
-            envBuilder.nameLocation(locationName, previousEnv.getNamedLocation(locationName));
+        for(String locationName : currentEnv.getLocationNames(false)) {
+            envBuilder.nameLocation(locationName, currentEnv.getNamedLocation(locationName));
         }
 
         // default update policy
-        envBuilder.setDefaultUnitUpdatePolicy(previousEnv.getUpdatePolicy());
+        envBuilder.setDefaultUnitUpdatePolicy(currentEnv.getUpdatePolicy());
 
         // units
-        final Set<String> updatedUnits = instruction.getUnitNames();
-        for(String unitName : previousEnv.getUnitNames()) {
-            if(updatedUnits.contains(unitName)) {
+        final Set<String> updatedUnits = new HashSet<String>(instruction.getUnitNames());
+        for(String unitName : currentEnv.getUnitNames()) {
+            if(updatedUnits.remove(unitName)) {
                 final ProvisionUnitInstruction unitInstr = instruction.getUnitInstruction(unitName);
                 // WARN this assumes the unit instruction conditions have been satisfied!!!
                 final String newVersion = unitInstr.getVersion();
                 if(newVersion == null) {
                     // unit removed
                 } else {
-                    envBuilder.copyUnit(previousEnv.getUnitEnvironment(unitName));
+                    envBuilder.copyUnit(currentEnv.getUnitEnvironment(unitName));
                     envBuilder.addUnit(unitName, newVersion);
                 }
             } else {
-                envBuilder.copyUnit(previousEnv.getUnitEnvironment(unitName));
+                envBuilder.copyUnit(currentEnv.getUnitEnvironment(unitName));
             }
         }
-
-        return new AppliedEnvironmentInstruction(envBuilder.build(), instruction){};
+        if(!updatedUnits.isEmpty()) {
+            for(String newUnit : updatedUnits) {
+                final ProvisionUnitInstruction unitInstr = instruction.getUnitInstruction(newUnit);
+                if(unitInstr.getReplacedVersion() != null) {
+                    throw ProvisionErrors.unitIsNotInstalled(newUnit);
+                }
+                envBuilder.addUnit(ProvisionUnitInfo.createInfo(unitInstr.getName(), unitInstr.getVersion()));
+            }
+        }
+        return new AppliedEnvironmentInstruction(envBuilder.build(), instruction);
     }
 
     static File getLastAppliedInstrDir(final File historyDir) throws ProvisionException {
@@ -125,11 +139,30 @@ public abstract class AppliedEnvironmentInstruction {
             tasks.add(FileTask.write(prevInstrTxt, lastAppliedInstrDir.getName()));
         }
         try {
-            tasks.add(FileTask.override(lastInstrTxt, instrDir.getName()));
+            if(lastInstrTxt.exists()) {
+                tasks.add(FileTask.override(lastInstrTxt, instrDir.getName()));
+            } else {
+                tasks.add(FileTask.write(lastInstrTxt, instrDir.getName()));
+            }
             tasks.safeExecute();
         } catch (IOException e) {
-            ProvisionErrors.failedToUpdateHistory(e);
+            throw ProvisionErrors.failedToUpdateHistory(e);
         }
+    }
+
+    static AppliedEnvironmentInstruction loadLast(File historyDir) throws ProvisionException {
+        final File instrDir = getLastAppliedInstrDir(historyDir);
+        if(instrDir == null) {
+            return null;
+        }
+        if(instrDir.exists()) {
+            if(!instrDir.isDirectory()) {
+                throw new ProvisionException(ProvisionErrors.notADir(instrDir));
+            }
+        } else {
+            throw ProvisionErrors.pathDoesNotExist(instrDir);
+        }
+        return new AppliedEnvironmentInstruction(getFileToLoad(instrDir, ENV_FILE), getFileToLoad(instrDir, ProvisionXml.PROVISION_XML)){};
     }
 
     protected static File getFileToPersist(final File instrDir, String name) throws ProvisionException {
@@ -140,21 +173,56 @@ public abstract class AppliedEnvironmentInstruction {
         return f;
     }
 
-    protected final ProvisionEnvironment updatedEnv;
-    protected final ProvisionEnvironmentInstruction appliedInstruction;
+    protected static File getFileToLoad(final File instrDir, String name) throws ProvisionException {
+        final File f = new File(instrDir, name);
+        if(!f.exists()) {
+            throw ProvisionErrors.pathDoesNotExist(f);
+        }
+        return f;
+    }
+
+    protected final File envFile;
+    protected final File instrFile;
+    protected ProvisionEnvironment updatedEnv;
+    protected ProvisionEnvironmentInstruction appliedInstruction;
+
+    protected AppliedEnvironmentInstruction(File envFile, File instrFile) {
+        assert envFile != null : ProvisionErrors.nullArgument("envFile");
+        assert instrFile != null : ProvisionErrors.nullArgument("instrFile");
+        this.envFile = envFile;
+        this.instrFile = instrFile;
+    }
 
     protected AppliedEnvironmentInstruction(ProvisionEnvironment updatedEnv, ProvisionEnvironmentInstruction appliedInstruction) {
         assert updatedEnv != null : ProvisionErrors.nullArgument("updatedEnv");
         assert appliedInstruction != null : ProvisionErrors.nullArgument("appliedInstruction");
+        envFile = null;
+        instrFile = null;
         this.updatedEnv = updatedEnv;
         this.appliedInstruction = appliedInstruction;
     }
 
-    public ProvisionEnvironment getUpdatedEnvironment() {
+    public ProvisionEnvironment getUpdatedEnvironment() throws ProvisionException {
+        if(updatedEnv == null) {
+            updatedEnv = AuditUtil.loadEnv(envFile);
+        }
         return updatedEnv;
     }
 
-    public ProvisionEnvironmentInstruction getAppliedInstruction() {
+    public ProvisionEnvironmentInstruction getAppliedInstruction() throws ProvisionException {
+        if(appliedInstruction == null) {
+            FileInputStream fis = null;
+            try {
+                fis = new FileInputStream(instrFile);
+                appliedInstruction = ProvisionXml.parse(fis);
+            } catch (FileNotFoundException e) {
+                throw ProvisionErrors.pathDoesNotExist(instrFile);
+            } catch (XMLStreamException e) {
+                throw ProvisionErrors.failedToParse(instrFile.getAbsolutePath(), e);
+            } finally {
+                IoUtils.safeClose(fis);
+            }
+        }
         return appliedInstruction;
     }
 }

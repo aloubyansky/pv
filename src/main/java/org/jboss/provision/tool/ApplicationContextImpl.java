@@ -48,6 +48,7 @@ import org.jboss.provision.UnitUpdatePolicy;
 import org.jboss.provision.audit.ProvisionUnitJournal;
 import org.jboss.provision.audit.UnitJournalRecord;
 import org.jboss.provision.audit.ProvisionEnvironmentJournal;
+import org.jboss.provision.history.ProvisionEnvironmentHistory;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.tool.instruction.ContentItemInstruction;
@@ -63,7 +64,7 @@ import org.jboss.provision.xml.ProvisionXml;
  */
 class ApplicationContextImpl implements ApplicationContext {
 
-    private final ProvisionEnvironment env;
+    private ProvisionEnvironment env;
     private ProvisionUnitEnvironment unitEnv;
     private EnvironmentTasks envTasks = new EnvironmentTasks();
 
@@ -74,7 +75,7 @@ class ApplicationContextImpl implements ApplicationContext {
         this.env = env;
     }
 
-    void processPackage(File pkgFile) throws ProvisionException {
+    ProvisionEnvironment processPackage(File pkgFile) throws ProvisionException {
         assert pkgFile != null : ProvisionErrors.nullArgument("packageFile");
 
         if (!pkgFile.exists()) {
@@ -89,6 +90,7 @@ class ApplicationContextImpl implements ApplicationContext {
             envJournal = ProvisionEnvironmentJournal.Factory.startSession(env);
             envJournal.record(env);
             envTasks.execute(envJournal);
+            env = ProvisionEnvironmentHistory.getInstance(env).update(env, instruction);
         } catch(ProvisionException|RuntimeException|Error e) {
             discardBackup = false;
             if(envJournal != null) {
@@ -109,6 +111,7 @@ class ApplicationContextImpl implements ApplicationContext {
                 envJournal.close();
             }
         }
+        return env;
     }
 
     void revertPerformedInstructions() throws ProvisionException {
@@ -148,11 +151,15 @@ class ApplicationContextImpl implements ApplicationContext {
 
     private void scheduleTasks(ProvisionEnvironmentInstruction instructions) throws ProvisionException {
         for (String unitName : instructions.getUnitNames()) {
+            final ProvisionUnitInstruction unitInstr = instructions.getUnitInstruction(unitName);
             this.unitEnv = env.getUnitEnvironment(unitName);
             if(unitEnv == null) {
-                throw ProvisionErrors.unknownUnit(unitName);
+                if(unitInstr.getReplacedVersion() != null) {
+                    throw ProvisionErrors.unknownUnit(unitName);
+                }
+                unitEnv = ProvisionUnitEnvironment.create(env, unitInstr, null);
             }
-            scheduleTasks(instructions.getUnitInstruction(unitName));
+            scheduleTasks(unitInstr);
         }
     }
 

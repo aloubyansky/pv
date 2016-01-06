@@ -27,6 +27,7 @@ import java.io.IOException;
 
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
+import org.jboss.provision.history.ProvisionEnvironmentHistory;
 import org.jboss.provision.info.ContentItemInfo;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionUnitContentInfo;
@@ -58,6 +59,9 @@ public class ProvisionInfoReader {
     private static void readContentInfo(final ProvisionUnitContentInfo.Builder builder, File file, final int rootPathOffset)
             throws ProvisionException {
         if(file.isDirectory()) {
+            if(file.getName().equals(ProvisionEnvironmentHistory.DEF_HISTORY_DIR)) {
+                return;
+            }
             for(File f : file.listFiles()) {
                 readContentInfo(builder, f, rootPathOffset);
             }
@@ -71,11 +75,5 @@ public class ProvisionInfoReader {
             String relativePath = file.getAbsolutePath().substring(rootPathOffset);
             builder.add(ContentItemInfo.BUILDER.build(ContentPath.forFSPath(relativePath), fileHash));
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-
-        System.out.println("hello");
-        readContentInfo("test", "x.x.x", new File("/home/olubyans/git/patch-unit/"));
     }
 }
