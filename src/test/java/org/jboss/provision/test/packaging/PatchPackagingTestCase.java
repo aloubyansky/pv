@@ -82,8 +82,7 @@ public class PatchPackagingTestCase extends PackagingTestBase {
             .setCurrentInstallationDir(home.getHome())
             .setTargetInstallationDir(next.getHome())
             .setPackageOutputFile(archive)
-            .setPatchId("patch1")
-            .buildUpdate();
+            .buildPatch("patch1");
 
         final File unzipDir = unzipPackage();
 

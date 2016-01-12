@@ -20,17 +20,20 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.test.history;
+package org.jboss.provision.test.application.update;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
+
+import java.io.File;
 import java.util.Collections;
 
 import org.jboss.provision.ProvisionEnvironment;
-import org.jboss.provision.history.ProvisionEnvironmentHistory;
+import org.jboss.provision.ProvisionException;
+import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
+import org.jboss.provision.test.util.FSUtils;
 import org.jboss.provision.tool.ProvisionPackage;
 import org.jboss.provision.tool.ProvisionTool;
 import org.junit.Test;
@@ -39,13 +42,25 @@ import org.junit.Test;
  *
  * @author Alexey Loubyansky
  */
-public class UnitPatchTestCase extends ApplicationTestBase {
+public class UnitVersionMismatchTestCase extends ApplicationTestBase {
+
+    private File tmpDir;
 
     @Override
     public void doInit() {
         originalInstall.createFileWithRandomContent("a.txt")
         .createFileWithRandomContent("b/b.txt")
         .createFileWithRandomContent("c/c/c.txt");
+
+        tmpDir = FSUtils.newTmpFile("uvm_testdir");
+        if(!tmpDir.mkdirs()) {
+            fail("failed to create " + tmpDir.getAbsolutePath());
+        }
+    }
+
+    @Override
+    public void doCleanUp() {
+        IoUtils.recursiveDelete(tmpDir);
     }
 
     @Test
@@ -57,16 +72,8 @@ public class UnitPatchTestCase extends ApplicationTestBase {
             .buildInstall("unitA", "1.0");
 
         final ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
-        assertNull(ProvisionEnvironmentHistory.getInstance(env).getCurrentEnvironment());
-        AssertUtil.assertEmptyDirBranch(testInstall.getHome());
+        final ProvisionEnvironment originalEnv = ProvisionTool.apply(env, archive);
 
-        ProvisionTool.apply(env, archive);
-
-        final ProvisionEnvironmentHistory history = ProvisionEnvironmentHistory.getInstance(env);
-        assertNotNull(history);
-        AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome());
-
-        final ProvisionEnvironment originalEnv = history.getCurrentEnvironment();
         assertEquals(Collections.singleton("unitA"), originalEnv.getUnitNames());
         assertEquals("1.0", originalEnv.getUnitEnvironment("unitA").getUnitInfo().getVersion());
 
@@ -76,13 +83,17 @@ public class UnitPatchTestCase extends ApplicationTestBase {
             .setCurrentInstallationDir(testInstall.getHome())
             .setTargetInstallationDir(originalInstall.getHome())
             .setPackageOutputFile(archive)
-            .buildPatch("patch1", "unitA", "1.0");
+            .buildUpdate("unitA", "1.1", "1.2");
 
         AssertUtil.assertNotIdentical(originalInstall.getHome(), testInstall.getHome(), true);
-        ProvisionTool.apply(originalEnv, archive);
-        AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome(), true);
-
-        final ProvisionEnvironment patchedEnv = history.getCurrentEnvironment();
-        assertEquals(originalEnv, patchedEnv); // the version hasn't changed
+        IoUtils.copyFile(testInstall.getHome(), tmpDir);
+        try {
+            ProvisionTool.apply(originalEnv, archive);
+            fail("Cannot apply an update that targets version 1.1 to version 1.0");
+        } catch(ProvisionException e) {
+            // expected
+        }
+        AssertUtil.assertNotIdentical(originalInstall.getHome(), testInstall.getHome(), true);
+        AssertUtil.assertIdentical(tmpDir, testInstall.getHome(), false);
     }
 }

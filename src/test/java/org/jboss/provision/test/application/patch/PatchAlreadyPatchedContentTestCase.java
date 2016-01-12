@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.test.application.replace;
+package org.jboss.provision.test.application.patch;
 
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.io.IoUtils;
@@ -35,7 +35,7 @@ import org.junit.Test;
  *
  * @author Alexey Loubyansky
  */
-public class OriginalReplaceTestCase extends ApplicationTestBase {
+public class PatchAlreadyPatchedContentTestCase extends ApplicationTestBase {
 
     private InstallationBuilder nextOriginal;
 
@@ -53,14 +53,18 @@ public class OriginalReplaceTestCase extends ApplicationTestBase {
     public void testMain() throws Exception {
 
         originalInstall.createFileWithRandomContent("a.txt")
+            .createFileWithRandomContent("a/b/c.txt")
             .createFileWithRandomContent("b/b.txt")
+            .createFileWithRandomContent("b/b/c.txt")
             .createFileWithRandomContent("c/c/c.txt")
             .createDir("d/e/f");
 
         IoUtils.copyFile(originalInstall.getHome(), nextOriginal.getHome());
 
         nextOriginal.updateFileWithRandomContent("a.txt")
+            .updateFileWithRandomContent("a/b/c.txt")
             .delete("b/b.txt")
+            .delete("b/b/c.txt")
             .createFileWithRandomContent("b/bb.txt")
             .createFileWithRandomContent("d/d/d/d.txt")
             .createDir("g/h/i");
@@ -69,12 +73,15 @@ public class OriginalReplaceTestCase extends ApplicationTestBase {
             .setCurrentInstallationDir(originalInstall.getHome())
             .setTargetInstallationDir(nextOriginal.getHome())
             .setPackageOutputFile(archive)
-            .setPatchId("patch1")
-            .buildUpdate();
+            .buildPatch("patch1");
 
         IoUtils.copyFile(originalInstall.getHome(), testInstall.getHome());
+        // update content of a path to the target content
+        IoUtils.copyFile(nextOriginal.resolvePath("a/b/c.txt"), testInstall.resolvePath("a/b/c.txt"));
+        // delete content that does not exist in the target
+        testInstall.delete("b/b.txt");
 
-        AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome());
+        AssertUtil.assertNotIdentical(originalInstall.getHome(), testInstall.getHome(), true);
         AssertUtil.assertNotIdentical(nextOriginal.getHome(), testInstall.getHome(), true);
 
         final ProvisionEnvironment env = ProvisionEnvironment.forUndefinedUnit().setEnvironmentHome(testInstall.getHome()).build();

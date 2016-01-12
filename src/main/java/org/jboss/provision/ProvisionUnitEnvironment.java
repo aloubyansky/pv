@@ -24,6 +24,7 @@ package org.jboss.provision;
 
 import java.io.File;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.jboss.provision.info.ContentPath;
@@ -38,8 +39,57 @@ public class ProvisionUnitEnvironment extends ProvisionEnvironmentBase {
     private final ContentPath unitHome;
     private final ProvisionUnitInfo unitInfo;
 
-    public static ProvisionUnitEnvironment create(ProvisionEnvironment parentEnv, ProvisionUnitInfo info, ContentPath unitHome) {
-        return new ProvisionUnitEnvironment(parentEnv, info, unitHome, Collections.<String, ContentPath>emptyMap(), null);
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private ProvisionEnvironment parentEnv;
+        private ProvisionUnitInfo unitInfo;
+        private ContentPath unitHome;
+        private Map<String, ContentPath> namedLocations = Collections.emptyMap();
+        private UnitUpdatePolicy updatePolicy;
+
+        private Builder() {}
+
+        public Builder setParentEnv(ProvisionEnvironment parentEnv) {
+            this.parentEnv = parentEnv;
+            return this;
+        }
+
+        public Builder setUnitInfo(ProvisionUnitInfo unitInfo) {
+            this.unitInfo = unitInfo;
+            return this;
+        }
+
+        public Builder setUnitHome(ContentPath unitHome) {
+            this.unitHome = unitHome;
+            return this;
+        }
+
+        public Builder nameLocation(String name, ContentPath path) {
+            assert name != null : ProvisionErrors.nullArgument("name");
+            assert path != null : ProvisionErrors.nullArgument("path");
+            switch(namedLocations.size()) {
+                case 0:
+                    namedLocations = Collections.singletonMap(name, path);
+                    break;
+                case 1:
+                    namedLocations = new HashMap<String, ContentPath>(namedLocations);
+                default:
+                    namedLocations.put(name, path);
+            }
+            return this;
+        }
+
+        public Builder setUpdatePolicy(UnitUpdatePolicy updatePolicy) {
+            this.updatePolicy = updatePolicy;
+            return this;
+        }
+
+        public ProvisionUnitEnvironment build() {
+            return new ProvisionUnitEnvironment(parentEnv, unitInfo, unitHome, namedLocations, updatePolicy);
+        }
     }
 
     ProvisionUnitEnvironment(ProvisionEnvironment parentEnv, ProvisionUnitInfo unitInfo, ContentPath unitHome,

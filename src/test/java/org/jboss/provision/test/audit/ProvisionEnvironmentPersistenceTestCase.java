@@ -67,7 +67,7 @@ public class ProvisionEnvironmentPersistenceTestCase {
         final ContentPath aLocation = ContentPath.forPath("a/a.txt");
         final ContentPath bLocation = ContentPath.forName("aLocation");
         final ContentPath cLocation = ContentPath.create("bLocation", "b/b.txt");
-        final ProvisionEnvironment env = ProvisionEnvironment.forUndefinedUnit()
+        final ProvisionEnvironment env = ProvisionEnvironment.builder()
             .setEnvironmentHome(installationHome)
             .addUnit("aUnit", "0.0.1.Alpha-SNAPSHOT")
             .addUnit("bUnit", "1.0.0.GA")

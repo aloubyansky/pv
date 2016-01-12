@@ -33,6 +33,7 @@ import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
 import org.jboss.provision.tool.ProvisionPackage;
 import org.jboss.provision.tool.ProvisionTool;
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -56,7 +57,7 @@ public class UndefinedVersionTestCase extends ApplicationTestBase {
 
         AssertUtil.assertEmptyDirBranch(testInstall.getHome());
 
-        final ProvisionEnvironment env = ProvisionEnvironment.forUndefinedUnit().setEnvironmentHome(testInstall.getHome()).build();
+        final ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
         final ProvisionEnvironmentHistory history = ProvisionEnvironmentHistory.getInstance(env);
         assertNull(history.getCurrentEnvironment());
 
@@ -66,7 +67,7 @@ public class UndefinedVersionTestCase extends ApplicationTestBase {
         assertNotNull(env2);
 
         assertTrue(env2 != env);
-        assertEquals(env, env2);
+        Assert.assertNotEquals(env, env2);
 
         originalInstall.updateFileWithRandomContent("a.txt")
             .createFileWithRandomContent("d/d.txt");
@@ -74,21 +75,21 @@ public class UndefinedVersionTestCase extends ApplicationTestBase {
             .setCurrentInstallationDir(testInstall.getHome())
             .setTargetInstallationDir(originalInstall.getHome())
             .setPackageOutputFile(archive)
-            .setPatchId("patch1")
-            .buildUpdate();
+            .buildPatch("patch1");
 
         AssertUtil.assertNotIdentical(originalInstall.getHome(), testInstall.getHome(), true);
-        ProvisionTool.apply(env, archive);
+        ProvisionTool.apply(env2, archive);
         AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome(), true);
 
         final ProvisionEnvironment env3 = history.getCurrentEnvironment();
-        assertEquals(env, env3);
+        assertTrue(env2 != env3);
+        assertEquals(env2, env3);
 
         ProvisionPackage.newBuilder()
             .setCurrentInstallationDir(testInstall.getHome())
             .setPackageOutputFile(archive)
             .buildUninstall();
-        ProvisionTool.apply(env, archive);
+        ProvisionTool.apply(env3, archive);
         AssertUtil.assertEmptyDirBranch(testInstall.getHome());
         assertNull(history.getCurrentEnvironment());
     }

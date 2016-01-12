@@ -59,7 +59,7 @@ public class InstallUnitVersionTestCase extends ApplicationTestBase {
 
         AssertUtil.assertEmptyDirBranch(testInstall.getHome());
 
-        final ProvisionEnvironment env = ProvisionEnvironment.newBuilder().setEnvironmentHome(testInstall.getHome()).build();
+        final ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
         final ProvisionEnvironmentHistory history = ProvisionEnvironmentHistory.getInstance(env);
         assertNull(history.getCurrentEnvironment());
 

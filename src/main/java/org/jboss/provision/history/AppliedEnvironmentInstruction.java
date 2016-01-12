@@ -57,7 +57,7 @@ class AppliedEnvironmentInstruction {
     private static final String PREV_INSTR_TXT = "prev.txt";
 
     public static AppliedEnvironmentInstruction create(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction) throws ProvisionException {
-        final Builder envBuilder = ProvisionEnvironment.newBuilder();
+        final Builder envBuilder = ProvisionEnvironment.builder();
 
         //env home
         envBuilder.setEnvironmentHome(currentEnv.getEnvironmentHome());

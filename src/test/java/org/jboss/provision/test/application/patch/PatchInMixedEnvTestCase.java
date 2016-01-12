@@ -20,25 +20,22 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.test.application.replace;
+package org.jboss.provision.test.application.patch;
 
 import org.jboss.provision.ProvisionEnvironment;
-import org.jboss.provision.ProvisionException;
-import org.jboss.provision.UnitUpdatePolicy;
 import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
 import org.jboss.provision.test.util.InstallationBuilder;
 import org.jboss.provision.tool.ProvisionPackage;
 import org.jboss.provision.tool.ProvisionTool;
-import org.junit.Assert;
 import org.junit.Test;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public class ReplaceConflictingContentTestCase extends ApplicationTestBase {
+public class PatchInMixedEnvTestCase extends ApplicationTestBase {
 
     private InstallationBuilder nextOriginal;
     private InstallationBuilder testInstall;
@@ -74,34 +71,19 @@ public class ReplaceConflictingContentTestCase extends ApplicationTestBase {
             .setCurrentInstallationDir(originalInstall.getHome())
             .setTargetInstallationDir(nextOriginal.getHome())
             .setPackageOutputFile(archive)
-            .setPatchId("patch1")
-            .buildUpdate();
+            .buildPatch("patch1");
 
         IoUtils.copyFile(originalInstall.getHome(), testInstall.getHome());
         testInstall.createFileWithRandomContent("aa.txt")
             .createFileWithRandomContent("b/bbb.txt")
             .createFileWithRandomContent("c/c/cc.txt")
-            .createFileWithRandomContent("d/e/f.txt")
-            .updateFileWithRandomContent("b/b.txt");
+            .createFileWithRandomContent("d/e/f.txt");
 
-        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
+        AssertUtil.assertExpectedContentInTarget(originalInstall.getHome(), testInstall.getHome());
         AssertUtil.assertExpectedFilesNotInTarget(nextOriginal.getHome(), testInstall.getHome(), false);
 
-        ProvisionEnvironment env = ProvisionEnvironment.forUndefinedUnit()
+        final ProvisionEnvironment env = ProvisionEnvironment.forUndefinedUnit()
                 .setEnvironmentHome(testInstall.getHome()).build();
-        try {
-            ProvisionTool.apply(env, archive);
-            Assert.fail("Modified content replaced");
-        } catch(ProvisionException e) {
-            // expected
-        }
-
-        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
-        AssertUtil.assertExpectedFilesNotInTarget(nextOriginal.getHome(), testInstall.getHome(), false);
-
-        env = ProvisionEnvironment.forUndefinedUnit()
-                .setEnvironmentHome(testInstall.getHome())
-                .setDefaultUnitUpdatePolicy(UnitUpdatePolicy.FORCED).build();
         ProvisionTool.apply(env, archive);
 
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);

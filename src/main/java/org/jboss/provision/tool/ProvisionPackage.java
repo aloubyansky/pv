@@ -83,28 +83,15 @@ public class ProvisionPackage {
             return this;
         }
 
-        public Builder setPatchId(String patchId) {
+        public void buildPatch(String patchId) throws ProvisionException {
+            buildPatch(patchId, ProvisionUnitInfo.UNDEFINED_NAME, ProvisionUnitInfo.UNDEFINED_VERSION);
+        }
+
+        public void buildPatch(String patchId, String unitName, String unitVersion) throws ProvisionException {
             this.patchId = patchId;
-            return this;
-        }
-
-        public void build() throws ProvisionException {
-            if(curDir == null) {
-                buildInstall();
-            } else {
-                if(targetDir == null) {
-                    buildUninstall();
-                } else {
-                    buildUpdate();
-                }
+            if(patchId == null) {
+                throw new ProvisionException(ProvisionErrors.nullArgument("patchId"));
             }
-        }
-
-        public void buildUpdate() throws ProvisionException {
-            buildUpdate(ProvisionUnitInfo.UNDEFINED_NAME, ProvisionUnitInfo.UNDEFINED_VERSION, ProvisionUnitInfo.UNDEFINED_VERSION);
-        }
-
-        public void buildPatch(String unitName, String unitVersion) throws ProvisionException {
             buildUpdate(unitName, unitVersion, unitVersion);
         }
 

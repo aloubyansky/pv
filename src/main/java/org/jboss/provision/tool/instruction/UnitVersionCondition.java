@@ -45,16 +45,11 @@ class UnitVersionCondition implements InstructionCondition {
     public boolean isSatisfied(ApplicationContext ctx) throws ProvisionException {
         final ProvisionUnitInfo unitInfo = ctx.getUnitEnvironment().getUnitInfo();
         if(version == null) {
-            if(unitInfo != null) {
+            if(unitInfo.getVersion() != null) {
                 throw ProvisionErrors.unitAlreadyInstalled(unitInfo.getName(), unitInfo.getVersion());
             }
-        } else {
-            if(unitInfo == null) {
-                throw ProvisionErrors.unitIsNotInstalled(name);
-            }
-            if(!unitInfo.getVersion().equals(version)) {
-                throw ProvisionErrors.unitVersionMismatch(unitInfo.getName(), version, unitInfo.getVersion());
-            }
+        } else if(!unitInfo.getVersion().equals(version)) {
+            throw ProvisionErrors.unitVersionMismatch(unitInfo.getName(), version, unitInfo.getVersion());
         }
         return true;
     }

@@ -142,7 +142,7 @@ public interface ContentItemInstruction extends ContentItemInfo {
             this.path = path;
             this.hash = hash;
             this.replacedHash = replacedHash;
-            conditions = Collections.<InstructionCondition>singletonList(new ContentHashCondition(path, replacedHash));
+            conditions = Collections.<InstructionCondition>singletonList(new ContentHashCondition(path, replacedHash, hash));
         }
 
         public static Builder addContent(ContentPath path, byte[] hash) {

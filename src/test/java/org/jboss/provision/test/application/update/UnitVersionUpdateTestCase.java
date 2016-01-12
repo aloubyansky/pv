@@ -20,55 +20,61 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.test.application.install;
+package org.jboss.provision.test.application.update;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
+
+import java.util.Collections;
 
 import org.jboss.provision.ProvisionEnvironment;
-import org.jboss.provision.ProvisionException;
-import org.jboss.provision.UnitUpdatePolicy;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
 import org.jboss.provision.tool.ProvisionPackage;
 import org.jboss.provision.tool.ProvisionTool;
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public class InstallOverConflictingContentTestCase extends ApplicationTestBase {
+public class UnitVersionUpdateTestCase extends ApplicationTestBase {
+
+    @Override
+    public void doInit() {
+        originalInstall.createFileWithRandomContent("a.txt")
+        .createFileWithRandomContent("b/b.txt")
+        .createFileWithRandomContent("c/c/c.txt");
+    }
 
     @Test
     public void testMain() throws Exception {
 
-        originalInstall.createFileWithRandomContent("a.txt")
-            .createFileWithRandomContent("b/b.txt")
-            .createFileWithRandomContent("c/c/c.txt")
-            .createDir("d/e/f");
-
         ProvisionPackage.newBuilder()
             .setTargetInstallationDir(originalInstall.getHome())
             .setPackageOutputFile(archive)
-            .buildInstall();
+            .buildInstall("unitA", "1.0");
 
-        testInstall.createFileWithRandomContent("b/b.txt");
+        final ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
+        final ProvisionEnvironment originalEnv = ProvisionTool.apply(env, archive);
 
-        ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
-        try {
-            ProvisionTool.apply(env, archive);
-            fail("install didn't fail");
-        } catch(ProvisionException e) {
-            // expected
-        }
+        assertEquals(Collections.singleton("unitA"), originalEnv.getUnitNames());
+        assertEquals("1.0", originalEnv.getUnitEnvironment("unitA").getUnitInfo().getVersion());
 
-        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), true);
+        originalInstall.updateFileWithRandomContent("a.txt")
+            .createFileWithRandomContent("d/d.txt");
+        ProvisionPackage.newBuilder()
+            .setCurrentInstallationDir(testInstall.getHome())
+            .setTargetInstallationDir(originalInstall.getHome())
+            .setPackageOutputFile(archive)
+            .buildUpdate("unitA", "1.0", "1.1");
 
-        env = ProvisionEnvironment.builder()
-                .setEnvironmentHome(testInstall.getHome())
-                .setDefaultUnitUpdatePolicy(UnitUpdatePolicy.FORCED).build();
-        ProvisionTool.apply(env, archive);
-
+        AssertUtil.assertNotIdentical(originalInstall.getHome(), testInstall.getHome(), true);
+        ProvisionEnvironment patchedEnv = ProvisionTool.apply(originalEnv, archive);
         AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome(), true);
+
+        Assert.assertNotEquals(originalEnv, patchedEnv);
+        assertEquals(Collections.singleton("unitA"), patchedEnv.getUnitNames());
+        assertEquals("1.1", patchedEnv.getUnitEnvironment("unitA").getUnitInfo().getVersion());
     }
 }

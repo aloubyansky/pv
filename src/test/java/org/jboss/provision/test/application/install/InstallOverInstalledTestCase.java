@@ -26,7 +26,6 @@ import static org.junit.Assert.fail;
 
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionException;
-import org.jboss.provision.UnitUpdatePolicy;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
 import org.jboss.provision.tool.ProvisionPackage;
@@ -37,7 +36,7 @@ import org.junit.Test;
  *
  * @author Alexey Loubyansky
  */
-public class InstallOverConflictingContentTestCase extends ApplicationTestBase {
+public class InstallOverInstalledTestCase extends ApplicationTestBase {
 
     @Test
     public void testMain() throws Exception {
@@ -52,23 +51,18 @@ public class InstallOverConflictingContentTestCase extends ApplicationTestBase {
             .setPackageOutputFile(archive)
             .buildInstall();
 
-        testInstall.createFileWithRandomContent("b/b.txt");
+        AssertUtil.assertEmptyDirBranch(testInstall.getHome());
 
-        ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
+        final ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
+        final ProvisionEnvironment installedEnv = ProvisionTool.apply(env, archive);
+
+        AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome(), true);
+
         try {
-            ProvisionTool.apply(env, archive);
-            fail("install didn't fail");
+            ProvisionTool.apply(installedEnv, archive);
+            fail("Cannot install the same version over itself.");
         } catch(ProvisionException e) {
             // expected
         }
-
-        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), true);
-
-        env = ProvisionEnvironment.builder()
-                .setEnvironmentHome(testInstall.getHome())
-                .setDefaultUnitUpdatePolicy(UnitUpdatePolicy.FORCED).build();
-        ProvisionTool.apply(env, archive);
-
-        AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome(), true);
     }
 }

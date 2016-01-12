@@ -58,7 +58,7 @@ public class UnitUpdateTestCase extends ApplicationTestBase {
             .setPackageOutputFile(archive)
             .buildInstall("unitA", "1.0");
 
-        final ProvisionEnvironment env = ProvisionEnvironment.newBuilder().setEnvironmentHome(testInstall.getHome()).build();
+        final ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
         assertNull(ProvisionEnvironmentHistory.getInstance(env).getCurrentEnvironment());
         AssertUtil.assertEmptyDirBranch(testInstall.getHome());
 

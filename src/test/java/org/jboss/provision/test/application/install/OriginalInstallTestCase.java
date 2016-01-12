@@ -50,7 +50,7 @@ public class OriginalInstallTestCase extends ApplicationTestBase {
 
         AssertUtil.assertEmptyDirBranch(testInstall.getHome());
 
-        final ProvisionEnvironment env = ProvisionEnvironment.forUndefinedUnit().setEnvironmentHome(testInstall.getHome()).build();
+        final ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
         ProvisionTool.apply(env, archive);
 
         AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome(), true);

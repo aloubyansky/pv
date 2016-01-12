@@ -163,6 +163,10 @@ public abstract class ProvisionUnitInstruction extends ProvisionUnitInfo {
         return contentInstructions;
     }
 
+    public ProvisionUnitInfo getReplacedUnitInfo() {
+        return ProvisionUnitInfo.createInfo(name, replacedVersion);
+    }
+
     @Override
     public int hashCode() {
         final int prime = 31;

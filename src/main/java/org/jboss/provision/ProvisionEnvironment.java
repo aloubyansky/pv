@@ -37,7 +37,7 @@ import org.jboss.provision.info.ProvisionUnitInfo;
  */
 public abstract class ProvisionEnvironment extends ProvisionEnvironmentBase {
 
-    public static Builder newBuilder() {
+    public static Builder builder() {
         return new Builder();
     }
 
@@ -54,7 +54,7 @@ public abstract class ProvisionEnvironment extends ProvisionEnvironmentBase {
         private File envHome;
         private Map<String, ContentPath> namedLocations = Collections.emptyMap();
         private Map<String, ContentPath> unitHomes = Collections.emptyMap();
-        private UnitUpdatePolicy defaultUnitUpdatePolicy = UnitUpdatePolicy.UNIT_FORCED_CONTENT_CONDITIONED;
+        private UnitUpdatePolicy defaultUnitUpdatePolicy = UnitUpdatePolicy.CONDITIONED;
         private Map<String, UnitUpdatePolicy> unitUpdatePolicies = Collections.emptyMap();
         private Map<String, ProvisionUnitInfo> unitInfos = Collections.emptyMap();
 

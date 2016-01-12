@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.test.application.replace;
+package org.jboss.provision.test.application.patch;
 
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.io.IoUtils;
@@ -35,21 +35,18 @@ import org.junit.Test;
  *
  * @author Alexey Loubyansky
  */
-public class ReplaceInMixedEnvTestCase extends ApplicationTestBase {
+public class PatchUndefinedVersionTestCase extends ApplicationTestBase {
 
     private InstallationBuilder nextOriginal;
-    private InstallationBuilder testInstall;
 
     @Override
     protected void doInit() {
         nextOriginal = InstallationBuilder.create();
-        testInstall = InstallationBuilder.create();
     }
 
     @Override
     protected void doCleanUp() {
         IoUtils.recursiveDelete(nextOriginal.getHome());
-        IoUtils.recursiveDelete(testInstall.getHome());
     }
 
     @Test
@@ -61,6 +58,7 @@ public class ReplaceInMixedEnvTestCase extends ApplicationTestBase {
             .createDir("d/e/f");
 
         IoUtils.copyFile(originalInstall.getHome(), nextOriginal.getHome());
+
         nextOriginal.updateFileWithRandomContent("a.txt")
             .delete("b/b.txt")
             .createFileWithRandomContent("b/bb.txt")
@@ -71,23 +69,17 @@ public class ReplaceInMixedEnvTestCase extends ApplicationTestBase {
             .setCurrentInstallationDir(originalInstall.getHome())
             .setTargetInstallationDir(nextOriginal.getHome())
             .setPackageOutputFile(archive)
-            .setPatchId("patch1")
-            .buildUpdate();
+            .buildPatch("patch1");
 
         IoUtils.copyFile(originalInstall.getHome(), testInstall.getHome());
-        testInstall.createFileWithRandomContent("aa.txt")
-            .createFileWithRandomContent("b/bbb.txt")
-            .createFileWithRandomContent("c/c/cc.txt")
-            .createFileWithRandomContent("d/e/f.txt");
 
-        AssertUtil.assertExpectedContentInTarget(originalInstall.getHome(), testInstall.getHome());
-        AssertUtil.assertExpectedFilesNotInTarget(nextOriginal.getHome(), testInstall.getHome(), false);
+        AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome());
+        AssertUtil.assertNotIdentical(nextOriginal.getHome(), testInstall.getHome(), true);
 
-        final ProvisionEnvironment env = ProvisionEnvironment.forUndefinedUnit()
-                .setEnvironmentHome(testInstall.getHome()).build();
+        final ProvisionEnvironment env = ProvisionEnvironment.forUndefinedUnit().setEnvironmentHome(testInstall.getHome()).build();
         ProvisionTool.apply(env, archive);
 
-        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
-        AssertUtil.assertExpectedContentInTarget(nextOriginal.getHome(), testInstall.getHome(), true);
+        AssertUtil.assertNotIdentical(originalInstall.getHome(), testInstall.getHome(), true);
+        AssertUtil.assertIdentical(nextOriginal.getHome(), testInstall.getHome(), true);
     }
 }

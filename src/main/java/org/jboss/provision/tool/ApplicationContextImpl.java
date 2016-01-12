@@ -157,7 +157,7 @@ class ApplicationContextImpl implements ApplicationContext {
                 if(unitInstr.getReplacedVersion() != null) {
                     throw ProvisionErrors.unknownUnit(unitName);
                 }
-                unitEnv = ProvisionUnitEnvironment.create(env, unitInstr, null);
+                unitEnv = ProvisionUnitEnvironment.builder().setParentEnv(env).setUnitInfo(unitInstr.getReplacedUnitInfo()).build();
             }
             scheduleTasks(unitInstr);
         }

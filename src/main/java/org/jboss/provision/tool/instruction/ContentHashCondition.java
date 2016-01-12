@@ -40,21 +40,27 @@ class ContentHashCondition implements InstructionCondition {
 
     private final ContentPath path;
     private final byte[] expectedHash;
+    private final byte[] newHash;
 
-    ContentHashCondition(ContentPath path, byte[] expectedHash) {
+    ContentHashCondition(ContentPath path, byte[] expectedHash, byte[] newHash) {
         this.path = path;
         this.expectedHash = expectedHash;
+        this.newHash = newHash;
     }
 
     @Override
     public boolean isSatisfied(ApplicationContext ctx) throws ProvisionException {
         final File targetFile = ctx.getUnitEnvironment().resolvePath(path);
         if(expectedHash == null) {
+            // the path is not expected to exist
             if(targetFile.exists()) {
                 throw ProvisionErrors.pathAlreadyExists(targetFile);
             }
         } else {
             if(!targetFile.exists()) {
+                if(newHash == null) {
+                    return false;
+                }
                 throw ProvisionErrors.pathDoesNotExist(targetFile);
             }
             byte[] actualHash;
@@ -62,6 +68,10 @@ class ContentHashCondition implements InstructionCondition {
                 actualHash = HashUtils.hashFile(targetFile);
             } catch (IOException e) {
                 throw ProvisionErrors.hashCalculationFailed(targetFile, e);
+            }
+            if(Arrays.equals(newHash, actualHash)) {
+                // the existing content matches the new one
+                return false;
             }
             if(!Arrays.equals(expectedHash, actualHash)) {
                 throw ProvisionErrors.pathHashMismatch(targetFile, HashUtils.bytesToHexString(expectedHash), HashUtils.bytesToHexString(actualHash));

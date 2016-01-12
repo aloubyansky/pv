@@ -100,7 +100,7 @@ public class ProvisionErrors {
     }
 
     public static ProvisionException unitVersionMismatch(String name, String expectedVersion, String actualVersion) {
-        return new ProvisionException("Installed unit " + name + " is at version " + actualVersion + " but expected to be at " + expectedVersion);
+        return new ProvisionException("The installed version of " + name + " is " + actualVersion + " but the provisioning task targets version " + expectedVersion);
     }
 
     public static ProvisionException pathAlreadyExists(File path) {
