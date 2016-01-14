@@ -218,4 +218,8 @@ public class ProvisionErrors {
     public static ProvisionException packageDoesNotAffectUnits() {
         return new ProvisionException("Package does not affect any unit.");
     }
+
+    public static ProvisionException environmentAlreadyExists(File envHome) {
+        return new ProvisionException("Environment already exists at " + envHome.getAbsolutePath());
+    }
 }

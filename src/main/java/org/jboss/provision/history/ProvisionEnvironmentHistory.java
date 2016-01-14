@@ -51,6 +51,17 @@ public class ProvisionEnvironmentHistory {
         return new ProvisionEnvironmentHistory(new File(envHome, DEF_HISTORY_DIR));
     }
 
+    public static boolean storesHistory(File dir) throws ProvisionException {
+        assert dir != null : ProvisionErrors.nullArgument("dir");
+        if(!dir.exists()) {
+            return false;
+        }
+        if(!dir.isDirectory()) {
+            return false;
+        }
+        return AppliedEnvironmentInstruction.getLastAppliedInstrDir(dir) != null;
+    }
+
     private final File historyHome;
 
     private ProvisionEnvironmentHistory(File historyHome) {

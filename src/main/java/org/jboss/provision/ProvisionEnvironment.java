@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.jboss.provision.history.ProvisionEnvironmentHistory;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionUnitInfo;
 
@@ -152,6 +153,12 @@ public abstract class ProvisionEnvironment extends ProvisionEnvironmentBase {
         }
 
         public ProvisionEnvironment build() throws ProvisionException {
+            if(envHome == null) {
+                throw new ProvisionException(ProvisionErrors.nullArgument("envHome"));
+            }
+            if(ProvisionEnvironmentHistory.storesHistory(envHome)) {
+                throw ProvisionErrors.environmentAlreadyExists(envHome);
+            }
             return new ProvisionEnvironment(this){};
         }
     }
