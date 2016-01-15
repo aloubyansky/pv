@@ -56,7 +56,7 @@ class AppliedEnvironmentInstruction {
     private static final String LAST_INSTR_TXT = "last.txt";
     private static final String PREV_INSTR_TXT = "prev.txt";
 
-    public static AppliedEnvironmentInstruction create(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction) throws ProvisionException {
+    static AppliedEnvironmentInstruction create(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction) throws ProvisionException {
         final Builder envBuilder = ProvisionEnvironment.builder();
 
         //env home
@@ -155,6 +155,21 @@ class AppliedEnvironmentInstruction {
         if(instrDir == null) {
             return null;
         }
+        return loadInstruction(instrDir);
+    }
+
+    static AppliedEnvironmentInstruction loadPrevious(AppliedEnvironmentInstruction instr) throws ProvisionException {
+        if(instr == null) {
+            return null;
+        }
+        final String prevDir = instr.getPreviousInstructionDirName();
+        if(prevDir == null) {
+            return null;
+        }
+        return loadInstruction(new File(instr.envFile.getParentFile().getParentFile(), prevDir));
+    }
+
+    private static AppliedEnvironmentInstruction loadInstruction(final File instrDir) throws ProvisionException {
         if(instrDir.exists()) {
             if(!instrDir.isDirectory()) {
                 throw new ProvisionException(ProvisionErrors.notADir(instrDir));
@@ -165,7 +180,7 @@ class AppliedEnvironmentInstruction {
         return new AppliedEnvironmentInstruction(getFileToLoad(instrDir, ENV_FILE), getFileToLoad(instrDir, ProvisionXml.PROVISION_XML)){};
     }
 
-    protected static File getFileToPersist(final File instrDir, String name) throws ProvisionException {
+    private static File getFileToPersist(final File instrDir, String name) throws ProvisionException {
         final File f = new File(instrDir, name);
         if(f.exists()) {
             throw ProvisionErrors.pathAlreadyExists(f);
@@ -173,7 +188,7 @@ class AppliedEnvironmentInstruction {
         return f;
     }
 
-    protected static File getFileToLoad(final File instrDir, String name) throws ProvisionException {
+    private static File getFileToLoad(final File instrDir, String name) throws ProvisionException {
         final File f = new File(instrDir, name);
         if(!f.exists()) {
             throw ProvisionErrors.pathDoesNotExist(f);
@@ -224,5 +239,20 @@ class AppliedEnvironmentInstruction {
             }
         }
         return appliedInstruction;
+    }
+
+    public String getPreviousInstructionDirName() throws ProvisionException {
+        if(instrFile == null) {
+            throw ProvisionErrors.fileIsNotAssociatedWithInstruction();
+        }
+        final File prevInstrTxt = new File(instrFile.getParentFile(), PREV_INSTR_TXT);
+        if(!prevInstrTxt.exists()) {
+            return null;
+        }
+        try {
+            return FileUtils.readFile(prevInstrTxt);
+        } catch (IOException e) {
+            throw ProvisionErrors.readError(prevInstrTxt, e);
+        }
     }
 }

@@ -222,4 +222,8 @@ public class ProvisionErrors {
     public static ProvisionException environmentAlreadyExists(File envHome) {
         return new ProvisionException("Environment already exists at " + envHome.getAbsolutePath());
     }
+
+    public static ProvisionException fileIsNotAssociatedWithInstruction() {
+        return new ProvisionException("Persistent file is not associated with the instruction.");
+    }
 }

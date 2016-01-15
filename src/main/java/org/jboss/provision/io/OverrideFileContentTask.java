@@ -63,4 +63,8 @@ class OverrideFileContentTask extends WriteFileTask {
         IoUtils.copy(backup, trgFile);
         IoUtils.recursiveDelete(backup);
     }
+    @Override
+    public void cleanup() throws IOException {
+        IoUtils.recursiveDelete(backup);
+    }
 }

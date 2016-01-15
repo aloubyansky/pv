@@ -23,10 +23,13 @@
 package org.jboss.provision.history;
 
 import java.io.File;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
+import org.jboss.provision.ProvisionUnitEnvironment;
 import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
 
@@ -83,5 +86,53 @@ public class ProvisionEnvironmentHistory {
     public ProvisionEnvironment getCurrentEnvironment() throws ProvisionException {
         final AppliedEnvironmentInstruction appliedInstr = AppliedEnvironmentInstruction.loadLast(historyHome);
         return appliedInstr == null ? null : appliedInstr.getUpdatedEnvironment();
+    }
+
+    public Iterator<ProvisionEnvironment> environmentIterator() {
+        return new Iterator<ProvisionEnvironment>() {
+
+            boolean doNext = true;
+            AppliedEnvironmentInstruction appliedInstr;
+
+            @Override
+            public boolean hasNext() {
+                if(doNext) {
+                    doNext();
+                }
+                return appliedInstr != null;
+            }
+            @Override
+            public ProvisionEnvironment next() {
+                if(hasNext()) {
+                    try {
+                        final ProvisionEnvironment next = appliedInstr.getUpdatedEnvironment();
+                        doNext = true;
+                        return next;
+                    } catch (ProvisionException e) {
+                        throw new IllegalStateException(e);
+                    }
+                }
+                throw new NoSuchElementException();
+            }
+            protected void doNext() {
+                if(!doNext) {
+                    return;
+                }
+                try {
+                    if (appliedInstr == null) {
+                        appliedInstr = AppliedEnvironmentInstruction.loadLast(historyHome);
+                    } else {
+                        appliedInstr = AppliedEnvironmentInstruction.loadPrevious(appliedInstr);
+                    }
+                } catch(ProvisionException e) {
+                    throw new IllegalStateException(e);
+                }
+                doNext = false;
+            }};
+    }
+
+    // TODO
+    public Iterator<ProvisionUnitEnvironment> unitHistory(String unitName) {
+        return null;
     }
 }
