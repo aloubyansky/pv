@@ -90,7 +90,7 @@ class ApplicationContextImpl implements ApplicationContext {
             envJournal = ProvisionEnvironmentJournal.Factory.startSession(env);
             envJournal.record(env);
             envTasks.execute(envJournal);
-            env = ProvisionEnvironmentHistory.getInstance(env).update(env, instruction);
+            env = ProvisionEnvironmentHistory.getInstance(env).update(env, instruction, envJournal);
         } catch(ProvisionException|RuntimeException|Error e) {
             discardBackup = false;
             if(envJournal != null) {

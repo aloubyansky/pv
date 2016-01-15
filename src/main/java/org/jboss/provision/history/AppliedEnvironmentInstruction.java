@@ -114,42 +114,6 @@ class AppliedEnvironmentInstruction {
         return new File(historyDir, dirName);
     }
 
-    static void persist(AppliedEnvironmentInstruction appliedInstr, File historyDir) throws ProvisionException {
-        assert appliedInstr != null : ProvisionErrors.nullArgument("appliedInstruction");
-        assert historyDir != null : ProvisionErrors.nullArgument("historyDir");
-        final File instrDir = new File(historyDir, UUID.randomUUID().toString());
-        if(instrDir.exists()) {
-            if(!instrDir.isDirectory()) {
-                throw new ProvisionException(ProvisionErrors.notADir(instrDir));
-            }
-        } else if(!instrDir.mkdirs()) {
-            throw new ProvisionException(ProvisionErrors.couldNotCreateDir(instrDir));
-        }
-
-        final File envFile = getFileToPersist(instrDir, ENV_FILE);
-        final File instrXml = getFileToPersist(instrDir, ProvisionXml.PROVISION_XML);
-        final File prevInstrTxt = getFileToPersist(instrDir, PREV_INSTR_TXT);
-        final File lastInstrTxt = new File(historyDir, LAST_INSTR_TXT);
-        final File lastAppliedInstrDir = getLastAppliedInstrDir(historyDir);
-
-        final FileTaskList tasks = new FileTaskList();
-        tasks.add(AuditUtil.createRecordTask(appliedInstr.updatedEnv, envFile));
-        tasks.add(FileTask.writeProvisionXml(instrXml, appliedInstr.appliedInstruction));
-        if(lastAppliedInstrDir != null && lastAppliedInstrDir.exists()) {
-            tasks.add(FileTask.write(prevInstrTxt, lastAppliedInstrDir.getName()));
-        }
-        try {
-            if(lastInstrTxt.exists()) {
-                tasks.add(FileTask.override(lastInstrTxt, instrDir.getName()));
-            } else {
-                tasks.add(FileTask.write(lastInstrTxt, instrDir.getName()));
-            }
-            tasks.safeExecute();
-        } catch (IOException e) {
-            throw ProvisionErrors.failedToUpdateHistory(e);
-        }
-    }
-
     static AppliedEnvironmentInstruction loadLast(File historyDir) throws ProvisionException {
         final File instrDir = getLastAppliedInstrDir(historyDir);
         if(instrDir == null) {
@@ -196,8 +160,8 @@ class AppliedEnvironmentInstruction {
         return f;
     }
 
-    protected final File envFile;
-    protected final File instrFile;
+    protected File envFile;
+    protected File instrXml;
     protected ProvisionEnvironment updatedEnv;
     protected ProvisionEnvironmentInstruction appliedInstruction;
 
@@ -205,14 +169,14 @@ class AppliedEnvironmentInstruction {
         assert envFile != null : ProvisionErrors.nullArgument("envFile");
         assert instrFile != null : ProvisionErrors.nullArgument("instrFile");
         this.envFile = envFile;
-        this.instrFile = instrFile;
+        this.instrXml = instrFile;
     }
 
     protected AppliedEnvironmentInstruction(ProvisionEnvironment updatedEnv, ProvisionEnvironmentInstruction appliedInstruction) {
         assert updatedEnv != null : ProvisionErrors.nullArgument("updatedEnv");
         assert appliedInstruction != null : ProvisionErrors.nullArgument("appliedInstruction");
         envFile = null;
-        instrFile = null;
+        instrXml = null;
         this.updatedEnv = updatedEnv;
         this.appliedInstruction = appliedInstruction;
     }
@@ -228,12 +192,12 @@ class AppliedEnvironmentInstruction {
         if(appliedInstruction == null) {
             FileInputStream fis = null;
             try {
-                fis = new FileInputStream(instrFile);
+                fis = new FileInputStream(instrXml);
                 appliedInstruction = ProvisionXml.parse(fis);
             } catch (FileNotFoundException e) {
-                throw ProvisionErrors.pathDoesNotExist(instrFile);
+                throw ProvisionErrors.pathDoesNotExist(instrXml);
             } catch (XMLStreamException e) {
-                throw ProvisionErrors.failedToParse(instrFile.getAbsolutePath(), e);
+                throw ProvisionErrors.failedToParse(instrXml.getAbsolutePath(), e);
             } finally {
                 IoUtils.safeClose(fis);
             }
@@ -241,11 +205,18 @@ class AppliedEnvironmentInstruction {
         return appliedInstruction;
     }
 
-    public String getPreviousInstructionDirName() throws ProvisionException {
-        if(instrFile == null) {
+    public File getInstructionDirectory() throws ProvisionException {
+        if(instrXml == null) {
             throw ProvisionErrors.fileIsNotAssociatedWithInstruction();
         }
-        final File prevInstrTxt = new File(instrFile.getParentFile(), PREV_INSTR_TXT);
+        return instrXml.getParentFile();
+    }
+
+    public String getPreviousInstructionDirName() throws ProvisionException {
+        if(instrXml == null) {
+            throw ProvisionErrors.fileIsNotAssociatedWithInstruction();
+        }
+        final File prevInstrTxt = new File(instrXml.getParentFile(), PREV_INSTR_TXT);
         if(!prevInstrTxt.exists()) {
             return null;
         }
@@ -253,6 +224,39 @@ class AppliedEnvironmentInstruction {
             return FileUtils.readFile(prevInstrTxt);
         } catch (IOException e) {
             throw ProvisionErrors.readError(prevInstrTxt, e);
+        }
+    }
+
+    void schedulePersistence(File historyDir, FileTaskList tasks) throws ProvisionException {
+        assert historyDir != null : ProvisionErrors.nullArgument("historyDir");
+        final File instrDir = new File(historyDir, UUID.randomUUID().toString());
+        if(instrDir.exists()) {
+            if(!instrDir.isDirectory()) {
+                throw new ProvisionException(ProvisionErrors.notADir(instrDir));
+            }
+        } else if(!instrDir.mkdirs()) {
+            throw new ProvisionException(ProvisionErrors.couldNotCreateDir(instrDir));
+        }
+
+        envFile = getFileToPersist(instrDir, ENV_FILE);
+        instrXml = getFileToPersist(instrDir, ProvisionXml.PROVISION_XML);
+        final File prevInstrTxt = getFileToPersist(instrDir, PREV_INSTR_TXT);
+        final File lastInstrTxt = new File(historyDir, LAST_INSTR_TXT);
+        final File lastAppliedInstrDir = getLastAppliedInstrDir(historyDir);
+
+        tasks.add(AuditUtil.createRecordTask(updatedEnv, envFile));
+        tasks.add(FileTask.writeProvisionXml(instrXml, appliedInstruction));
+        if(lastAppliedInstrDir != null && lastAppliedInstrDir.exists()) {
+            tasks.add(FileTask.write(prevInstrTxt, lastAppliedInstrDir.getName()));
+        }
+        try {
+            if(lastInstrTxt.exists()) {
+                tasks.add(FileTask.override(lastInstrTxt, instrDir.getName()));
+            } else {
+                tasks.add(FileTask.write(lastInstrTxt, instrDir.getName()));
+            }
+        } catch (IOException e) {
+            throw ProvisionErrors.failedToUpdateHistory(e);
         }
     }
 }

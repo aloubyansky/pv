@@ -23,6 +23,7 @@
 package org.jboss.provision.history;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -30,6 +31,10 @@ import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.ProvisionUnitEnvironment;
+import org.jboss.provision.audit.ProvisionEnvironmentJournal;
+import org.jboss.provision.audit.ProvisionUnitJournal;
+import org.jboss.provision.io.FileTask;
+import org.jboss.provision.io.FileTaskList;
 import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
 
@@ -40,6 +45,7 @@ import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
 public class ProvisionEnvironmentHistory {
 
     public static final String DEF_HISTORY_DIR = ".pvh";
+    private static final String UNITS = "units";
 
     public static ProvisionEnvironmentHistory getInstance(ProvisionEnvironment env) {
         assert env != null : ProvisionErrors.nullArgument("env");
@@ -72,13 +78,36 @@ public class ProvisionEnvironmentHistory {
         this.historyHome = historyHome;
     }
 
-    public ProvisionEnvironment update(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction) throws ProvisionException {
+    public ProvisionEnvironment update(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction, ProvisionEnvironmentJournal envJournal) throws ProvisionException {
         final AppliedEnvironmentInstruction appliedInstr = AppliedEnvironmentInstruction.create(currentEnv, instruction);
         final ProvisionEnvironment updatedEnv = appliedInstr.getUpdatedEnvironment();
         if(updatedEnv.getUnitNames().isEmpty()) { // delete the history when the environment is uninstalled
             IoUtils.recursiveDelete(historyHome);
         } else {
-            AppliedEnvironmentInstruction.persist(appliedInstr, historyHome);
+            final FileTaskList tasks = new FileTaskList();
+
+            appliedInstr.schedulePersistence(historyHome, tasks);
+
+            final String instrId = appliedInstr.getInstructionDirectory().getName();
+            final File unitsDir = new File(historyHome, UNITS);
+            if(!unitsDir.exists() && !unitsDir.mkdirs()) {
+                throw new ProvisionException(ProvisionErrors.couldNotCreateDir(unitsDir));
+            }
+            for(ProvisionUnitJournal unitJournal : envJournal.getUnitJournals()) {
+                final String unitName = unitJournal.getUnitEnvironment().getUnitInfo().getName();
+                final File unitBackupDir = IoUtils.newFile(unitsDir, unitName, instrId);
+                if(unitBackupDir.exists()) {
+                    throw ProvisionErrors.pathAlreadyExists(unitBackupDir);
+                }
+                FileTask.copy(unitJournal.getContentBackupDir(), unitBackupDir);
+            }
+
+            try {
+                tasks.safeExecute();
+            } catch (IOException e) {
+                throw ProvisionErrors.failedToUpdateHistory(e);
+            }
+
         }
         return updatedEnv;
     }

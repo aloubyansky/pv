@@ -34,21 +34,30 @@ import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
  */
 public abstract class FileTask {
 
+    public static FileTask copy(File src, File target) {
+        return new CopyFileTask(src, target);
+    }
+
     public static FileTask override(File target, String content) throws IOException {
         return new OverrideFileContentTask(target, content, true);
     }
+
     public static FileTask write(File target, String content) {
         return new WriteFileTask(target, content);
     }
+
     public static FileTask write(File target, Properties props) {
         return new WritePropertiesFileTask(target, props);
     }
+
     public static FileTask writeProvisionXml(File target, ProvisionEnvironmentInstruction instruction) {
         return new WriteProvisionXmlTask(target, instruction);
     }
 
     abstract void execute() throws IOException;
+
     abstract void rollback() throws IOException;
+
     void safeRollback() {
         try {
             rollback();
@@ -56,6 +65,7 @@ public abstract class FileTask {
             // ignore
         }
     }
+
     public void cleanup() throws IOException {
     }
 }

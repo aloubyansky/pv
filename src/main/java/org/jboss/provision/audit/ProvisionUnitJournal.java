@@ -42,4 +42,6 @@ public interface ProvisionUnitJournal {
     List<UnitJournalRecord> getRecorded();
 
     void load() throws ProvisionException;
+
+    File getContentBackupDir();
 }

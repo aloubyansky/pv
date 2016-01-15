@@ -160,6 +160,8 @@ class EnvironmentJournalImpl implements ProvisionEnvironmentJournal {
 
         private final ProvisionUnitEnvironment unitEnv;
         private final File unitAuditDir;
+        private final File contentBackupDir;
+        private final File instrDir;
         private List<UnitJournalRecord> recorded = Collections.emptyList();
 
         protected UnitAuditJournalImpl(ProvisionUnitEnvironment unitEnv, File unitAuditDir) {
@@ -167,6 +169,8 @@ class EnvironmentJournalImpl implements ProvisionEnvironmentJournal {
             assert unitAuditDir != null : ProvisionErrors.nullArgument("unitAuditDir");
             this.unitEnv = unitEnv;
             this.unitAuditDir = unitAuditDir;
+            contentBackupDir = new File(unitAuditDir, CONTENT_DIR);
+            instrDir = new File(unitAuditDir, INSTR_DIR);
         }
 
         @Override
@@ -182,7 +186,7 @@ class EnvironmentJournalImpl implements ProvisionEnvironmentJournal {
 
             File backup = null;
             if (replacedFile.exists()) {
-                backup = IoUtils.newFile(unitAuditDir, CONTENT_DIR, instruction.getPath().getFSRelativePath());
+                backup = IoUtils.newFile(contentBackupDir, instruction.getPath().getFSRelativePath());
                 if (!backup.getParentFile().exists() && !backup.getParentFile().mkdirs()) {
                     throw new ProvisionException(ProvisionErrors.couldNotCreateDir(backup.getParentFile()));
                 }
@@ -203,7 +207,7 @@ class EnvironmentJournalImpl implements ProvisionEnvironmentJournal {
                 default:
                     recorded.add(record);
             }
-            AuditUtil.record(instruction, IoUtils.newFile(unitAuditDir, INSTR_DIR, recorded.size() + INSTR_FILE_SUFFIX));
+            AuditUtil.record(instruction, IoUtils.newFile(instrDir, recorded.size() + INSTR_FILE_SUFFIX));
         }
 
         @Override
@@ -218,22 +222,25 @@ class EnvironmentJournalImpl implements ProvisionEnvironmentJournal {
             }
             assertDirToLoad(unitAuditDir);
             recorded = new ArrayList<UnitJournalRecord>();
-            final File instructionsDir = new File(unitAuditDir, INSTR_DIR);
-            final File contentDir = new File(unitAuditDir, CONTENT_DIR);
-            final List<String> names = Arrays.asList(instructionsDir.list());
+            final List<String> names = Arrays.asList(instrDir.list());
             Collections.sort(names);
             for (String name : names) {
                 if (!name.endsWith(INSTR_FILE_SUFFIX)) {
                     continue;
                 }
-                final File f = new File(instructionsDir, name);
+                final File f = new File(instrDir, name);
                 final ContentItemInstruction instruction = AuditUtil.load(f);
-                File backupFile = new File(contentDir, instruction.getPath().getFSRelativePath());
+                File backupFile = new File(contentBackupDir, instruction.getPath().getFSRelativePath());
                 if (!backupFile.exists()) {
                     backupFile = null;
                 }
                 recorded.add(new AuditRecordImpl(instruction, backupFile));
             }
+        }
+
+        @Override
+        public File getContentBackupDir() {
+            return contentBackupDir;
         }
     }
 

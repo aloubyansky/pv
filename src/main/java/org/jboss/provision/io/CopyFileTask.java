@@ -35,7 +35,7 @@ class CopyFileTask extends TwoFilesTask {
     }
     @Override
     void execute() throws IOException {
-        IoUtils.copy(src, trg);
+        IoUtils.copyFile(src, trg);
     }
     @Override
     void rollback() throws IOException {
