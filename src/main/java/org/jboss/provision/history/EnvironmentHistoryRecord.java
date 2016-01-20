@@ -42,6 +42,7 @@ import org.jboss.provision.io.FileTask;
 import org.jboss.provision.io.FileTaskList;
 import org.jboss.provision.io.FileUtils;
 import org.jboss.provision.io.IoUtils;
+import org.jboss.provision.tool.ContentSource;
 import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
 import org.jboss.provision.tool.instruction.ProvisionUnitInstruction;
 import org.jboss.provision.xml.ProvisionXml;
@@ -50,13 +51,13 @@ import org.jboss.provision.xml.ProvisionXml;
  *
  * @author Alexey Loubyansky
  */
-class AppliedEnvironmentInstruction {
+public class EnvironmentHistoryRecord {
 
     private static final String ENV_FILE = "env.properties";
     private static final String LAST_INSTR_TXT = "last.txt";
     private static final String PREV_INSTR_TXT = "prev.txt";
 
-    static AppliedEnvironmentInstruction create(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction) throws ProvisionException {
+    static EnvironmentHistoryRecord create(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction) throws ProvisionException {
         final Builder envBuilder = ProvisionEnvironment.builder();
 
         //env home
@@ -96,7 +97,7 @@ class AppliedEnvironmentInstruction {
                 envBuilder.addUnit(ProvisionUnitInfo.createInfo(unitInstr.getName(), unitInstr.getVersion()));
             }
         }
-        return new AppliedEnvironmentInstruction(envBuilder.build(), instruction);
+        return new EnvironmentHistoryRecord(envBuilder.build(), instruction);
     }
 
     static File getLastAppliedInstrDir(final File historyDir) throws ProvisionException {
@@ -114,7 +115,7 @@ class AppliedEnvironmentInstruction {
         return new File(historyDir, dirName);
     }
 
-    static AppliedEnvironmentInstruction loadLast(File historyDir) throws ProvisionException {
+    static EnvironmentHistoryRecord loadLast(File historyDir) throws ProvisionException {
         final File instrDir = getLastAppliedInstrDir(historyDir);
         if(instrDir == null) {
             return null;
@@ -122,7 +123,7 @@ class AppliedEnvironmentInstruction {
         return loadInstruction(instrDir);
     }
 
-    static AppliedEnvironmentInstruction loadPrevious(AppliedEnvironmentInstruction instr) throws ProvisionException {
+    static EnvironmentHistoryRecord loadPrevious(EnvironmentHistoryRecord instr) throws ProvisionException {
         if(instr == null) {
             return null;
         }
@@ -133,7 +134,7 @@ class AppliedEnvironmentInstruction {
         return loadInstruction(new File(instr.envFile.getParentFile().getParentFile(), prevDir));
     }
 
-    private static AppliedEnvironmentInstruction loadInstruction(final File instrDir) throws ProvisionException {
+    private static EnvironmentHistoryRecord loadInstruction(final File instrDir) throws ProvisionException {
         if(instrDir.exists()) {
             if(!instrDir.isDirectory()) {
                 throw new ProvisionException(ProvisionErrors.notADir(instrDir));
@@ -141,7 +142,7 @@ class AppliedEnvironmentInstruction {
         } else {
             throw ProvisionErrors.pathDoesNotExist(instrDir);
         }
-        return new AppliedEnvironmentInstruction(getFileToLoad(instrDir, ENV_FILE), getFileToLoad(instrDir, ProvisionXml.PROVISION_XML)){};
+        return new EnvironmentHistoryRecord(getFileToLoad(instrDir, ENV_FILE), getFileToLoad(instrDir, ProvisionXml.PROVISION_XML)){};
     }
 
     private static File getFileToPersist(final File instrDir, String name) throws ProvisionException {
@@ -165,14 +166,14 @@ class AppliedEnvironmentInstruction {
     protected ProvisionEnvironment updatedEnv;
     protected ProvisionEnvironmentInstruction appliedInstruction;
 
-    protected AppliedEnvironmentInstruction(File envFile, File instrFile) {
+    protected EnvironmentHistoryRecord(File envFile, File instrFile) {
         assert envFile != null : ProvisionErrors.nullArgument("envFile");
         assert instrFile != null : ProvisionErrors.nullArgument("instrFile");
         this.envFile = envFile;
         this.instrXml = instrFile;
     }
 
-    protected AppliedEnvironmentInstruction(ProvisionEnvironment updatedEnv, ProvisionEnvironmentInstruction appliedInstruction) {
+    protected EnvironmentHistoryRecord(ProvisionEnvironment updatedEnv, ProvisionEnvironmentInstruction appliedInstruction) {
         assert updatedEnv != null : ProvisionErrors.nullArgument("updatedEnv");
         assert appliedInstruction != null : ProvisionErrors.nullArgument("appliedInstruction");
         envFile = null;
@@ -205,16 +206,21 @@ class AppliedEnvironmentInstruction {
         return appliedInstruction;
     }
 
-    public File getInstructionDirectory() throws ProvisionException {
+    public ContentSource getBackup() throws ProvisionException {
+        final File instrDir = getInstructionDirectory();
+        return ContentSource.forBackup(instrDir);
+    }
+
+    File getInstructionDirectory() throws ProvisionException {
         if(instrXml == null) {
-            throw ProvisionErrors.fileIsNotAssociatedWithInstruction();
+            throw ProvisionErrors.instructionIsNotAssociatedWithFile();
         }
         return instrXml.getParentFile();
     }
 
-    public String getPreviousInstructionDirName() throws ProvisionException {
+    String getPreviousInstructionDirName() throws ProvisionException {
         if(instrXml == null) {
-            throw ProvisionErrors.fileIsNotAssociatedWithInstruction();
+            throw ProvisionErrors.instructionIsNotAssociatedWithFile();
         }
         final File prevInstrTxt = new File(instrXml.getParentFile(), PREV_INSTR_TXT);
         if(!prevInstrTxt.exists()) {

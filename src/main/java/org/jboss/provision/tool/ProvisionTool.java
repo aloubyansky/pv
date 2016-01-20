@@ -25,7 +25,11 @@ package org.jboss.provision.tool;
 import java.io.File;
 
 import org.jboss.provision.ProvisionEnvironment;
+import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
+import org.jboss.provision.history.EnvironmentHistoryRecord;
+import org.jboss.provision.history.ProvisionEnvironmentHistory;
+import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
 
 /**
  *
@@ -37,7 +41,20 @@ public class ProvisionTool {
     }
 
     public static ProvisionEnvironment apply(ProvisionEnvironment env, File packageFile) throws ProvisionException {
-        final ApplicationContextImpl appCtx = new ApplicationContextImpl(env);
+        assert env != null : ProvisionErrors.nullArgument("env");
+        assert packageFile != null : ProvisionErrors.nullArgument("packageFile");
+        final ApplicationContextImpl appCtx = new ApplicationContextImpl(env, ContentSource.forZip(packageFile));
         return appCtx.processPackage(packageFile);
+    }
+
+    public static ProvisionEnvironment rollbackLast(ProvisionEnvironment env) throws ProvisionException {
+        assert env != null : ProvisionErrors.nullArgument("env");
+        final EnvironmentHistoryRecord record = ProvisionEnvironmentHistory.getInstance(env).getLastRecord();
+        if(record == null) {
+            throw ProvisionErrors.noHistoryRecordedUntilThisPoint();
+        }
+        final ApplicationContextImpl appCtx = new ApplicationContextImpl(env, record.getBackup());
+        ProvisionEnvironmentInstruction rollback = record.getAppliedInstruction().getRollback();
+        return appCtx.apply(rollback);
     }
 }

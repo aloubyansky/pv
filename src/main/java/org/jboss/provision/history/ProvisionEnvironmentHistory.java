@@ -26,7 +26,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
@@ -36,6 +35,7 @@ import org.jboss.provision.audit.ProvisionUnitJournal;
 import org.jboss.provision.io.FileTask;
 import org.jboss.provision.io.FileTaskList;
 import org.jboss.provision.io.IoUtils;
+import org.jboss.provision.tool.ContentSource;
 import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
 
 /**
@@ -68,7 +68,7 @@ public class ProvisionEnvironmentHistory {
         if(!dir.isDirectory()) {
             return false;
         }
-        return AppliedEnvironmentInstruction.getLastAppliedInstrDir(dir) != null;
+        return EnvironmentHistoryRecord.getLastAppliedInstrDir(dir) != null;
     }
 
     private final File historyHome;
@@ -78,8 +78,8 @@ public class ProvisionEnvironmentHistory {
         this.historyHome = historyHome;
     }
 
-    public ProvisionEnvironment update(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction, ProvisionEnvironmentJournal envJournal) throws ProvisionException {
-        final AppliedEnvironmentInstruction appliedInstr = AppliedEnvironmentInstruction.create(currentEnv, instruction);
+    public ProvisionEnvironment record(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction, ProvisionEnvironmentJournal envJournal) throws ProvisionException {
+        final EnvironmentHistoryRecord appliedInstr = EnvironmentHistoryRecord.create(currentEnv, instruction);
         final ProvisionEnvironment updatedEnv = appliedInstr.getUpdatedEnvironment();
         if(updatedEnv.getUnitNames().isEmpty()) { // delete the history when the environment is uninstalled
             IoUtils.recursiveDelete(historyHome);
@@ -96,10 +96,14 @@ public class ProvisionEnvironmentHistory {
             for(ProvisionUnitJournal unitJournal : envJournal.getUnitJournals()) {
                 final String unitName = unitJournal.getUnitEnvironment().getUnitInfo().getName();
                 final File unitBackupDir = IoUtils.newFile(unitsDir, unitName, instrId);
-                if(unitBackupDir.exists()) {
-                    throw ProvisionErrors.pathAlreadyExists(unitBackupDir);
+                if(!unitJournal.getContentBackupDir().exists()) {
+                    tasks.add(FileTask.mkdirs(unitBackupDir));
+                } else {
+                    if (unitBackupDir.exists()) {
+                        throw ProvisionErrors.pathAlreadyExists(unitBackupDir);
+                    }
+                    tasks.add(FileTask.copy(unitJournal.getContentBackupDir(), unitBackupDir));
                 }
-                FileTask.copy(unitJournal.getContentBackupDir(), unitBackupDir);
             }
 
             try {
@@ -107,22 +111,36 @@ public class ProvisionEnvironmentHistory {
             } catch (IOException e) {
                 throw ProvisionErrors.failedToUpdateHistory(e);
             }
-
         }
         return updatedEnv;
     }
 
     public ProvisionEnvironment getCurrentEnvironment() throws ProvisionException {
-        final AppliedEnvironmentInstruction appliedInstr = AppliedEnvironmentInstruction.loadLast(historyHome);
+        final EnvironmentHistoryRecord appliedInstr = EnvironmentHistoryRecord.loadLast(historyHome);
         return appliedInstr == null ? null : appliedInstr.getUpdatedEnvironment();
     }
 
-    public Iterator<ProvisionEnvironment> environmentIterator() {
-        return new Iterator<ProvisionEnvironment>() {
+    public EnvironmentHistoryRecord getLastRecord() throws ProvisionException {
+        return EnvironmentHistoryRecord.loadLast(historyHome);
+    }
 
+    // TODO
+    public ProvisionEnvironment rollbackToPrevious() throws ProvisionException {
+        final EnvironmentHistoryRecord appliedInstr = EnvironmentHistoryRecord.loadLast(historyHome);
+        final String prevInstrDir = appliedInstr.getPreviousInstructionDirName();
+        if(prevInstrDir == null) {
+            throw ProvisionErrors.noHistoryRecordedUntilThisPoint();
+        }
+
+        ContentSource.forBackup(appliedInstr.getInstructionDirectory());
+        final ProvisionEnvironmentInstruction rollbackInstr = appliedInstr.getAppliedInstruction().getRollback();
+        return null;
+    }
+
+    Iterator<EnvironmentHistoryRecord> appliedInstructions() {
+        return new Iterator<EnvironmentHistoryRecord>() {
             boolean doNext = true;
-            AppliedEnvironmentInstruction appliedInstr;
-
+            EnvironmentHistoryRecord appliedInstr;
             @Override
             public boolean hasNext() {
                 if(doNext) {
@@ -131,15 +149,10 @@ public class ProvisionEnvironmentHistory {
                 return appliedInstr != null;
             }
             @Override
-            public ProvisionEnvironment next() {
+            public EnvironmentHistoryRecord next() {
                 if(hasNext()) {
-                    try {
-                        final ProvisionEnvironment next = appliedInstr.getUpdatedEnvironment();
-                        doNext = true;
-                        return next;
-                    } catch (ProvisionException e) {
-                        throw new IllegalStateException(e);
-                    }
+                    doNext = true;
+                        return appliedInstr;
                 }
                 throw new NoSuchElementException();
             }
@@ -149,14 +162,31 @@ public class ProvisionEnvironmentHistory {
                 }
                 try {
                     if (appliedInstr == null) {
-                        appliedInstr = AppliedEnvironmentInstruction.loadLast(historyHome);
+                        appliedInstr = EnvironmentHistoryRecord.loadLast(historyHome);
                     } else {
-                        appliedInstr = AppliedEnvironmentInstruction.loadPrevious(appliedInstr);
+                        appliedInstr = EnvironmentHistoryRecord.loadPrevious(appliedInstr);
                     }
                 } catch(ProvisionException e) {
                     throw new IllegalStateException(e);
                 }
                 doNext = false;
+            }};
+    }
+
+    public Iterator<ProvisionEnvironment> environmentIterator() {
+        return new Iterator<ProvisionEnvironment>() {
+            final Iterator<EnvironmentHistoryRecord> delegate = appliedInstructions();
+            @Override
+            public boolean hasNext() {
+                return delegate.hasNext();
+            }
+            @Override
+            public ProvisionEnvironment next() {
+                try {
+                    return delegate.next().getUpdatedEnvironment();
+                } catch (ProvisionException e) {
+                    throw new IllegalStateException(e);
+                }
             }};
     }
 

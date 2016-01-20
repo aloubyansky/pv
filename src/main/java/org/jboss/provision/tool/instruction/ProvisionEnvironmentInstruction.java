@@ -28,74 +28,91 @@ import java.util.Map;
 import java.util.Set;
 
 import org.jboss.provision.ProvisionErrors;
+import org.jboss.provision.ProvisionException;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public interface ProvisionEnvironmentInstruction {
+public class ProvisionEnvironmentInstruction {
 
-    Set<String> getUnitNames();
+    public static Builder builder() {
+        return new Builder();
+    }
 
-    ProvisionUnitInstruction getUnitInstruction(String unitName);
+    protected final Map<String, ProvisionUnitInstruction> units;
 
-    class Builder {
+    protected ProvisionEnvironmentInstruction(Map<String, ProvisionUnitInstruction> units) {
+        assert units != null : ProvisionErrors.nullArgument("units");
+        this.units = units;
+    }
 
-        private final class ProvisionPackageImpl implements ProvisionEnvironmentInstruction {
-            private final Map<String, ProvisionUnitInstruction> units;
+    public Set<String> getUnitNames() {
+        return units.keySet();
+    }
 
-            public ProvisionPackageImpl(Map<String, ProvisionUnitInstruction> units) {
-                assert units != null : ProvisionErrors.nullArgument("units");
-                this.units = units;
+    public ProvisionUnitInstruction getUnitInstruction(String unitName) {
+        return units.get(unitName);
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((units == null) ? 0 : units.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        ProvisionEnvironmentInstruction other = (ProvisionEnvironmentInstruction) obj;
+        if (units == null) {
+            if (other.units != null)
+                return false;
+        } else if (!units.equals(other.units))
+            return false;
+        return true;
+    }
+
+    public ProvisionEnvironmentInstruction getRollback() throws ProvisionException {
+        final Builder builder = builder();
+        for(String unitName : getUnitNames()) {
+            final ProvisionUnitInstruction unitInstr = getUnitInstruction(unitName);
+            final String replacedVersion = unitInstr.getReplacedVersion();
+            final String version = unitInstr.getVersion();
+            final ProvisionUnitInstruction.Builder unitInstBuilder;
+            if(replacedVersion == null) {
+                unitInstBuilder = ProvisionUnitInstruction.uninstallUnit(unitName, unitInstr.getVersion());
+            } else if(version == null) {
+                unitInstBuilder = ProvisionUnitInstruction.installUnit(unitName, unitInstr.getVersion());
+            } else if(replacedVersion.equals(version)) {
+                unitInstBuilder = ProvisionUnitInstruction.patchUnit(unitName, unitInstr.getVersion(), "rollback-" + unitInstr.getId());
+            } else {
+                unitInstBuilder = ProvisionUnitInstruction.replaceUnit(unitName, replacedVersion, unitInstr.getVersion());
             }
-
-            @Override
-            public Set<String> getUnitNames() {
-                return units.keySet();
+            for(ContentItemInstruction contentInst : unitInstr.getContentInstructions()) {
+                unitInstBuilder.addContentInstruction(contentInst.getRollback());
             }
-
-            @Override
-            public ProvisionUnitInstruction getUnitInstruction(String unitName) {
-                return units.get(unitName);
-            }
-
-            @Override
-            public int hashCode() {
-                final int prime = 31;
-                int result = 1;
-                result = prime * result + ((units == null) ? 0 : units.hashCode());
-                return result;
-            }
-
-            @Override
-            public boolean equals(Object obj) {
-                if (this == obj)
-                    return true;
-                if (obj == null)
-                    return false;
-                if (getClass() != obj.getClass())
-                    return false;
-                ProvisionPackageImpl other = (ProvisionPackageImpl) obj;
-                if (units == null) {
-                    if (other.units != null)
-                        return false;
-                } else if (!units.equals(other.units))
-                    return false;
-                return true;
-            }
+            builder.add(unitInstBuilder.build());
         }
+        return builder.build();
+    }
+
+    public static class Builder {
 
         private Map<String, ProvisionUnitInstruction> units = Collections.<String, ProvisionUnitInstruction>emptyMap();
 
         private Builder() {
         }
 
-        public static Builder newPackage() {
-            return new Builder();
-        }
-
         public ProvisionEnvironmentInstruction build() {
-            return new ProvisionPackageImpl(units);
+            return new ProvisionEnvironmentInstruction(units);
         }
 
         public Builder add(ProvisionUnitInstruction unit) {

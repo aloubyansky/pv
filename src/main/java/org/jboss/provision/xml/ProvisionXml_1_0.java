@@ -138,7 +138,7 @@ class ProvisionXml_1_0 implements XMLStreamConstants, XMLElementReader<ParsingRe
     @Override
     public void readElement(XMLExtendedStreamReader reader, ParsingResult result) throws XMLStreamException {
 
-        final ProvisionEnvironmentInstruction.Builder builder = ProvisionEnvironmentInstruction.Builder.newPackage();
+        final ProvisionEnvironmentInstruction.Builder builder = ProvisionEnvironmentInstruction.builder();
         while (reader.hasNext() && reader.nextTag() != END_ELEMENT) {
             final String localName = reader.getLocalName();
             final Element element = Element.forName(localName);

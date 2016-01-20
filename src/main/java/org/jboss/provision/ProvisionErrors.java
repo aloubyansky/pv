@@ -223,7 +223,11 @@ public class ProvisionErrors {
         return new ProvisionException("Environment already exists at " + envHome.getAbsolutePath());
     }
 
-    public static ProvisionException fileIsNotAssociatedWithInstruction() {
-        return new ProvisionException("Persistent file is not associated with the instruction.");
+    public static ProvisionException instructionIsNotAssociatedWithFile() {
+        return new ProvisionException("Instruction is not associated with a persistent file.");
+    }
+
+    public static ProvisionException noHistoryRecordedUntilThisPoint() {
+        return new ProvisionException("No history recorded until this point.");
     }
 }

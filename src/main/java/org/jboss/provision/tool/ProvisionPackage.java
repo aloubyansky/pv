@@ -106,7 +106,7 @@ public class ProvisionPackage {
             } else {
                 updateInstruction = ProvisionInstructionBuilder.patch(patchId, currentContent, targetContent);
             }
-            ProvisionPackage.build(ProvisionEnvironmentInstruction.Builder.newPackage().add(updateInstruction).build(), targetDir, pkgFile);
+            ProvisionPackage.build(ProvisionEnvironmentInstruction.builder().add(updateInstruction).build(), targetDir, pkgFile);
         }
 
         public void buildInstall() throws ProvisionException {
@@ -120,7 +120,7 @@ public class ProvisionPackage {
             assertExists(targetDir, "targetInstallationDir");
             final ProvisionUnitContentInfo contentInfo = ProvisionInfoReader.readContentInfo(unitName, targetVersion, targetDir);
             final ProvisionUnitInstruction installInstruction = ProvisionInstructionBuilder.install(contentInfo);
-            ProvisionPackage.build(ProvisionEnvironmentInstruction.Builder.newPackage().add(installInstruction).build(), targetDir, pkgFile);
+            ProvisionPackage.build(ProvisionEnvironmentInstruction.builder().add(installInstruction).build(), targetDir, pkgFile);
         }
 
         public void buildUninstall() throws ProvisionException {
@@ -134,7 +134,7 @@ public class ProvisionPackage {
             assertExists(curDir, "currentInstallationDir");
             final ProvisionUnitContentInfo contentInfo = ProvisionInfoReader.readContentInfo(unitName, unitVersion, curDir);
             final ProvisionUnitInstruction uninstallInstruction = ProvisionInstructionBuilder.uninstall(contentInfo);
-            ProvisionPackage.build(ProvisionEnvironmentInstruction.Builder.newPackage().add(uninstallInstruction).build(), curDir, pkgFile);
+            ProvisionPackage.build(ProvisionEnvironmentInstruction.builder().add(uninstallInstruction).build(), curDir, pkgFile);
         }
 
         private void assertExists(File f, String argName) throws ProvisionException {

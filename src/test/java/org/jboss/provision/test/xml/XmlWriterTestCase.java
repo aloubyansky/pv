@@ -44,7 +44,7 @@ public class XmlWriterTestCase {
     public void testXmlWriter() throws Exception {
 
         final File root = new File("/home/olubyans/git/pv/");
-        final ProvisionEnvironmentInstruction pkg = ProvisionEnvironmentInstruction.Builder.newPackage()
+        final ProvisionEnvironmentInstruction pkg = ProvisionEnvironmentInstruction.builder()
                 .add(ProvisionInstructionBuilder.install(ProvisionInfoReader.readContentInfo("test", "x.x.x", root)))
                 .add(ProvisionInstructionBuilder.uninstall(ProvisionInfoReader.readContentInfo("test2", "y.y.y", root)))
                 .build();

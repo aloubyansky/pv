@@ -35,100 +35,98 @@ import org.jboss.provision.info.ContentPath;
  *
  * @author Alexey Loubyansky
  */
-public interface ContentItemInstruction extends ContentItemInfo {
+public class ContentItemInstruction implements ContentItemInfo {
 
-    byte[] getReplacedHash();
+    protected final ContentPath path;
+    protected final byte[] hash;
+    protected final byte[] replacedHash;
+    protected boolean required = true;
 
-    List<InstructionCondition> getConditions();
+    protected final List<InstructionCondition> conditions;
 
-    boolean isRequired();
+    protected ContentItemInstruction(ContentPath path, byte[] hash, byte[] replacedHash, boolean required,
+            List<InstructionCondition> conditions) {
+        this.path = path;
+        this.hash = hash;
+        this.replacedHash = replacedHash;
+        this.required = required;
+        this.conditions = conditions;
+    }
 
-    class Builder {
+    public ContentPath getPath() {
+        return path;
+    }
 
-        private static final class ContentItemInstructionImpl implements ContentItemInstruction {
+    @Override
+    public byte[] getContentHash() {
+        return hash;
+    }
 
-            private final ContentPath path;
-            private final byte[] hash;
-            private final byte[] replacedHash;
-            private boolean required = true;
+    public byte[] getReplacedHash() {
+        return replacedHash;
+    }
 
-            private final List<InstructionCondition> conditions;
+    public List<InstructionCondition> getConditions() {
+        return conditions;
+    }
 
-            public ContentItemInstructionImpl(ContentPath path, byte[] hash, byte[] replacedHash, boolean required,
-                    List<InstructionCondition> conditions) {
-                super();
-                this.path = path;
-                this.hash = hash;
-                this.replacedHash = replacedHash;
-                this.required = required;
-                this.conditions = conditions;
-            }
+    public boolean isRequired() {
+        return required;
+    }
 
-            @Override
-            public ContentPath getPath() {
-                return path;
-            }
-
-            @Override
-            public byte[] getContentHash() {
-                return hash;
-            }
-
-            @Override
-            public byte[] getReplacedHash() {
-                return replacedHash;
-            }
-
-            @Override
-            public List<InstructionCondition> getConditions() {
-                return conditions;
-            }
-
-            @Override
-            public boolean isRequired() {
-                return required;
-            }
-
-            @Override
-            public int hashCode() {
-                final int prime = 31;
-                int result = 1;
-                result = prime * result + ((conditions == null) ? 0 : conditions.hashCode());
-                result = prime * result + Arrays.hashCode(hash);
-                result = prime * result + ((path == null) ? 0 : path.hashCode());
-                result = prime * result + Arrays.hashCode(replacedHash);
-                result = prime * result + (required ? 1231 : 1237);
-                return result;
-            }
-
-            @Override
-            public boolean equals(Object obj) {
-                if (this == obj)
-                    return true;
-                if (obj == null)
-                    return false;
-                if (getClass() != obj.getClass())
-                    return false;
-                ContentItemInstructionImpl other = (ContentItemInstructionImpl) obj;
-                if (conditions == null) {
-                    if (other.conditions != null)
-                        return false;
-                } else if (!conditions.equals(other.conditions))
-                    return false;
-                if (!Arrays.equals(hash, other.hash))
-                    return false;
-                if (path == null) {
-                    if (other.path != null)
-                        return false;
-                } else if (!path.equals(other.path))
-                    return false;
-                if (!Arrays.equals(replacedHash, other.replacedHash))
-                    return false;
-                if (required != other.required)
-                    return false;
-                return true;
-            }
+    public ContentItemInstruction getRollback() {
+        Builder builder;
+        if(replacedHash == null) {
+            builder = Builder.removeContent(path, hash);
+        } else if(hash == null) {
+            builder = Builder.addContent(path, replacedHash);
+        } else {
+            builder = Builder.replaceContent(path, replacedHash, hash);
         }
+        return builder.setRequired(required).build();
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((conditions == null) ? 0 : conditions.hashCode());
+        result = prime * result + Arrays.hashCode(hash);
+        result = prime * result + ((path == null) ? 0 : path.hashCode());
+        result = prime * result + Arrays.hashCode(replacedHash);
+        result = prime * result + (required ? 1231 : 1237);
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        ContentItemInstruction other = (ContentItemInstruction) obj;
+        if (conditions == null) {
+            if (other.conditions != null)
+                return false;
+        } else if (!conditions.equals(other.conditions))
+            return false;
+        if (!Arrays.equals(hash, other.hash))
+            return false;
+        if (path == null) {
+            if (other.path != null)
+                return false;
+        } else if (!path.equals(other.path))
+            return false;
+        if (!Arrays.equals(replacedHash, other.replacedHash))
+            return false;
+        if (required != other.required)
+            return false;
+        return true;
+    }
+
+    public static class Builder {
 
         private final ContentPath path;
         private final byte[] hash;
@@ -172,7 +170,7 @@ public interface ContentItemInstruction extends ContentItemInfo {
         }
 
         public ContentItemInstruction build() {
-            return new ContentItemInstructionImpl(path, hash, replacedHash, required, conditions);
+            return new ContentItemInstruction(path, hash, replacedHash, required, conditions);
         }
     }
 }

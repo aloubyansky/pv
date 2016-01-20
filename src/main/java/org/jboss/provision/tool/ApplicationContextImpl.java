@@ -23,8 +23,6 @@
 package org.jboss.provision.tool;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,9 +31,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipException;
-import java.util.zip.ZipFile;
 
 import javax.xml.stream.XMLStreamException;
 
@@ -68,20 +63,24 @@ class ApplicationContextImpl implements ApplicationContext {
     private ProvisionUnitEnvironment unitEnv;
     private EnvironmentTasks envTasks = new EnvironmentTasks();
 
-    private ZipFile zip;
+    private final ContentSource contentSrc;
 
-    ApplicationContextImpl(ProvisionEnvironment env) {
+    ApplicationContextImpl(ProvisionEnvironment env, ContentSource contentSource) {
         assert env != null : ProvisionErrors.nullArgument("env");
+        assert contentSource != null : ProvisionErrors.nullArgument("contentSource");
         this.env = env;
+        this.contentSrc = contentSource;
     }
 
     ProvisionEnvironment processPackage(File pkgFile) throws ProvisionException {
         assert pkgFile != null : ProvisionErrors.nullArgument("packageFile");
-
         if (!pkgFile.exists()) {
             throw ProvisionErrors.pathDoesNotExist(pkgFile);
         }
-        final ProvisionEnvironmentInstruction instruction = readInstruction(pkgFile);
+        return apply(readInstruction(pkgFile));
+    }
+
+    protected ProvisionEnvironment apply(final ProvisionEnvironmentInstruction instruction) throws ProvisionException {
         ProvisionEnvironmentJournal envJournal = null;
         boolean discardBackup = true;
         try {
@@ -90,7 +89,7 @@ class ApplicationContextImpl implements ApplicationContext {
             envJournal = ProvisionEnvironmentJournal.Factory.startSession(env);
             envJournal.record(env);
             envTasks.execute(envJournal);
-            env = ProvisionEnvironmentHistory.getInstance(env).update(env, instruction, envJournal);
+            env = ProvisionEnvironmentHistory.getInstance(env).record(env, instruction, envJournal);
         } catch(ProvisionException|RuntimeException|Error e) {
             discardBackup = false;
             if(envJournal != null) {
@@ -103,7 +102,7 @@ class ApplicationContextImpl implements ApplicationContext {
             }
             throw e;
         } finally {
-            IoUtils.safeClose(zip);
+            IoUtils.safeClose(contentSrc);
             if(envJournal != null) {
                 if(discardBackup) {
                     envJournal.discardBackup();
@@ -209,19 +208,8 @@ class ApplicationContextImpl implements ApplicationContext {
     private ProvisionEnvironmentInstruction readInstruction(File pvnPackage) throws ProvisionException {
         InputStream is = null;
         try {
-            if (pvnPackage.isDirectory()) {
-                is = new FileInputStream(new File(pvnPackage, ProvisionXml.PROVISION_XML));
-            } else {
-                zip = new ZipFile(pvnPackage);
-                is = zip.getInputStream(new ZipEntry(ProvisionXml.PROVISION_XML));
-            }
+            is = contentSrc.getInputStream(env, ContentPath.forPath(ProvisionXml.PROVISION_XML));
             return ProvisionXml.parse(is);
-        } catch (ZipException e) {
-            throw ProvisionErrors.zipFormatError(pvnPackage, e);
-        } catch (FileNotFoundException e) {
-            throw ProvisionErrors.pathDoesNotExist(new File(pvnPackage, ProvisionXml.PROVISION_XML).getAbsoluteFile());
-        } catch (IOException e) {
-            throw ProvisionErrors.readError(pvnPackage, e);
         } catch (XMLStreamException e) {
             throw ProvisionErrors.failedToParse(ProvisionXml.PROVISION_XML, e);
         } finally {
@@ -395,7 +383,7 @@ class ApplicationContextImpl implements ApplicationContext {
                     InputStream is = null;
                     FileOutputStream os = null;
                     try {
-                        is = zip.getInputStream(new ZipEntry(scheduled.instruction.getPath().getRelativePath())); // TODO THIS NEEDS A BETTER PATH BINDING
+                        is = contentSrc.getInputStream(unitJournal.getUnitEnvironment(), scheduled.instruction.getPath());
                         os = new FileOutputStream(targetFile);
                         IoUtils.copyStream(is, os);
                     } catch (IOException e) {

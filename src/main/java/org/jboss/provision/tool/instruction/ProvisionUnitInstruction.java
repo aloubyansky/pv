@@ -167,6 +167,19 @@ public abstract class ProvisionUnitInstruction extends ProvisionUnitInfo {
         return ProvisionUnitInfo.createInfo(name, replacedVersion);
     }
 
+    public UnitInstructionType getType() {
+        if(this.replacedVersion == null) {
+            return UnitInstructionType.INSTALL;
+        }
+        if(this.version == null) {
+            return UnitInstructionType.UNINSTALL;
+        }
+        if(replacedVersion.equals(version)) {
+            return UnitInstructionType.PATCH;
+        }
+        return UnitInstructionType.REPLACE;
+    }
+
     @Override
     public int hashCode() {
         final int prime = 31;

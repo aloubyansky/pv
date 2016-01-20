@@ -38,6 +38,9 @@ public abstract class FileTask {
         return new CopyFileTask(src, target);
     }
 
+    public static FileTask mkdirs(File dir) {
+        return new MkDirsTask(dir);
+    }
     public static FileTask override(File target, String content) throws IOException {
         return new OverrideFileContentTask(target, content, true);
     }
