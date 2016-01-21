@@ -38,6 +38,10 @@ public abstract class FileTask {
         return new CopyFileTask(src, target);
     }
 
+    public static FileTask delete(File f) {
+        return new DeleteFileTask(f);
+    }
+
     public static FileTask mkdirs(File dir) {
         return new MkDirsTask(dir);
     }

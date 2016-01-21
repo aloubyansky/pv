@@ -66,65 +66,98 @@ public abstract class ContentSource implements Closeable {
                 }
             }
             @Override
-            public InputStream getInputStream(ProvisionUnitEnvironment unitEnv, ContentPath path) throws ProvisionException {
-                return getInputStream(path);
+            public boolean isAvailable(ProvisionUnitEnvironment unitEnv, ContentPath path) {
+                return zip.getEntry(path.getRelativePath()) != null;
             }
             @Override
-            public InputStream getInputStream(ProvisionEnvironment env, ContentPath path) throws ProvisionException {
-                return getInputStream(path);
+            public InputStream getInputStream(ProvisionUnitEnvironment unitEnv, ContentPath path, boolean errorIfNotResolved) throws ProvisionException {
+                return getInputStream(path, errorIfNotResolved);
             }
-            protected InputStream getInputStream(ContentPath path) throws ProvisionException {
+            @Override
+            public InputStream getInputStream(ProvisionEnvironment env, ContentPath path, boolean errorIfNotResolved) throws ProvisionException {
+                return getInputStream(path, errorIfNotResolved);
+            }
+            protected InputStream getInputStream(ContentPath path, boolean errorIfNotResolved) throws ProvisionException {
                 try {
                     return zip.getInputStream(new ZipEntry(path.getRelativePath())); // TODO THIS NEEDS A BETTER PATH BINDING
                 } catch (ZipException e) {
-                    throw ProvisionErrors.zipFormatError(f, e);
+                    if(errorIfNotResolved) {
+                        throw ProvisionErrors.zipFormatError(f, e);
+                    }
                 } catch (IOException e) {
-                    throw ProvisionErrors.readError(f, e);
+                    if(errorIfNotResolved) {
+                        throw ProvisionErrors.readError(f, e);
+                    }
                 }
+                return null;
             }
         };
     }
 
-    public static ContentSource forBackup(final File backupDir) throws ProvisionException {
-        assert backupDir != null : ProvisionErrors.nullArgument("backupDir");
-        if(!backupDir.exists()) {
-            throw ProvisionErrors.pathDoesNotExist(backupDir);
+    public static ContentSource forBackup(final File instrDir) throws ProvisionException {
+        assert instrDir != null : ProvisionErrors.nullArgument("backupDir");
+        if(!instrDir.exists()) {
+            throw ProvisionErrors.pathDoesNotExist(instrDir);
         }
         return new ContentSource() {
             final String units = "units";
-
-            final File baseDir = backupDir;
+            final String instrId = instrDir.getName();
+            final File historyDir = instrDir.getParentFile();
 
             @Override
             public void close() throws IOException {
             }
 
-            @Override
-            public InputStream getInputStream(ProvisionEnvironment env, ContentPath path) throws ProvisionException {
-                return getInputStream(baseDir, path);
+            public boolean isAvailable(ProvisionUnitEnvironment unitEnv, ContentPath path) {
+                return new File(getBaseDir(unitEnv), path.getFSRelativePath()).exists();
             }
 
             @Override
-            public InputStream getInputStream(ProvisionUnitEnvironment unitEnv, ContentPath path) throws ProvisionException {
-                final File unitDir = IoUtils.newFile(baseDir, units, unitEnv.getUnitInfo().getName());
+            public InputStream getInputStream(ProvisionEnvironment env, ContentPath path, boolean errorIfNotResolved) throws ProvisionException {
+                return getInputStream(historyDir, path, errorIfNotResolved);
+            }
+
+            @Override
+            public InputStream getInputStream(ProvisionUnitEnvironment unitEnv, ContentPath path, boolean errorIfNotResolved) throws ProvisionException {
+                final File unitDir = getBaseDir(unitEnv);
                 if(!unitDir.exists()) {
-                    throw ProvisionErrors.pathDoesNotExist(unitDir);
+                    if(errorIfNotResolved) {
+                        throw ProvisionErrors.pathDoesNotExist(unitDir);
+                    }
+                    return null;
                 }
-                return getInputStream(unitDir, path);
+                return getInputStream(unitDir, path, errorIfNotResolved);
             }
 
-            protected InputStream getInputStream(final File baseDir, ContentPath path) throws ProvisionException {
+            protected File getBaseDir(ProvisionUnitEnvironment unitEnv) {
+                return IoUtils.newFile(historyDir, units, unitEnv.getUnitInfo().getName(), instrId);
+            }
+
+            protected InputStream getInputStream(final File baseDir, ContentPath path, boolean errorIfNotResolved) throws ProvisionException {
                 final File targetFile = new File(baseDir, path.getFSRelativePath());
                 try {
                     return new FileInputStream(targetFile);
                 } catch (FileNotFoundException e) {
-                    throw ProvisionErrors.pathDoesNotExist(targetFile);
+                    if(errorIfNotResolved) {
+                        throw ProvisionErrors.pathDoesNotExist(targetFile);
+                    }
                 }
+                return null;
             }
         };
     }
 
-    public abstract InputStream getInputStream(ProvisionEnvironment env, ContentPath path) throws ProvisionException;
+    public abstract boolean isAvailable(ProvisionUnitEnvironment unitEnv, ContentPath path);
 
-    public abstract InputStream getInputStream(ProvisionUnitEnvironment unitEnv, ContentPath path) throws ProvisionException;
+    public InputStream getInputStream(ProvisionEnvironment env, ContentPath path) throws ProvisionException {
+        return getInputStream(env, path, true);
+    }
+
+    public abstract InputStream getInputStream(ProvisionEnvironment env, ContentPath path, boolean errorIfNotResolved) throws ProvisionException;
+
+    public InputStream getInputStream(ProvisionUnitEnvironment unitEnv, ContentPath path) throws ProvisionException {
+        return getInputStream(unitEnv, path, true);
+    }
+
+    public abstract InputStream getInputStream(ProvisionUnitEnvironment unitEnv, ContentPath path, boolean errorIfNotResolved) throws ProvisionException;
 }

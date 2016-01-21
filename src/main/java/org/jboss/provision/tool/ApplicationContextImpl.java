@@ -59,6 +59,28 @@ import org.jboss.provision.xml.ProvisionXml;
  */
 class ApplicationContextImpl implements ApplicationContext {
 
+    interface CommitCallback {
+        CommitCallback APPLY = new CommitCallback() {
+            @Override
+            public ProvisionEnvironment commit(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction,
+                    ProvisionEnvironmentJournal envJournal) throws ProvisionException {
+                return MutableEnvironmentHistory.newInstance(ProvisionEnvironmentHistory.getInstance(currentEnv).getHistoryHome())
+                        .doRecord(currentEnv, instruction, envJournal);
+            }
+        };
+
+        CommitCallback ROLLBACK = new CommitCallback() {
+            @Override
+            public ProvisionEnvironment commit(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction,
+                    ProvisionEnvironmentJournal envJournal) throws ProvisionException {
+                return MutableEnvironmentHistory.newInstance(ProvisionEnvironmentHistory.getInstance(currentEnv).getHistoryHome())
+                        .doRollbackLast(currentEnv);
+            }
+        };
+
+        ProvisionEnvironment commit(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction, ProvisionEnvironmentJournal envJournal) throws ProvisionException;
+    }
+
     private ProvisionEnvironment env;
     private ProvisionUnitEnvironment unitEnv;
     private EnvironmentTasks envTasks = new EnvironmentTasks();
@@ -77,10 +99,10 @@ class ApplicationContextImpl implements ApplicationContext {
         if (!pkgFile.exists()) {
             throw ProvisionErrors.pathDoesNotExist(pkgFile);
         }
-        return apply(readInstruction(pkgFile));
+        return apply(readInstruction(pkgFile), CommitCallback.APPLY);
     }
 
-    protected ProvisionEnvironment apply(final ProvisionEnvironmentInstruction instruction) throws ProvisionException {
+    protected ProvisionEnvironment apply(final ProvisionEnvironmentInstruction instruction, CommitCallback callback) throws ProvisionException {
         ProvisionEnvironmentJournal envJournal = null;
         boolean discardBackup = true;
         try {
@@ -89,7 +111,7 @@ class ApplicationContextImpl implements ApplicationContext {
             envJournal = ProvisionEnvironmentJournal.Factory.startSession(env);
             envJournal.record(env);
             envTasks.execute(envJournal);
-            env = ProvisionEnvironmentHistory.getInstance(env).record(env, instruction, envJournal);
+            env = callback.commit(env, instruction, envJournal);
         } catch(ProvisionException|RuntimeException|Error e) {
             discardBackup = false;
             if(envJournal != null) {
@@ -189,7 +211,9 @@ class ApplicationContextImpl implements ApplicationContext {
                     }
                 }
             }
-            if(item.getContentHash() == null) {
+            if(item.getContentHash() == null &&
+                    // TODO this check here is for rolling back a forced add of an item over a conflicting existing one which was backed up
+                    !contentSrc.isAvailable(unitEnv, item.getPath())) {
                 unitTasks.scheduleDelete(item);
             } else {
                 unitTasks.scheduleCopy(item);

@@ -73,22 +73,25 @@ public class ProvisionEnvironmentHistory {
 
     private final File historyHome;
 
-    private ProvisionEnvironmentHistory(File historyHome) {
+    protected ProvisionEnvironmentHistory(File historyHome) {
         assert historyHome != null : ProvisionErrors.nullArgument("historyHome");
         this.historyHome = historyHome;
     }
 
-    public ProvisionEnvironment record(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction, ProvisionEnvironmentJournal envJournal) throws ProvisionException {
-        final EnvironmentHistoryRecord appliedInstr = EnvironmentHistoryRecord.create(currentEnv, instruction);
-        final ProvisionEnvironment updatedEnv = appliedInstr.getUpdatedEnvironment();
+    public File getHistoryHome() {
+        return historyHome;
+    }
+
+    protected ProvisionEnvironment record(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction, ProvisionEnvironmentJournal envJournal) throws ProvisionException {
+        final EnvironmentHistoryRecord historyRecord = EnvironmentHistoryRecord.create(currentEnv, instruction);
+        final ProvisionEnvironment updatedEnv = historyRecord.getUpdatedEnvironment();
         if(updatedEnv.getUnitNames().isEmpty()) { // delete the history when the environment is uninstalled
             IoUtils.recursiveDelete(historyHome);
         } else {
             final FileTaskList tasks = new FileTaskList();
+            historyRecord.schedulePersistence(historyHome, tasks);
 
-            appliedInstr.schedulePersistence(historyHome, tasks);
-
-            final String instrId = appliedInstr.getInstructionDirectory().getName();
+            final String instrId = historyRecord.getInstructionDirectory().getName();
             final File unitsDir = new File(historyHome, UNITS);
             if(!unitsDir.exists() && !unitsDir.mkdirs()) {
                 throw new ProvisionException(ProvisionErrors.couldNotCreateDir(unitsDir));
@@ -113,6 +116,28 @@ public class ProvisionEnvironmentHistory {
             }
         }
         return updatedEnv;
+    }
+
+    protected ProvisionEnvironment rollbackLast(ProvisionEnvironment currentEnv) throws ProvisionException {
+        final ProvisionEnvironmentHistory history = ProvisionEnvironmentHistory.getInstance(currentEnv);
+        final FileTaskList tasks = new FileTaskList();
+        final EnvironmentHistoryRecord prevRecord = EnvironmentHistoryRecord.scheduleDeleteLast(history.getHistoryHome(), tasks);
+        if(tasks.isEmpty()) {
+            return currentEnv;
+        }
+        try {
+            tasks.safeExecute();
+        } catch (IOException e) {
+            throw ProvisionErrors.failedToUpdateHistory(e);
+        }
+        if(prevRecord == null) {
+            IoUtils.recursiveDelete(historyHome);
+            return ProvisionEnvironment.builder().setEnvironmentHome(currentEnv.getEnvironmentHome()).build();
+        }
+        if(prevRecord.getUpdatedEnvironment().getUnitNames().isEmpty()) { // delete the history when the environment is uninstalled
+            IoUtils.recursiveDelete(historyHome);
+        }
+        return prevRecord.getUpdatedEnvironment();
     }
 
     public ProvisionEnvironment getCurrentEnvironment() throws ProvisionException {

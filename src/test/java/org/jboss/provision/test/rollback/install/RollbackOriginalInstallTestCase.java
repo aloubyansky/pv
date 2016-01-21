@@ -28,7 +28,6 @@ import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.history.ProvisionEnvironmentHistory;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
-import org.jboss.provision.test.util.TreeUtil;
 import org.jboss.provision.tool.ProvisionPackage;
 import org.jboss.provision.tool.ProvisionTool;
 import org.junit.Test;
@@ -37,7 +36,7 @@ import org.junit.Test;
  *
  * @author Alexey Loubyansky
  */
-public class OriginalInstallTestCase extends ApplicationTestBase {
+public class RollbackOriginalInstallTestCase extends ApplicationTestBase {
 
     @Test
     public void testMain() throws Exception {
@@ -54,18 +53,13 @@ public class OriginalInstallTestCase extends ApplicationTestBase {
 
         AssertUtil.assertEmptyDirBranch(testInstall.getHome());
 
-        TreeUtil.logTree(testInstall.getHome());
-
         ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
         env = ProvisionTool.apply(env, archive);
-
-        TreeUtil.logTree(testInstall.getHome());
 
         AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome(), true);
 
         env = ProvisionTool.rollbackLast(env);
 
-        TreeUtil.logTree(testInstall.getHome());
         AssertUtil.assertEmptyDirBranch(testInstall.getHome());
         assertNull(ProvisionEnvironmentHistory.getInstance(env).getCurrentEnvironment());
     }

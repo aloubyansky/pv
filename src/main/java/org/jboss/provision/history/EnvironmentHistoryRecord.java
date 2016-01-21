@@ -134,6 +134,24 @@ public class EnvironmentHistoryRecord {
         return loadInstruction(new File(instr.envFile.getParentFile().getParentFile(), prevDir));
     }
 
+    static EnvironmentHistoryRecord scheduleDeleteLast(File historyDir, FileTaskList tasks) throws ProvisionException {
+        final EnvironmentHistoryRecord lastRecord = loadLast(historyDir);
+        if(lastRecord == null) {
+            return null;
+        }
+        final String prevRecordDir = lastRecord.getPreviousInstructionDirName();
+        if(prevRecordDir != null) {
+            final File lastInstrTxt = new File(historyDir, LAST_INSTR_TXT);
+            try {
+                tasks.add(FileTask.override(lastInstrTxt, prevRecordDir));
+            } catch (IOException e) {
+                throw ProvisionErrors.failedToUpdateHistory(e);
+            }
+        }
+        tasks.add(FileTask.delete(lastRecord.getInstructionDirectory()));
+        return loadPrevious(lastRecord);
+    }
+
     private static EnvironmentHistoryRecord loadInstruction(final File instrDir) throws ProvisionException {
         if(instrDir.exists()) {
             if(!instrDir.isDirectory()) {

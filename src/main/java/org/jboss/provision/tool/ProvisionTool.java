@@ -29,6 +29,7 @@ import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.history.EnvironmentHistoryRecord;
 import org.jboss.provision.history.ProvisionEnvironmentHistory;
+import org.jboss.provision.tool.ApplicationContextImpl.CommitCallback;
 import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
 
 /**
@@ -55,6 +56,6 @@ public class ProvisionTool {
         }
         final ApplicationContextImpl appCtx = new ApplicationContextImpl(env, record.getBackup());
         ProvisionEnvironmentInstruction rollback = record.getAppliedInstruction().getRollback();
-        return appCtx.apply(rollback);
+        return appCtx.apply(rollback, CommitCallback.ROLLBACK);
     }
 }
