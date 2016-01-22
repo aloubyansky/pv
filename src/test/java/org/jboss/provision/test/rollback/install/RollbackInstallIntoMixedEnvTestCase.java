@@ -20,13 +20,15 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.test.application.patch;
+package org.jboss.provision.test.rollback.install;
+
+import java.io.File;
 
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
-import org.jboss.provision.test.util.InstallationBuilder;
+import org.jboss.provision.test.util.FSUtils;
 import org.jboss.provision.tool.ProvisionPackage;
 import org.jboss.provision.tool.ProvisionTool;
 import org.junit.Test;
@@ -35,18 +37,18 @@ import org.junit.Test;
  *
  * @author Alexey Loubyansky
  */
-public class PatchInMixedEnvTestCase extends ApplicationTestBase {
+public class RollbackInstallIntoMixedEnvTestCase extends ApplicationTestBase {
 
-    private InstallationBuilder nextOriginal;
+    private File temp;
 
     @Override
     protected void doInit() {
-        nextOriginal = InstallationBuilder.create();
+        temp = FSUtils.createTmpDir("installtemptest");
     }
 
     @Override
     protected void doCleanUp() {
-        IoUtils.recursiveDelete(nextOriginal.getHome());
+        IoUtils.recursiveDelete(temp);
     }
 
     @Test
@@ -57,33 +59,34 @@ public class PatchInMixedEnvTestCase extends ApplicationTestBase {
             .createFileWithRandomContent("c/c/c.txt")
             .createDir("d/e/f");
 
-        IoUtils.copyFile(originalInstall.getHome(), nextOriginal.getHome());
-        nextOriginal.updateFileWithRandomContent("a.txt")
-            .delete("b/b.txt")
-            .createFileWithRandomContent("b/bb.txt")
-            .createFileWithRandomContent("d/d/d/d.txt")
-            .createDir("g/h/i");
-
         ProvisionPackage.newBuilder()
-            .setCurrentInstallationDir(originalInstall.getHome())
-            .setTargetInstallationDir(nextOriginal.getHome())
+            .setTargetInstallationDir(originalInstall.getHome())
             .setPackageOutputFile(archive)
-            .buildPatch("patch1");
+            .buildInstall();
 
-        IoUtils.copyFile(originalInstall.getHome(), testInstall.getHome());
-        testInstall.createFileWithRandomContent("aa.txt")
-            .createFileWithRandomContent("b/bbb.txt")
-            .createFileWithRandomContent("c/c/cc.txt")
-            .createFileWithRandomContent("d/e/f.txt");
+        testInstall.createFileWithRandomContent("b/bb.txt");
+        testInstall.createFileWithRandomContent("c/cc.txt");
+        testInstall.createFileWithRandomContent("d/dd.txt");
+        testInstall.createDir("e");
 
-        AssertUtil.assertExpectedContentInTarget(originalInstall.getHome(), testInstall.getHome());
-        AssertUtil.assertExpectedFilesNotInTarget(nextOriginal.getHome(), testInstall.getHome(), false);
+        IoUtils.copyFile(testInstall.getHome(), temp);
 
-        final ProvisionEnvironment env = ProvisionEnvironment.forUndefinedUnit()
-                .setEnvironmentHome(testInstall.getHome()).build();
-        ProvisionTool.apply(env, archive);
+        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), true);
+        AssertUtil.assertIdentical(temp, testInstall.getHome());
 
-        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
-        AssertUtil.assertExpectedContentInTarget(nextOriginal.getHome(), testInstall.getHome(), true);
+        ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
+        env = ProvisionTool.apply(env, archive);
+
+        AssertUtil.assertNotIdentical(temp, testInstall.getHome(), true);
+        AssertUtil.assertExpectedContentInTarget(temp, testInstall.getHome(), true);
+        AssertUtil.assertExpectedContentInTarget(originalInstall.getHome(), testInstall.getHome(), true);
+
+        env = ProvisionTool.rollbackLast(env);
+
+        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), true);
+        AssertUtil.assertIdentical(temp, testInstall.getHome(), true);
+
+        assertHistoryEmpty(env);
+        assertCantRollback(env);
     }
 }

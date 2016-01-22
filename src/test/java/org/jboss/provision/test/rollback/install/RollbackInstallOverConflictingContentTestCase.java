@@ -22,7 +22,6 @@
 
 package org.jboss.provision.test.rollback.install;
 
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import java.io.File;
@@ -30,7 +29,6 @@ import java.io.File;
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.UnitUpdatePolicy;
-import org.jboss.provision.history.ProvisionEnvironmentHistory;
 import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
@@ -93,6 +91,6 @@ public class RollbackInstallOverConflictingContentTestCase extends ApplicationTe
         env = ProvisionTool.rollbackLast(env);
 
         AssertUtil.assertIdentical(tmpDir, testInstall.getHome(), true);
-        assertNull(ProvisionEnvironmentHistory.getInstance(env).getCurrentEnvironment());
+        assertHistoryEmpty(env);
     }
 }

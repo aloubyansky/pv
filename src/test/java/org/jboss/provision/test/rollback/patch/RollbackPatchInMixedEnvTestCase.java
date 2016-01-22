@@ -20,36 +20,39 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.test.application.patch;
+package org.jboss.provision.test.rollback.patch;
+
+import java.io.File;
 
 import org.jboss.provision.ProvisionEnvironment;
-import org.jboss.provision.ProvisionException;
-import org.jboss.provision.UnitUpdatePolicy;
 import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
+import org.jboss.provision.test.util.FSUtils;
 import org.jboss.provision.test.util.InstallationBuilder;
 import org.jboss.provision.tool.ProvisionPackage;
 import org.jboss.provision.tool.ProvisionTool;
-import org.junit.Assert;
 import org.junit.Test;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public class ForcePatchOverContentConflictTestCase extends ApplicationTestBase {
+public class RollbackPatchInMixedEnvTestCase extends ApplicationTestBase {
 
     private InstallationBuilder nextOriginal;
+    private File tempDir;
 
     @Override
     protected void doInit() {
         nextOriginal = InstallationBuilder.create();
+        tempDir = FSUtils.createTmpDir("pvrollbackmixed");
     }
 
     @Override
     protected void doCleanUp() {
         IoUtils.recursiveDelete(nextOriginal.getHome());
+        IoUtils.recursiveDelete(tempDir);
     }
 
     @Test
@@ -77,30 +80,28 @@ public class ForcePatchOverContentConflictTestCase extends ApplicationTestBase {
         testInstall.createFileWithRandomContent("aa.txt")
             .createFileWithRandomContent("b/bbb.txt")
             .createFileWithRandomContent("c/c/cc.txt")
-            .createFileWithRandomContent("d/e/f.txt")
-            .updateFileWithRandomContent("b/b.txt");
+            .createFileWithRandomContent("d/e/f.txt");
 
-        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
+        IoUtils.copyFile(testInstall.getHome(), tempDir);
+
+        AssertUtil.assertIdentical(testInstall.getHome(), tempDir);
+        AssertUtil.assertExpectedContentInTarget(originalInstall.getHome(), testInstall.getHome());
         AssertUtil.assertExpectedFilesNotInTarget(nextOriginal.getHome(), testInstall.getHome(), false);
 
         ProvisionEnvironment env = ProvisionEnvironment.forUndefinedUnit()
                 .setEnvironmentHome(testInstall.getHome()).build();
-        try {
-            ProvisionTool.apply(env, archive);
-            Assert.fail("Modified content replaced");
-        } catch(ProvisionException e) {
-            // expected
-        }
+        env = ProvisionTool.apply(env, archive);
 
-        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
-        AssertUtil.assertExpectedFilesNotInTarget(nextOriginal.getHome(), testInstall.getHome(), false);
-
-        env = ProvisionEnvironment.forUndefinedUnit()
-                .setEnvironmentHome(testInstall.getHome())
-                .setDefaultUnitUpdatePolicy(UnitUpdatePolicy.FORCED).build();
-        ProvisionTool.apply(env, archive);
-
+        AssertUtil.assertNotIdentical(testInstall.getHome(), tempDir, true);
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
         AssertUtil.assertExpectedContentInTarget(nextOriginal.getHome(), testInstall.getHome(), true);
+
+        env = ProvisionTool.rollbackLast(env);
+        AssertUtil.assertExpectedContentInTarget(originalInstall.getHome(), testInstall.getHome());
+        AssertUtil.assertExpectedFilesNotInTarget(nextOriginal.getHome(), testInstall.getHome(), false);
+        AssertUtil.assertIdentical(testInstall.getHome(), tempDir, true);
+
+        assertHistoryEmpty(env);
+        assertCantRollback(env);
     }
 }

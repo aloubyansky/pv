@@ -76,7 +76,7 @@ public class PatchAlreadyPatchedContentTestCase extends ApplicationTestBase {
             .buildPatch("patch1");
 
         IoUtils.copyFile(originalInstall.getHome(), testInstall.getHome());
-        // update content of a path to the target content
+        // update content of a path in the target installation
         IoUtils.copyFile(nextOriginal.resolvePath("a/b/c.txt"), testInstall.resolvePath("a/b/c.txt"));
         // delete content that does not exist in the target
         testInstall.delete("b/b.txt");

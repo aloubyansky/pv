@@ -211,12 +211,17 @@ class ApplicationContextImpl implements ApplicationContext {
                     }
                 }
             }
-            if(item.getContentHash() == null &&
-                    // TODO this check here is for rolling back a forced add of an item over a conflicting existing one which was backed up
-                    !contentSrc.isAvailable(unitEnv, item.getPath())) {
-                unitTasks.scheduleDelete(item);
-            } else {
-                unitTasks.scheduleCopy(item);
+            if(item.getContentHash() == null) {
+                // TODO this check here is for rolling back a forced add of an item over a conflicting existing one which was backed up
+                if(contentSrc.isAvailable(unitEnv, item.getPath())) {
+                    unitTasks.scheduleCopy(item);
+                } else {
+                    unitTasks.scheduleDelete(item);
+                }
+            } else
+                // TODO this check here is for rolling back a delete of an item which has already been deleted
+                if(contentSrc.isAvailable(unitEnv, item.getPath())) {
+                    unitTasks.scheduleCopy(item);
             }
         }
     }

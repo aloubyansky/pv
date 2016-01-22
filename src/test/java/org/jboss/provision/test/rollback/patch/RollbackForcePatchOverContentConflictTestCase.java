@@ -20,7 +20,9 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.test.application.patch;
+package org.jboss.provision.test.rollback.patch;
+
+import java.io.File;
 
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionException;
@@ -28,6 +30,7 @@ import org.jboss.provision.UnitUpdatePolicy;
 import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
+import org.jboss.provision.test.util.FSUtils;
 import org.jboss.provision.test.util.InstallationBuilder;
 import org.jboss.provision.tool.ProvisionPackage;
 import org.jboss.provision.tool.ProvisionTool;
@@ -38,18 +41,22 @@ import org.junit.Test;
  *
  * @author Alexey Loubyansky
  */
-public class ForcePatchOverContentConflictTestCase extends ApplicationTestBase {
+public class RollbackForcePatchOverContentConflictTestCase extends ApplicationTestBase {
 
     private InstallationBuilder nextOriginal;
+    private File tempDir;
 
     @Override
     protected void doInit() {
         nextOriginal = InstallationBuilder.create();
+        tempDir = FSUtils.createTmpDir("pvrollbackforcedpatch");
     }
 
     @Override
     protected void doCleanUp() {
         IoUtils.recursiveDelete(nextOriginal.getHome());
+        IoUtils.recursiveDelete(testInstall.getHome());
+        IoUtils.recursiveDelete(tempDir);
     }
 
     @Test
@@ -79,7 +86,9 @@ public class ForcePatchOverContentConflictTestCase extends ApplicationTestBase {
             .createFileWithRandomContent("c/c/cc.txt")
             .createFileWithRandomContent("d/e/f.txt")
             .updateFileWithRandomContent("b/b.txt");
+        IoUtils.copyFile(testInstall.getHome(), tempDir);
 
+        AssertUtil.assertIdentical(tempDir, testInstall.getHome());
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
         AssertUtil.assertExpectedFilesNotInTarget(nextOriginal.getHome(), testInstall.getHome(), false);
 
@@ -92,15 +101,26 @@ public class ForcePatchOverContentConflictTestCase extends ApplicationTestBase {
             // expected
         }
 
+        AssertUtil.assertIdentical(tempDir, testInstall.getHome());
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
         AssertUtil.assertExpectedFilesNotInTarget(nextOriginal.getHome(), testInstall.getHome(), false);
 
         env = ProvisionEnvironment.forUndefinedUnit()
                 .setEnvironmentHome(testInstall.getHome())
                 .setDefaultUnitUpdatePolicy(UnitUpdatePolicy.FORCED).build();
-        ProvisionTool.apply(env, archive);
+        env = ProvisionTool.apply(env, archive);
 
+        AssertUtil.assertNotIdentical(tempDir, testInstall.getHome(), true);
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
         AssertUtil.assertExpectedContentInTarget(nextOriginal.getHome(), testInstall.getHome(), true);
+
+        env = ProvisionTool.rollbackLast(env);
+
+        AssertUtil.assertExpectedFilesNotInTarget(nextOriginal.getHome(), testInstall.getHome(), false);
+        AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
+        AssertUtil.assertIdentical(tempDir, testInstall.getHome(), true);
+
+        assertHistoryEmpty(env);
+        assertCantRollback(env);
     }
 }

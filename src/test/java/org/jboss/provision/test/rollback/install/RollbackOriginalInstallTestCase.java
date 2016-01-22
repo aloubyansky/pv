@@ -23,7 +23,6 @@
 package org.jboss.provision.test.rollback.install;
 
 import static org.junit.Assert.assertNull;
-
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.history.ProvisionEnvironmentHistory;
 import org.jboss.provision.test.application.ApplicationTestBase;
@@ -62,5 +61,8 @@ public class RollbackOriginalInstallTestCase extends ApplicationTestBase {
 
         AssertUtil.assertEmptyDirBranch(testInstall.getHome());
         assertNull(ProvisionEnvironmentHistory.getInstance(env).getCurrentEnvironment());
+
+        assertCantRollback(env);
+        assertHistoryEmpty(env);
     }
 }
