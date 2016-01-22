@@ -28,9 +28,9 @@ import java.io.File;
 import java.io.StringReader;
 import java.io.StringWriter;
 
-import org.jboss.provision.tool.ProvisionInfoReader;
-import org.jboss.provision.tool.ProvisionInstructionBuilder;
-import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
+import org.jboss.provision.info.ProvisionInfoReader;
+import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
+import org.jboss.provision.instruction.ProvisionInstructionBuilder;
 import org.jboss.provision.xml.ProvisionXml;
 import org.junit.Test;
 

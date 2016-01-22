@@ -29,12 +29,12 @@ import java.io.File;
 import java.util.Collections;
 
 import org.jboss.provision.ProvisionEnvironment;
+import org.jboss.provision.info.ProvisionEnvironmentInfo;
+import org.jboss.provision.instruction.ProvisionPackage;
 import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
 import org.jboss.provision.test.util.FSUtils;
-import org.jboss.provision.tool.ProvisionPackage;
-import org.jboss.provision.tool.ProvisionTool;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -69,10 +69,11 @@ public class RollbackUnitVersionUpdateTestCase extends ApplicationTestBase {
             .buildInstall("unitA", "1.0");
 
         final ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
-        final ProvisionEnvironment originalEnv = ProvisionTool.apply(env, archive);
+        env.apply(archive);
 
-        assertEquals(Collections.singleton("unitA"), originalEnv.getUnitNames());
-        assertEquals("1.0", originalEnv.getUnitEnvironment("unitA").getUnitInfo().getVersion());
+        ProvisionEnvironmentInfo originalInfo = env.getEnvironmentInfo();
+        assertEquals(Collections.singleton("unitA"), originalInfo.getUnitNames());
+        assertEquals("1.0", originalInfo.getUnitInfo("unitA").getVersion());
 
         IoUtils.copyFile(originalInstall.getHome(), tempDir);
 
@@ -86,31 +87,33 @@ public class RollbackUnitVersionUpdateTestCase extends ApplicationTestBase {
 
         AssertUtil.assertIdentical(tempDir, testInstall.getHome());
         AssertUtil.assertNotIdentical(originalInstall.getHome(), testInstall.getHome(), true);
-        final ProvisionEnvironment patchedEnv = ProvisionTool.apply(originalEnv, archive);
+        env.apply(archive);
 
         AssertUtil.assertNotIdentical(tempDir, testInstall.getHome(), true);
         AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome(), true);
 
-        Assert.assertNotEquals(originalEnv, patchedEnv);
-        assertEquals(Collections.singleton("unitA"), patchedEnv.getUnitNames());
-        assertEquals("1.1", patchedEnv.getUnitEnvironment("unitA").getUnitInfo().getVersion());
+        ProvisionEnvironmentInfo updatedInfo = env.getEnvironmentInfo();
+        Assert.assertNotEquals(originalInfo, updatedInfo);
+        assertEquals(Collections.singleton("unitA"), updatedInfo.getUnitNames());
+        assertEquals("1.1", updatedInfo.getUnitInfo("unitA").getVersion());
 
-        ProvisionEnvironment rolledbackEnv = ProvisionTool.rollbackLast(patchedEnv);
+        env.rollbackLast();
         AssertUtil.assertNotIdentical(originalInstall.getHome(), testInstall.getHome(), true);
         AssertUtil.assertIdentical(tempDir, testInstall.getHome(), true);
 
-        assertEquals(Collections.singleton("unitA"), rolledbackEnv.getUnitNames());
-        assertEquals("1.0", rolledbackEnv.getUnitEnvironment("unitA").getUnitInfo().getVersion());
+        ProvisionEnvironmentInfo rolledBackInfo = env.getEnvironmentInfo();
+        assertEquals(Collections.singleton("unitA"), rolledBackInfo.getUnitNames());
+        assertEquals("1.0", rolledBackInfo.getUnitInfo("unitA").getVersion());
 
-        Assert.assertNotEquals(patchedEnv, rolledbackEnv);
-        Assert.assertEquals(originalEnv, rolledbackEnv);
+        Assert.assertNotEquals(updatedInfo, rolledBackInfo);
+        Assert.assertEquals(originalInfo, rolledBackInfo);
 
-        assertHistoryNotEmpty(rolledbackEnv);
+        assertHistoryNotEmpty(env);
 
-        rolledbackEnv = ProvisionTool.rollbackLast(rolledbackEnv);
+        env.rollbackLast();
         AssertUtil.assertEmptyDirBranch(testInstall.getHome());
-        assertTrue(rolledbackEnv.getUnitNames().isEmpty());
-        assertHistoryEmpty(rolledbackEnv);
-        assertCantRollback(rolledbackEnv);
+        assertTrue(env.getEnvironmentInfo().getUnitNames().isEmpty());
+        assertHistoryEmpty(env);
+        assertCantRollback(env);
     }
 }

@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.tool;
+package org.jboss.provision;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -45,12 +45,12 @@ import org.jboss.provision.audit.UnitJournalRecord;
 import org.jboss.provision.audit.ProvisionEnvironmentJournal;
 import org.jboss.provision.history.ProvisionEnvironmentHistory;
 import org.jboss.provision.info.ContentPath;
+import org.jboss.provision.instruction.ContentItemInstruction;
+import org.jboss.provision.instruction.InstructionCondition;
+import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
+import org.jboss.provision.instruction.ProvisionUnitInstruction;
+import org.jboss.provision.instruction.UpdatePolicy;
 import org.jboss.provision.io.IoUtils;
-import org.jboss.provision.tool.instruction.ContentItemInstruction;
-import org.jboss.provision.tool.instruction.InstructionCondition;
-import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
-import org.jboss.provision.tool.instruction.ProvisionUnitInstruction;
-import org.jboss.provision.tool.instruction.UpdatePolicy;
 import org.jboss.provision.xml.ProvisionXml;
 
 /**
@@ -432,6 +432,25 @@ class ApplicationContextImpl implements ApplicationContext {
         ScheduledInstruction(File targetFile, ContentItemInstruction instruction) {
             this.targetFile = targetFile;
             this.instruction = instruction;
+        }
+    }
+
+    static class MutableEnvironmentHistory extends ProvisionEnvironmentHistory {
+
+        static MutableEnvironmentHistory newInstance(File historyHome) {
+            return new MutableEnvironmentHistory(historyHome);
+        }
+
+        private MutableEnvironmentHistory(File historyHome) {
+            super(historyHome);
+        }
+
+        ProvisionEnvironment doRecord(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction, ProvisionEnvironmentJournal envJournal) throws ProvisionException {
+            return record(currentEnv, instruction, envJournal);
+        }
+
+        ProvisionEnvironment doRollbackLast(ProvisionEnvironment currentEnv) throws ProvisionException {
+            return rollbackLast(currentEnv);
         }
     }
 }

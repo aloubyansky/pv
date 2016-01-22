@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.tool;
+package org.jboss.provision.instruction;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -31,8 +31,6 @@ import org.jboss.provision.ProvisionException;
 import org.jboss.provision.info.ContentItemInfo;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionUnitContentInfo;
-import org.jboss.provision.tool.instruction.ContentItemInstruction;
-import org.jboss.provision.tool.instruction.ProvisionUnitInstruction;
 
 /**
  *

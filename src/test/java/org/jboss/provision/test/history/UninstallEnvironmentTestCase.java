@@ -23,16 +23,17 @@
 package org.jboss.provision.test.history;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.util.Collections;
+import java.util.Iterator;
 
 import org.jboss.provision.ProvisionEnvironment;
-import org.jboss.provision.history.ProvisionEnvironmentHistory;
+import org.jboss.provision.info.ProvisionEnvironmentInfo;
+import org.jboss.provision.instruction.ProvisionPackage;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
-import org.jboss.provision.tool.ProvisionPackage;
-import org.jboss.provision.tool.ProvisionTool;
 import org.junit.Test;
 
 /**
@@ -57,25 +58,28 @@ public class UninstallEnvironmentTestCase extends ApplicationTestBase {
             .buildInstall("unitA", "1.0");
 
         final ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
-        assertNull(ProvisionEnvironmentHistory.getInstance(env).getCurrentEnvironment());
+        assertFalse(env.environmentHistory().hasNext());
+        assertTrue(env.getEnvironmentInfo().getUnitNames().isEmpty());
         AssertUtil.assertEmptyDirBranch(testInstall.getHome());
 
-        ProvisionTool.apply(env, archive);
+        env.apply(archive);
 
-        final ProvisionEnvironmentHistory history = ProvisionEnvironmentHistory.getInstance(env);
-        assertNotNull(history);
         AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome());
 
-        final ProvisionEnvironment curEnv = history.getCurrentEnvironment();
-        assertEquals(Collections.singleton("unitA"), curEnv.getUnitNames());
-        assertEquals("1.0", curEnv.getUnitEnvironment("unitA").getUnitInfo().getVersion());
+        Iterator<ProvisionEnvironmentInfo> envHistory = env.environmentHistory();
+        assertTrue(envHistory.hasNext());
+        ProvisionEnvironmentInfo envInfo = envHistory.next();
+        assertEquals(Collections.singleton("unitA"), envInfo.getUnitNames());
+        assertEquals("1.0", envInfo.getUnitInfo("unitA").getVersion());
+        assertFalse(envHistory.hasNext());
 
         ProvisionPackage.newBuilder()
             .setCurrentInstallationDir(testInstall.getHome())
             .setPackageOutputFile(archive)
             .buildUninstall("unitA", "1.0");
-        ProvisionTool.apply(curEnv, archive);
+        env.apply(archive);
         AssertUtil.assertEmptyDirBranch(testInstall.getHome());
-        assertNull(ProvisionEnvironmentHistory.getInstance(curEnv).getCurrentEnvironment());
+        assertFalse(env.environmentHistory().hasNext());
+        assertTrue(env.getEnvironmentInfo().getUnitNames().isEmpty());
     }
 }

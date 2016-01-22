@@ -31,7 +31,7 @@ import java.io.StringWriter;
 import java.util.Properties;
 
 import org.jboss.provision.ProvisionErrors;
-import org.jboss.provision.util.Utils;
+import org.jboss.provision.util.PropertyUtils;
 
 /**
  *
@@ -39,7 +39,7 @@ import org.jboss.provision.util.Utils;
  */
 public class FileUtils {
 
-    private static final String LS = Utils.getSystemProperty("line.separator");
+    private static final String LS = PropertyUtils.getSystemProperty("line.separator");
 
     public static String readFile(File f) throws IOException {
         assert f != null : ProvisionErrors.nullArgument("file");

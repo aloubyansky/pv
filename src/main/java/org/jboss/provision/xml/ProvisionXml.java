@@ -36,7 +36,7 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
 
-import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
+import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
 import org.jboss.staxmapper.XMLElementWriter;
 import org.jboss.staxmapper.XMLMapper;
 

@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.util.UUID;
 
 import org.jboss.provision.io.IoUtils;
-import org.jboss.provision.util.Utils;
+import org.jboss.provision.util.PropertyUtils;
 
 /**
  *
@@ -36,7 +36,7 @@ import org.jboss.provision.util.Utils;
  */
 public class FSUtils {
 
-    private static final File TMP_DIR = new File(Utils.getSystemProperty("java.io.tmpdir"));
+    private static final File TMP_DIR = new File(PropertyUtils.getSystemProperty("java.io.tmpdir"));
 
     public static File createTmpDir(String name) {
         final File dir = new File(TMP_DIR, name);
@@ -47,7 +47,7 @@ public class FSUtils {
     }
 
     public static File nextTmpDir(String prefix) {
-        final File tmpDir = new File(Utils.getSystemProperty("java.io.tmpdir"));
+        final File tmpDir = new File(PropertyUtils.getSystemProperty("java.io.tmpdir"));
         File f = new File(tmpDir, prefix);
         if(f.exists()) {
             int i = 1;

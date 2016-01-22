@@ -27,13 +27,12 @@ import java.io.File;
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.UnitUpdatePolicy;
+import org.jboss.provision.instruction.ProvisionPackage;
 import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
 import org.jboss.provision.test.util.FSUtils;
 import org.jboss.provision.test.util.InstallationBuilder;
-import org.jboss.provision.tool.ProvisionPackage;
-import org.jboss.provision.tool.ProvisionTool;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -95,7 +94,7 @@ public class RollbackForcePatchOverContentConflictTestCase extends ApplicationTe
         ProvisionEnvironment env = ProvisionEnvironment.forUndefinedUnit()
                 .setEnvironmentHome(testInstall.getHome()).build();
         try {
-            ProvisionTool.apply(env, archive);
+            env.apply(archive);
             Assert.fail("Modified content replaced");
         } catch(ProvisionException e) {
             // expected
@@ -108,13 +107,13 @@ public class RollbackForcePatchOverContentConflictTestCase extends ApplicationTe
         env = ProvisionEnvironment.forUndefinedUnit()
                 .setEnvironmentHome(testInstall.getHome())
                 .setDefaultUnitUpdatePolicy(UnitUpdatePolicy.FORCED).build();
-        env = ProvisionTool.apply(env, archive);
+        env.apply(archive);
 
         AssertUtil.assertNotIdentical(tempDir, testInstall.getHome(), true);
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
         AssertUtil.assertExpectedContentInTarget(nextOriginal.getHome(), testInstall.getHome(), true);
 
-        env = ProvisionTool.rollbackLast(env);
+        env.rollbackLast();
 
         AssertUtil.assertExpectedFilesNotInTarget(nextOriginal.getHome(), testInstall.getHome(), false);
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);

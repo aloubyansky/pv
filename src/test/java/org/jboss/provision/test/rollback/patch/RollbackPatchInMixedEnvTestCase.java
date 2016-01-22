@@ -25,13 +25,12 @@ package org.jboss.provision.test.rollback.patch;
 import java.io.File;
 
 import org.jboss.provision.ProvisionEnvironment;
+import org.jboss.provision.instruction.ProvisionPackage;
 import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
 import org.jboss.provision.test.util.FSUtils;
 import org.jboss.provision.test.util.InstallationBuilder;
-import org.jboss.provision.tool.ProvisionPackage;
-import org.jboss.provision.tool.ProvisionTool;
 import org.junit.Test;
 
 /**
@@ -90,13 +89,13 @@ public class RollbackPatchInMixedEnvTestCase extends ApplicationTestBase {
 
         ProvisionEnvironment env = ProvisionEnvironment.forUndefinedUnit()
                 .setEnvironmentHome(testInstall.getHome()).build();
-        env = ProvisionTool.apply(env, archive);
+        env.apply(archive);
 
         AssertUtil.assertNotIdentical(testInstall.getHome(), tempDir, true);
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
         AssertUtil.assertExpectedContentInTarget(nextOriginal.getHome(), testInstall.getHome(), true);
 
-        env = ProvisionTool.rollbackLast(env);
+        env.rollbackLast();
         AssertUtil.assertExpectedContentInTarget(originalInstall.getHome(), testInstall.getHome());
         AssertUtil.assertExpectedFilesNotInTarget(nextOriginal.getHome(), testInstall.getHome(), false);
         AssertUtil.assertIdentical(testInstall.getHome(), tempDir, true);

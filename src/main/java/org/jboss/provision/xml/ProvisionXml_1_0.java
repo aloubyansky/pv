@@ -29,10 +29,10 @@ import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 
 import org.jboss.provision.info.ContentPath;
-import org.jboss.provision.tool.instruction.ContentItemInstruction;
-import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
-import org.jboss.provision.tool.instruction.ProvisionUnitInstruction;
-import org.jboss.provision.tool.instruction.ProvisionUnitInstruction.Builder;
+import org.jboss.provision.instruction.ContentItemInstruction;
+import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
+import org.jboss.provision.instruction.ProvisionUnitInstruction;
+import org.jboss.provision.instruction.ProvisionUnitInstruction.Builder;
 import org.jboss.provision.util.HashUtils;
 import org.jboss.provision.xml.ProvisionXml.ParsingResult;
 import org.jboss.staxmapper.XMLElementReader;

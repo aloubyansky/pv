@@ -23,17 +23,18 @@
 package org.jboss.provision.test.history;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Collections;
+import java.util.Iterator;
+
 import org.jboss.provision.ProvisionEnvironment;
-import org.jboss.provision.history.ProvisionEnvironmentHistory;
+import org.jboss.provision.info.ProvisionEnvironmentInfo;
+import org.jboss.provision.info.ProvisionUnitInfo;
+import org.jboss.provision.instruction.ProvisionPackage;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
-import org.jboss.provision.tool.ProvisionPackage;
-import org.jboss.provision.tool.ProvisionTool;
-import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -58,16 +59,16 @@ public class UndefinedVersionTestCase extends ApplicationTestBase {
         AssertUtil.assertEmptyDirBranch(testInstall.getHome());
 
         final ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
-        final ProvisionEnvironmentHistory history = ProvisionEnvironmentHistory.getInstance(env);
-        assertNull(history.getCurrentEnvironment());
+        assertFalse(env.environmentHistory().hasNext());
 
-        ProvisionTool.apply(env, archive);
+        env.apply(archive);
 
-        final ProvisionEnvironment env2 = history.getCurrentEnvironment();
-        assertNotNull(env2);
-
-        assertTrue(env2 != env);
-        Assert.assertNotEquals(env, env2);
+        Iterator<ProvisionEnvironmentInfo> envHistory = env.environmentHistory();
+        assertTrue(envHistory.hasNext());
+        final ProvisionEnvironmentInfo installedInfo = envHistory.next();
+        assertFalse(envHistory.hasNext());
+        assertEquals(Collections.singleton(ProvisionUnitInfo.UNDEFINED_NAME), installedInfo.getUnitNames());
+        assertEquals(ProvisionUnitInfo.UNDEFINED_VERSION, installedInfo.getUnitInfo(ProvisionUnitInfo.UNDEFINED_NAME).getVersion());
 
         originalInstall.updateFileWithRandomContent("a.txt")
             .createFileWithRandomContent("d/d.txt");
@@ -78,19 +79,22 @@ public class UndefinedVersionTestCase extends ApplicationTestBase {
             .buildPatch("patch1");
 
         AssertUtil.assertNotIdentical(originalInstall.getHome(), testInstall.getHome(), true);
-        ProvisionTool.apply(env2, archive);
+        env.apply(archive);
         AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome(), true);
 
-        final ProvisionEnvironment env3 = history.getCurrentEnvironment();
-        assertTrue(env2 != env3);
-        assertEquals(env2, env3);
+        envHistory = env.environmentHistory();
+        assertTrue(envHistory.hasNext());
+        final ProvisionEnvironmentInfo patchedInfo = envHistory.next();
+
+        assertEquals(installedInfo, patchedInfo);
 
         ProvisionPackage.newBuilder()
             .setCurrentInstallationDir(testInstall.getHome())
             .setPackageOutputFile(archive)
             .buildUninstall();
-        ProvisionTool.apply(env3, archive);
+        env.apply(archive);
         AssertUtil.assertEmptyDirBranch(testInstall.getHome());
-        assertNull(history.getCurrentEnvironment());
+        assertFalse(env.environmentHistory().hasNext());
+        assertTrue(env.getEnvironmentInfo().getUnitNames().isEmpty());
     }
 }

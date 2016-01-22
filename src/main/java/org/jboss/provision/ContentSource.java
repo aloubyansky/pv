@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.tool;
+package org.jboss.provision;
 
 import java.io.Closeable;
 import java.io.File;
@@ -32,10 +32,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
-import org.jboss.provision.ProvisionEnvironment;
-import org.jboss.provision.ProvisionErrors;
-import org.jboss.provision.ProvisionException;
-import org.jboss.provision.ProvisionUnitEnvironment;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.io.IoUtils;
 

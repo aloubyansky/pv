@@ -29,12 +29,11 @@ import java.io.File;
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.UnitUpdatePolicy;
+import org.jboss.provision.instruction.ProvisionPackage;
 import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
 import org.jboss.provision.test.util.FSUtils;
-import org.jboss.provision.tool.ProvisionPackage;
-import org.jboss.provision.tool.ProvisionTool;
 import org.junit.Test;
 
 /**
@@ -73,7 +72,7 @@ public class RollbackInstallOverConflictingContentTestCase extends ApplicationTe
 
         ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
         try {
-            ProvisionTool.apply(env, archive);
+            env.apply(archive);
             fail("install didn't fail");
         } catch(ProvisionException e) {
             // expected
@@ -84,11 +83,11 @@ public class RollbackInstallOverConflictingContentTestCase extends ApplicationTe
         env = ProvisionEnvironment.builder()
                 .setEnvironmentHome(testInstall.getHome())
                 .setDefaultUnitUpdatePolicy(UnitUpdatePolicy.FORCED).build();
-        env = ProvisionTool.apply(env, archive);
+        env.apply(archive);
 
         AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome(), true);
 
-        env = ProvisionTool.rollbackLast(env);
+        env.rollbackLast();
 
         AssertUtil.assertIdentical(tmpDir, testInstall.getHome(), true);
         assertHistoryEmpty(env);

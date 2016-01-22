@@ -29,7 +29,7 @@ import java.util.zip.ZipException;
 import javax.xml.stream.XMLStreamException;
 
 import org.jboss.provision.info.ContentPath;
-import org.jboss.provision.tool.instruction.ContentItemInstruction;
+import org.jboss.provision.instruction.ContentItemInstruction;
 import org.jboss.provision.util.HashUtils;
 
 /**

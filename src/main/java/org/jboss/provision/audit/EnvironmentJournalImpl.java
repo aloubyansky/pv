@@ -36,8 +36,8 @@ import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.ProvisionUnitEnvironment;
+import org.jboss.provision.instruction.ContentItemInstruction;
 import org.jboss.provision.io.IoUtils;
-import org.jboss.provision.tool.instruction.ContentItemInstruction;
 
 /**
  *

@@ -32,19 +32,19 @@ import java.util.UUID;
 
 import javax.xml.stream.XMLStreamException;
 
+import org.jboss.provision.ContentSource;
+import org.jboss.provision.ProvisionEnvironmentBuilder;
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionErrors;
-import org.jboss.provision.ProvisionEnvironment.Builder;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.audit.AuditUtil;
 import org.jboss.provision.info.ProvisionUnitInfo;
+import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
+import org.jboss.provision.instruction.ProvisionUnitInstruction;
 import org.jboss.provision.io.FileTask;
 import org.jboss.provision.io.FileTaskList;
 import org.jboss.provision.io.FileUtils;
 import org.jboss.provision.io.IoUtils;
-import org.jboss.provision.tool.ContentSource;
-import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
-import org.jboss.provision.tool.instruction.ProvisionUnitInstruction;
 import org.jboss.provision.xml.ProvisionXml;
 
 /**
@@ -58,7 +58,7 @@ public class EnvironmentHistoryRecord {
     private static final String PREV_INSTR_TXT = "prev.txt";
 
     static EnvironmentHistoryRecord create(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction) throws ProvisionException {
-        final Builder envBuilder = ProvisionEnvironment.builder();
+        final ProvisionEnvironmentBuilder envBuilder = ProvisionEnvironment.builder();
 
         //env home
         envBuilder.setEnvironmentHome(currentEnv.getEnvironmentHome());

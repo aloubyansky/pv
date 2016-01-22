@@ -27,7 +27,7 @@ import java.util.List;
 
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.ProvisionUnitEnvironment;
-import org.jboss.provision.tool.instruction.ContentItemInstruction;
+import org.jboss.provision.instruction.ContentItemInstruction;
 
 /**
  *

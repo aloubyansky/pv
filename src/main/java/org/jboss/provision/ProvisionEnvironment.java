@@ -25,145 +25,36 @@ package org.jboss.provision;
 import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import org.jboss.provision.history.EnvironmentHistoryRecord;
 import org.jboss.provision.history.ProvisionEnvironmentHistory;
 import org.jboss.provision.info.ContentPath;
+import org.jboss.provision.info.ProvisionEnvironmentInfo;
 import org.jboss.provision.info.ProvisionUnitInfo;
+import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public abstract class ProvisionEnvironment extends ProvisionEnvironmentBase {
+public class ProvisionEnvironment extends ProvisionEnvironmentBase {
 
-    public static Builder builder() {
-        return new Builder();
+    public static ProvisionEnvironmentBuilder builder() {
+        return new ProvisionEnvironmentBuilder();
     }
 
-    public static Builder forUndefinedUnit() {
-        return new Builder().addUnit(ProvisionUnitInfo.UNDEFINED_INFO);
+    public static ProvisionEnvironmentBuilder forUndefinedUnit() {
+        return new ProvisionEnvironmentBuilder().addUnit(ProvisionUnitInfo.UNDEFINED_INFO);
     }
 
-    public static Builder forUnit(String name, String version) {
-        return new Builder().addUnit(name, version);
+    public static ProvisionEnvironmentBuilder forUnit(String name, String version) {
+        return new ProvisionEnvironmentBuilder().addUnit(name, version);
     }
 
-    public static class Builder {
-
-        private File envHome;
-        private Map<String, ContentPath> namedLocations = Collections.emptyMap();
-        private Map<String, ContentPath> unitHomes = Collections.emptyMap();
-        private UnitUpdatePolicy defaultUnitUpdatePolicy = UnitUpdatePolicy.CONDITIONED;
-        private Map<String, UnitUpdatePolicy> unitUpdatePolicies = Collections.emptyMap();
-        private Map<String, ProvisionUnitInfo> unitInfos = Collections.emptyMap();
-
-        private Builder() {
-        }
-
-        public Builder setEnvironmentHome(File envHome) {
-            this.envHome = envHome;
-            return this;
-        }
-
-        public Builder nameLocation(String name, String relativePath) {
-            return nameLocation(name, ContentPath.forPath(relativePath));
-        }
-
-        public Builder nameLocation(String name, ContentPath relativePath) {
-            switch(namedLocations.size()) {
-                case 0:
-                    namedLocations = Collections.singletonMap(name, relativePath);
-                    break;
-                case 1:
-                    namedLocations = new HashMap<String, ContentPath>(namedLocations);
-                default:
-                    namedLocations.put(name, relativePath);
-            }
-            return this;
-        }
-
-        public Builder addUnit(final String name, final String version) {
-            assert name != null : ProvisionErrors.nullArgument("name");
-            assert version != null : ProvisionErrors.nullArgument("version");
-            return addUnit(ProvisionUnitInfo.createInfo(name, version));
-        }
-
-        public Builder addUnit(ProvisionUnitInfo unitInfo) {
-            switch(unitInfos.size()) {
-                case 0:
-                    unitInfos = Collections.singletonMap(unitInfo.getName(), unitInfo);
-                    break;
-                case 1:
-                    unitInfos = new HashMap<String, ProvisionUnitInfo>(unitInfos);
-                default:
-                    unitInfos.put(unitInfo.getName(), unitInfo);
-            }
-            return this;
-        }
-
-        public Builder copyUnit(ProvisionUnitEnvironment unitEnv) throws ProvisionException {
-            addUnit(unitEnv.getUnitInfo());
-            final String unitName = unitEnv.getUnitInfo().getName();
-            if(unitEnv.getHomePath() != null) {
-                setUnitHome(unitName, unitEnv.getHomePath());
-            }
-            if(unitEnv.getUpdatePolicy() != null) {
-                setUnitUpdatePolicy(unitName, unitEnv.getUpdatePolicy());
-            }
-            return this;
-        }
-
-        public Builder setUnitHome(String unitName, ContentPath unitHome) throws ProvisionException {
-            if(!unitInfos.containsKey(unitName)) {
-                throw ProvisionErrors.unknownUnit(unitName);
-            }
-            switch(unitHomes.size()) {
-                case 0:
-                    unitHomes = Collections.singletonMap(unitName, unitHome);
-                    break;
-                case 1:
-                    unitHomes = new HashMap<String, ContentPath>(unitHomes);
-                default:
-                    unitHomes.put(unitName, unitHome);
-            }
-            return this;
-        }
-
-        public Builder setDefaultUnitUpdatePolicy(UnitUpdatePolicy unitPolicy) {
-            this.defaultUnitUpdatePolicy = unitPolicy;
-            return this;
-        }
-
-        public Builder setUnitUpdatePolicy(String unitName, UnitUpdatePolicy updatePolicy) throws ProvisionException {
-            if(!unitInfos.containsKey(unitName)) {
-                throw ProvisionErrors.unknownUnit(unitName);
-            }
-            switch(unitUpdatePolicies.size()) {
-                case 0:
-                    unitUpdatePolicies = Collections.singletonMap(unitName, updatePolicy);
-                    break;
-                case 1:
-                    unitUpdatePolicies = new HashMap<String, UnitUpdatePolicy>(unitUpdatePolicies);
-                default:
-                    unitUpdatePolicies.put(unitName, updatePolicy);
-            }
-            return this;
-        }
-
-        public ProvisionEnvironment build() throws ProvisionException {
-            if(envHome == null) {
-                throw new ProvisionException(ProvisionErrors.nullArgument("envHome"));
-            }
-            if(ProvisionEnvironmentHistory.storesHistory(envHome)) {
-                throw ProvisionErrors.environmentAlreadyExists(envHome);
-            }
-            return new ProvisionEnvironment(this){};
-        }
-    }
-
-    protected ProvisionEnvironment(Builder builder) throws ProvisionException {
+    ProvisionEnvironment(ProvisionEnvironmentBuilder builder) throws ProvisionException {
         super(builder.namedLocations, builder.defaultUnitUpdatePolicy);
         assert builder.envHome != null : ProvisionErrors.nullArgument("envHome");
         assert builder.defaultUnitUpdatePolicy != null : ProvisionErrors.nullArgument("updatePolicy");
@@ -190,7 +81,7 @@ public abstract class ProvisionEnvironment extends ProvisionEnvironmentBase {
     }
 
     private final File envHome;
-    private final Map<String, ProvisionUnitEnvironment> unitEnvs;
+    private Map<String, ProvisionUnitEnvironment> unitEnvs;
 
     @Override
     public File getEnvironmentHome() {
@@ -199,6 +90,21 @@ public abstract class ProvisionEnvironment extends ProvisionEnvironmentBase {
 
     public Set<String> getUnitNames() {
         return unitEnvs.keySet();
+    }
+
+    public ProvisionEnvironmentInfo getEnvironmentInfo() {
+        if(unitEnvs.isEmpty()) {
+            return ProvisionEnvironmentInfo.emptyEnvironment();
+        }
+        final ProvisionEnvironmentInfo.Builder builder = ProvisionEnvironmentInfo.builder();
+        for(ProvisionUnitEnvironment unitEnv : unitEnvs.values()) {
+            try {
+                builder.addUnit(unitEnv.getUnitInfo());
+            } catch (ProvisionException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+        return builder.build();
     }
 
     public ProvisionUnitEnvironment getUnitEnvironment(String unitName) {
@@ -210,6 +116,31 @@ public abstract class ProvisionEnvironment extends ProvisionEnvironmentBase {
         assert unitName != null : ProvisionErrors.nullArgument("unitName");
         final ProvisionUnitEnvironment unitEnv = unitEnvs.get(unitName);
         return unitEnv == null ? null : unitEnv.resolveUpdatePolicy();
+    }
+
+    public Iterator<ProvisionEnvironmentInfo> environmentHistory() throws ProvisionException {
+        return ProvisionEnvironmentHistory.getInstance(this).environmentIterator();
+    }
+
+    public void apply(File packageFile) throws ProvisionException {
+        assert packageFile != null : ProvisionErrors.nullArgument("packageFile");
+        final ApplicationContextImpl appCtx = new ApplicationContextImpl(this, ContentSource.forZip(packageFile));
+        reset(appCtx.processPackage(packageFile));
+    }
+
+    public void rollbackLast() throws ProvisionException {
+        final EnvironmentHistoryRecord record = ProvisionEnvironmentHistory.getInstance(this).getLastRecord();
+        if(record == null) {
+            throw ProvisionErrors.noHistoryRecordedUntilThisPoint();
+        }
+        final ApplicationContextImpl appCtx = new ApplicationContextImpl(this, record.getBackup());
+        ProvisionEnvironmentInstruction rollback = record.getAppliedInstruction().getRollback();
+        reset(appCtx.apply(rollback, ApplicationContextImpl.CommitCallback.ROLLBACK));
+    }
+
+    protected void reset(ProvisionEnvironment env) {
+        super.reset(env);
+        this.unitEnvs = env.unitEnvs;
     }
 
     @Override

@@ -26,17 +26,17 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
-import org.jboss.provision.ProvisionUnitEnvironment;
 import org.jboss.provision.audit.ProvisionEnvironmentJournal;
 import org.jboss.provision.audit.ProvisionUnitJournal;
+import org.jboss.provision.info.ProvisionEnvironmentInfo;
+import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
 import org.jboss.provision.io.FileTask;
 import org.jboss.provision.io.FileTaskList;
 import org.jboss.provision.io.IoUtils;
-import org.jboss.provision.tool.ContentSource;
-import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
 
 /**
  *
@@ -149,19 +149,6 @@ public class ProvisionEnvironmentHistory {
         return EnvironmentHistoryRecord.loadLast(historyHome);
     }
 
-    // TODO
-    public ProvisionEnvironment rollbackToPrevious() throws ProvisionException {
-        final EnvironmentHistoryRecord appliedInstr = EnvironmentHistoryRecord.loadLast(historyHome);
-        final String prevInstrDir = appliedInstr.getPreviousInstructionDirName();
-        if(prevInstrDir == null) {
-            throw ProvisionErrors.noHistoryRecordedUntilThisPoint();
-        }
-
-        ContentSource.forBackup(appliedInstr.getInstructionDirectory());
-        final ProvisionEnvironmentInstruction rollbackInstr = appliedInstr.getAppliedInstruction().getRollback();
-        return null;
-    }
-
     Iterator<EnvironmentHistoryRecord> appliedInstructions() {
         return new Iterator<EnvironmentHistoryRecord>() {
             boolean doNext = true;
@@ -198,25 +185,20 @@ public class ProvisionEnvironmentHistory {
             }};
     }
 
-    public Iterator<ProvisionEnvironment> environmentIterator() {
-        return new Iterator<ProvisionEnvironment>() {
+    public Iterator<ProvisionEnvironmentInfo> environmentIterator() {
+        return new Iterator<ProvisionEnvironmentInfo>() {
             final Iterator<EnvironmentHistoryRecord> delegate = appliedInstructions();
             @Override
             public boolean hasNext() {
                 return delegate.hasNext();
             }
             @Override
-            public ProvisionEnvironment next() {
+            public ProvisionEnvironmentInfo next() {
                 try {
-                    return delegate.next().getUpdatedEnvironment();
+                    return delegate.next().getUpdatedEnvironment().getEnvironmentInfo();
                 } catch (ProvisionException e) {
                     throw new IllegalStateException(e);
                 }
             }};
-    }
-
-    // TODO
-    public Iterator<ProvisionUnitEnvironment> unitHistory(String unitName) {
-        return null;
     }
 }

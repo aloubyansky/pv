@@ -31,10 +31,10 @@ import java.util.Collection;
 
 import org.jboss.provision.info.ContentItemInfo;
 import org.jboss.provision.info.ContentPath;
+import org.jboss.provision.info.ProvisionInfoReader;
 import org.jboss.provision.info.ProvisionUnitContentInfo;
 import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.test.TestWithInstallationBuilder;
-import org.jboss.provision.tool.ProvisionInfoReader;
 import org.jboss.provision.util.HashUtils;
 import org.junit.Assert;
 import org.junit.Test;

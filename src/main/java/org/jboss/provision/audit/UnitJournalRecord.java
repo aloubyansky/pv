@@ -24,7 +24,7 @@ package org.jboss.provision.audit;
 
 import java.io.File;
 
-import org.jboss.provision.tool.instruction.ContentItemInstruction;
+import org.jboss.provision.instruction.ContentItemInstruction;
 
 /**
  *

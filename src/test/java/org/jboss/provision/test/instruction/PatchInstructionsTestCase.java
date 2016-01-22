@@ -28,14 +28,14 @@ import static org.junit.Assert.fail;
 
 import java.util.List;
 
+import org.jboss.provision.info.ProvisionInfoReader;
 import org.jboss.provision.info.ProvisionUnitContentInfo;
 import org.jboss.provision.info.ProvisionUnitInfo;
+import org.jboss.provision.instruction.ContentItemInstruction;
+import org.jboss.provision.instruction.ProvisionInstructionBuilder;
+import org.jboss.provision.instruction.ProvisionUnitInstruction;
 import org.jboss.provision.test.TestWithInstallationBuilder;
 import org.jboss.provision.test.util.AssertUtil;
-import org.jboss.provision.tool.ProvisionInfoReader;
-import org.jboss.provision.tool.ProvisionInstructionBuilder;
-import org.jboss.provision.tool.instruction.ContentItemInstruction;
-import org.jboss.provision.tool.instruction.ProvisionUnitInstruction;
 import org.junit.Test;
 
 /**

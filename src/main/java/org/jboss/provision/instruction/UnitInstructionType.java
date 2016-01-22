@@ -20,36 +20,16 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.tool;
-
-import java.io.File;
-
-import org.jboss.provision.ProvisionEnvironment;
-import org.jboss.provision.ProvisionException;
-import org.jboss.provision.audit.ProvisionEnvironmentJournal;
-import org.jboss.provision.history.ProvisionEnvironmentHistory;
-import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
-
+package org.jboss.provision.instruction;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-class MutableEnvironmentHistory extends ProvisionEnvironmentHistory {
+public enum UnitInstructionType {
 
-    static MutableEnvironmentHistory newInstance(File historyHome) {
-        return new MutableEnvironmentHistory(historyHome);
-    }
-
-    private MutableEnvironmentHistory(File historyHome) {
-        super(historyHome);
-    }
-
-    ProvisionEnvironment doRecord(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction, ProvisionEnvironmentJournal envJournal) throws ProvisionException {
-        return record(currentEnv, instruction, envJournal);
-    }
-
-    ProvisionEnvironment doRollbackLast(ProvisionEnvironment currentEnv) throws ProvisionException {
-        return rollbackLast(currentEnv);
-    }
+    INSTALL,
+    REPLACE,
+    PATCH,
+    UNINSTALL
 }

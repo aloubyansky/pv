@@ -25,11 +25,11 @@ import org.jboss.provision.ProvisionErrors;
 
 
 /**
- * Represents target installation.
+ * Represents target unit installation.
  *
  * @author Alexey Loubyansky
  */
-public abstract class ProvisionUnitInfo {
+public class ProvisionUnitInfo {
 
     public static final String UNDEFINED_NAME = "UNDEFINED";
     public static final String UNDEFINED_VERSION = UNDEFINED_NAME;
@@ -37,7 +37,7 @@ public abstract class ProvisionUnitInfo {
     public static final ProvisionUnitInfo UNDEFINED_INFO = createInfo(UNDEFINED_NAME, UNDEFINED_VERSION);
 
     public static ProvisionUnitInfo createInfo(String name, String version) {
-        return new ProvisionUnitInfo(name, version) {};
+        return new ProvisionUnitInfo(name, version);
     }
 
     protected final String name;

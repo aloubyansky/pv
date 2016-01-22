@@ -117,6 +117,10 @@ public class ProvisionUnitEnvironment extends ProvisionEnvironmentBase {
         return unitHome;
     }
 
+    protected void reset(ProvisionUnitEnvironment env) {
+        throw new UnsupportedOperationException();
+    }
+
     @Override
     public int hashCode() {
         final int prime = 31;

@@ -27,15 +27,14 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import org.jboss.provision.ProvisionEnvironment;
-import org.jboss.provision.history.ProvisionEnvironmentHistory;
-import org.jboss.provision.info.ProvisionUnitInfo;
+import org.jboss.provision.info.ProvisionEnvironmentInfo;
+import org.jboss.provision.instruction.ProvisionPackage;
 import org.jboss.provision.test.application.ApplicationTestBase;
-import org.jboss.provision.tool.ProvisionPackage;
-import org.jboss.provision.tool.ProvisionTool;
 import org.junit.Test;
 
 /**
@@ -47,8 +46,7 @@ public class ProvEnvIteratorTestCase extends ApplicationTestBase {
     @Test
     public void testEmptyHistory() throws Exception {
         final ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
-        final ProvisionEnvironmentHistory history = ProvisionEnvironmentHistory.getInstance(env);
-        Iterator<ProvisionEnvironment> i = history.environmentIterator();
+        Iterator<ProvisionEnvironmentInfo> i = env.environmentHistory();
         assertFalse(i.hasNext());
         try {
             i.next();
@@ -71,7 +69,13 @@ public class ProvEnvIteratorTestCase extends ApplicationTestBase {
             .buildInstall("unitA", "1.0");
 
         final ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
-        final ProvisionEnvironment env1_0 = ProvisionTool.apply(env, archive);
+        final ProvisionEnvironmentInfo infoEmpty = env.getEnvironmentInfo();
+        assertTrue(infoEmpty.getUnitNames().isEmpty());
+
+        env.apply(archive);
+        final ProvisionEnvironmentInfo info1_0 = env.getEnvironmentInfo();
+        assertEquals(Collections.singleton("unitA"), info1_0.getUnitNames());
+        assertEquals("1.0", info1_0.getUnitInfo("unitA").getVersion());
 
         originalInstall.createFileWithRandomContent("d/d/d/d.txt");
         ProvisionPackage.newBuilder()
@@ -79,7 +83,10 @@ public class ProvEnvIteratorTestCase extends ApplicationTestBase {
             .setTargetInstallationDir(originalInstall.getHome())
             .setPackageOutputFile(archive)
             .buildUpdate("unitA", "1.0", "1.1");
-        final ProvisionEnvironment env1_1 = ProvisionTool.apply(env1_0, archive);
+        env.apply(archive);
+        final ProvisionEnvironmentInfo info1_1 = env.getEnvironmentInfo();
+        assertEquals(Collections.singleton("unitA"), info1_1.getUnitNames());
+        assertEquals("1.1", info1_1.getUnitInfo("unitA").getVersion());
 
         originalInstall.updateFileWithRandomContent("d/d/d/d.txt");
         ProvisionPackage.newBuilder()
@@ -87,25 +94,24 @@ public class ProvEnvIteratorTestCase extends ApplicationTestBase {
             .setTargetInstallationDir(originalInstall.getHome())
             .setPackageOutputFile(archive)
             .buildPatch("patch1", "unitA", "1.1");
-        final ProvisionEnvironment envPatch1 = ProvisionTool.apply(env1_1, archive);
+        env.apply(archive);
+        final ProvisionEnvironmentInfo infoPatch1 = env.getEnvironmentInfo();
+        assertEquals(Collections.singleton("unitA"), infoPatch1.getUnitNames());
+        assertEquals("1.1", infoPatch1.getUnitInfo("unitA").getVersion());
 
-        final ProvisionEnvironmentHistory history = ProvisionEnvironmentHistory.getInstance(env);
-        Iterator<ProvisionEnvironment> i = history.environmentIterator();
-
-        assertTrue(i.hasNext());
-        ProvisionEnvironment nextEnv = i.next();
-        assertEquals(envPatch1, nextEnv);
-        assertEquals(ProvisionUnitInfo.createInfo("unitA", "1.1"), nextEnv.getUnitEnvironment("unitA").getUnitInfo());
+        final Iterator<ProvisionEnvironmentInfo> i = env.environmentHistory();
 
         assertTrue(i.hasNext());
-        nextEnv = i.next();
-        assertEquals(env1_1, nextEnv);
-        assertEquals(ProvisionUnitInfo.createInfo("unitA", "1.1"), nextEnv.getUnitEnvironment("unitA").getUnitInfo());
+        ProvisionEnvironmentInfo envInfo = i.next();
+        assertEquals(infoPatch1, envInfo);
 
         assertTrue(i.hasNext());
-        nextEnv = i.next();
-        assertEquals(env1_0, nextEnv);
-        assertEquals(ProvisionUnitInfo.createInfo("unitA", "1.0"), nextEnv.getUnitEnvironment("unitA").getUnitInfo());
+        envInfo = i.next();
+        assertEquals(info1_1, envInfo);
+
+        assertTrue(i.hasNext());
+        envInfo = i.next();
+        assertEquals(info1_0, envInfo);
 
         assertFalse(i.hasNext());
         try {

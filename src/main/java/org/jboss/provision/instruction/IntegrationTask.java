@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2016, Red Hat, Inc., and individual contributors
+ * Copyright 2015, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -20,16 +20,12 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.tool.instruction;
+package org.jboss.provision.instruction;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public enum UnitInstructionType {
+public interface IntegrationTask {
 
-    INSTALL,
-    REPLACE,
-    PATCH,
-    UNINSTALL
 }

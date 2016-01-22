@@ -27,7 +27,7 @@ import java.io.IOException;
 import java.util.LinkedList;
 
 import org.jboss.provision.util.HashUtils;
-import org.jboss.provision.util.Utils;
+import org.jboss.provision.util.PropertyUtils;
 
 /**
  *
@@ -35,7 +35,7 @@ import org.jboss.provision.util.Utils;
  */
 public class TreeUtil {
 
-    private static final String LN = Utils.getSystemProperty("line.separator");
+    private static final String LN = PropertyUtils.getSystemProperty("line.separator");
 
     public static void logTree(File f) throws IOException {
         final StringBuilder buf = new StringBuilder();

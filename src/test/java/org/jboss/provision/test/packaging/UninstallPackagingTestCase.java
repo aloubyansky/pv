@@ -36,12 +36,12 @@ import java.util.List;
 import java.util.Map;
 
 import org.jboss.provision.info.ProvisionUnitInfo;
+import org.jboss.provision.instruction.ContentItemInstruction;
+import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
+import org.jboss.provision.instruction.ProvisionPackage;
+import org.jboss.provision.instruction.ProvisionUnitInstruction;
 import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.test.util.AssertUtil;
-import org.jboss.provision.tool.ProvisionPackage;
-import org.jboss.provision.tool.instruction.ContentItemInstruction;
-import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
-import org.jboss.provision.tool.instruction.ProvisionUnitInstruction;
 import org.jboss.provision.xml.ProvisionXml;
 import org.junit.Test;
 

@@ -27,7 +27,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.jboss.provision.tool.instruction.UpdatePolicy;
+import org.jboss.provision.instruction.UpdatePolicy;
 
 /**
  *

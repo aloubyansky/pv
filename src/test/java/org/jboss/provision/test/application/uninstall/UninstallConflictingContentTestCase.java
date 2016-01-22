@@ -27,12 +27,11 @@ import java.io.File;
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.UnitUpdatePolicy;
+import org.jboss.provision.instruction.ProvisionPackage;
 import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
 import org.jboss.provision.test.util.FSUtils;
-import org.jboss.provision.tool.ProvisionPackage;
-import org.jboss.provision.tool.ProvisionTool;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -83,7 +82,7 @@ public class UninstallConflictingContentTestCase extends ApplicationTestBase {
 
         ProvisionEnvironment env = ProvisionEnvironment.forUndefinedUnit().setEnvironmentHome(testInstall.getHome()).build();
         try {
-            ProvisionTool.apply(env, archive);
+            env.apply(archive);
             Assert.fail("Modified content uninstalled");
         } catch(ProvisionException e) {
             // expected
@@ -95,7 +94,7 @@ public class UninstallConflictingContentTestCase extends ApplicationTestBase {
         env = ProvisionEnvironment.forUndefinedUnit()
                 .setEnvironmentHome(testInstall.getHome())
                 .setDefaultUnitUpdatePolicy(UnitUpdatePolicy.FORCED).build();
-        ProvisionTool.apply(env, archive);
+        env.apply(archive);
 
         AssertUtil.assertExpectedContentInTarget(temp, testInstall.getHome());
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), true);

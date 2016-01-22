@@ -27,11 +27,9 @@ import java.io.File;
 
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionException;
-import org.jboss.provision.history.ProvisionEnvironmentHistory;
 import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.test.util.FSUtils;
 import org.jboss.provision.test.util.InstallationBuilder;
-import org.jboss.provision.tool.ProvisionTool;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -69,16 +67,16 @@ public class ApplicationTestBase {
     }
 
     protected void assertHistoryEmpty(ProvisionEnvironment env) throws ProvisionException {
-        Assert.assertNull(ProvisionEnvironmentHistory.getInstance(env).getCurrentEnvironment());
+        Assert.assertFalse(env.environmentHistory().hasNext());
     }
 
     protected void assertHistoryNotEmpty(ProvisionEnvironment env) throws ProvisionException {
-        Assert.assertNotNull(ProvisionEnvironmentHistory.getInstance(env).getCurrentEnvironment());
+        Assert.assertNotNull(env.environmentHistory().hasNext());
     }
 
     protected void assertCantRollback(ProvisionEnvironment env) {
         try {
-            env = ProvisionTool.rollbackLast(env);
+            env.rollbackLast();
             fail("No history recorded until this point.");
         } catch (ProvisionException e) {
             // expected

@@ -23,11 +23,10 @@
 package org.jboss.provision.test.application.uninstall;
 
 import org.jboss.provision.ProvisionEnvironment;
+import org.jboss.provision.instruction.ProvisionPackage;
 import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
-import org.jboss.provision.tool.ProvisionPackage;
-import org.jboss.provision.tool.ProvisionTool;
 import org.junit.Test;
 
 /**
@@ -54,7 +53,7 @@ public class OriginalUninstallTestCase extends ApplicationTestBase {
         AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome());
 
         final ProvisionEnvironment env = ProvisionEnvironment.forUndefinedUnit().setEnvironmentHome(testInstall.getHome()).build();
-        ProvisionTool.apply(env, archive);
+        env.apply(archive);
 
         AssertUtil.assertEmptyDirBranch(testInstall.getHome());
     }

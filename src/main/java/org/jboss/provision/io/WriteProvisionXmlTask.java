@@ -28,7 +28,7 @@ import java.io.IOException;
 
 import javax.xml.stream.XMLStreamException;
 
-import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
+import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
 import org.jboss.provision.xml.ProvisionXml;
 
 /**

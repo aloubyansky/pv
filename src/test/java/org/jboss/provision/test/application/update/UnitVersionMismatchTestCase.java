@@ -30,12 +30,11 @@ import java.util.Collections;
 
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionException;
+import org.jboss.provision.instruction.ProvisionPackage;
 import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
 import org.jboss.provision.test.util.FSUtils;
-import org.jboss.provision.tool.ProvisionPackage;
-import org.jboss.provision.tool.ProvisionTool;
 import org.junit.Test;
 
 /**
@@ -72,10 +71,10 @@ public class UnitVersionMismatchTestCase extends ApplicationTestBase {
             .buildInstall("unitA", "1.0");
 
         final ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
-        final ProvisionEnvironment originalEnv = ProvisionTool.apply(env, archive);
+        env.apply(archive);
 
-        assertEquals(Collections.singleton("unitA"), originalEnv.getUnitNames());
-        assertEquals("1.0", originalEnv.getUnitEnvironment("unitA").getUnitInfo().getVersion());
+        assertEquals(Collections.singleton("unitA"), env.getUnitNames());
+        assertEquals("1.0", env.getUnitEnvironment("unitA").getUnitInfo().getVersion());
 
         originalInstall.updateFileWithRandomContent("a.txt")
             .createFileWithRandomContent("d/d.txt");
@@ -88,7 +87,7 @@ public class UnitVersionMismatchTestCase extends ApplicationTestBase {
         AssertUtil.assertNotIdentical(originalInstall.getHome(), testInstall.getHome(), true);
         IoUtils.copyFile(testInstall.getHome(), tmpDir);
         try {
-            ProvisionTool.apply(originalEnv, archive);
+            env.apply(archive);
             fail("Cannot apply an update that targets version 1.1 to version 1.0");
         } catch(ProvisionException e) {
             // expected

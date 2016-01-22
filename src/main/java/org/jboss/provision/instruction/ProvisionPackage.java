@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.tool;
+package org.jboss.provision.instruction;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -36,12 +36,10 @@ import javax.xml.stream.XMLStreamException;
 
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
+import org.jboss.provision.info.ProvisionInfoReader;
 import org.jboss.provision.info.ProvisionUnitContentInfo;
 import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.io.IoUtils;
-import org.jboss.provision.tool.instruction.ContentItemInstruction;
-import org.jboss.provision.tool.instruction.ProvisionEnvironmentInstruction;
-import org.jboss.provision.tool.instruction.ProvisionUnitInstruction;
 import org.jboss.provision.util.HashUtils;
 import org.jboss.provision.xml.ProvisionXml;
 

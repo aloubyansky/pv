@@ -38,8 +38,8 @@ import org.jboss.provision.info.ContentPath;
 abstract class ProvisionEnvironmentBase {
 
     private final ProvisionEnvironmentBase parentEnv;
-    private final Map<String, ContentPath> namedLocations;
-    private final UnitUpdatePolicy updatePolicy;
+    private Map<String, ContentPath> namedLocations;
+    private UnitUpdatePolicy updatePolicy;
 
     ProvisionEnvironmentBase(Map<String, ContentPath> namedLocations, UnitUpdatePolicy updatePolicy) {
         this(null, namedLocations, updatePolicy);
@@ -131,6 +131,14 @@ abstract class ProvisionEnvironmentBase {
             return updatePolicy;
         }
         return parentEnv == null ? null : parentEnv.resolveUpdatePolicy();
+    }
+
+    protected void reset(ProvisionEnvironmentBase env) {
+        if(parentEnv != null) {
+            parentEnv.reset(env.getParentEnv());
+        }
+        this.namedLocations = env.namedLocations;
+        this.updatePolicy = env.updatePolicy;
     }
 
     @Override

@@ -20,16 +20,37 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.tool.instruction;
+package org.jboss.provision.util;
 
-import org.jboss.provision.ApplicationContext;
-import org.jboss.provision.ProvisionException;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.Locale;
+
+import org.jboss.provision.ProvisionErrors;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public interface InstructionCondition {
+public class PropertyUtils {
 
-    boolean isSatisfied(ApplicationContext ctx) throws ProvisionException;
+    private PropertyUtils() {
+    }
+
+    public static boolean isWindows() {
+        return getSystemProperty("os.name").toLowerCase(Locale.ENGLISH).indexOf("windows") >= 0;
+    }
+
+    public static String getSystemProperty(final String name) {
+        assert name != null : ProvisionErrors.nullArgument("name");
+        final SecurityManager sm = System.getSecurityManager();
+        if(sm != null) {
+            return AccessController.doPrivileged(new PrivilegedAction<String>(){
+                public String run() {
+                    return System.getProperty(name);
+                }});
+        } else {
+            return System.getProperty(name);
+        }
+    }
 }

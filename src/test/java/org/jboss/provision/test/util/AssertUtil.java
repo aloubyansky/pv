@@ -34,7 +34,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.jboss.provision.history.ProvisionEnvironmentHistory;
-import org.jboss.provision.tool.instruction.ContentItemInstruction;
+import org.jboss.provision.instruction.ContentItemInstruction;
 import org.jboss.provision.util.HashUtils;
 import org.junit.Assert;
 

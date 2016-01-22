@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.tool.instruction;
+package org.jboss.provision.instruction;
 
 import java.util.ArrayList;
 import java.util.Arrays;

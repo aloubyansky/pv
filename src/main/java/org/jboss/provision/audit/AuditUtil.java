@@ -31,18 +31,18 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
+import org.jboss.provision.ProvisionEnvironmentBuilder;
 import org.jboss.provision.ProvisionEnvironment;
-import org.jboss.provision.ProvisionEnvironment.Builder;
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
 import org.jboss.provision.ProvisionUnitEnvironment;
 import org.jboss.provision.UnitUpdatePolicy;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionUnitInfo;
+import org.jboss.provision.instruction.ContentItemInstruction;
+import org.jboss.provision.instruction.UpdatePolicy;
 import org.jboss.provision.io.FileTask;
 import org.jboss.provision.io.FileUtils;
-import org.jboss.provision.tool.instruction.ContentItemInstruction;
-import org.jboss.provision.tool.instruction.UpdatePolicy;
 import org.jboss.provision.util.HashUtils;
 
 /**
@@ -159,7 +159,7 @@ public class AuditUtil {
             throw ProvisionErrors.failedToLoadEnvironmentAuditRecord(e);
         }
 
-        final Builder envBuilder = ProvisionEnvironment.builder();
+        final ProvisionEnvironmentBuilder envBuilder = ProvisionEnvironment.builder();
         UnitUpdatePolicy.Builder defPolicy = null;
         Map<String, UnitUpdatePolicy.Builder> unitPolicies = null;
         Set<String> addedUnits = Collections.emptySet();

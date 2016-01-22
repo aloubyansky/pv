@@ -23,20 +23,17 @@
 package org.jboss.provision.test.history;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Collections;
+import java.util.Iterator;
 
 import org.jboss.provision.ProvisionEnvironment;
-import org.jboss.provision.ProvisionUnitEnvironment;
-import org.jboss.provision.history.ProvisionEnvironmentHistory;
+import org.jboss.provision.info.ProvisionEnvironmentInfo;
+import org.jboss.provision.instruction.ProvisionPackage;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
-import org.jboss.provision.tool.ProvisionPackage;
-import org.jboss.provision.tool.ProvisionTool;
-import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -60,18 +57,19 @@ public class InstallUnitVersionTestCase extends ApplicationTestBase {
         AssertUtil.assertEmptyDirBranch(testInstall.getHome());
 
         final ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
-        final ProvisionEnvironmentHistory history = ProvisionEnvironmentHistory.getInstance(env);
-        assertNull(history.getCurrentEnvironment());
 
-        ProvisionTool.apply(env, archive);
+        assertFalse(env.environmentHistory().hasNext());
+        assertTrue(env.getEnvironmentInfo().getUnitNames().isEmpty());
 
-        final ProvisionEnvironment env2 = history.getCurrentEnvironment();
-        assertNotNull(env2);
-        Assert.assertNotEquals(env, env2);
+        env.apply(archive);
 
-        assertTrue(env.getUnitNames().isEmpty());
-        assertEquals(Collections.singleton("unitA"), env2.getUnitNames());
-        ProvisionUnitEnvironment unitAEnv = env2.getUnitEnvironment("unitA");
-        assertEquals("1.0", unitAEnv.getUnitInfo().getVersion());
+        final Iterator<ProvisionEnvironmentInfo> envHistory = env.environmentHistory();
+        assertTrue(envHistory.hasNext());
+        final ProvisionEnvironmentInfo historyInfo = envHistory.next();
+        assertEquals(Collections.singleton("unitA"), historyInfo.getUnitNames());
+        assertEquals("1.0", historyInfo.getUnitInfo("unitA").getVersion());
+        assertFalse(envHistory.hasNext());
+
+        assertEquals(historyInfo, env.getEnvironmentInfo());
     }
 }
