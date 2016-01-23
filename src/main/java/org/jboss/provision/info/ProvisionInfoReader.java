@@ -25,9 +25,9 @@ package org.jboss.provision.info;
 import java.io.File;
 import java.io.IOException;
 
+import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
-import org.jboss.provision.history.ProvisionEnvironmentHistory;
 import org.jboss.provision.util.HashUtils;
 
 /**
@@ -55,7 +55,7 @@ public class ProvisionInfoReader {
     private static void readContentInfo(final ProvisionUnitContentInfo.Builder builder, File file, final int rootPathOffset)
             throws ProvisionException {
         if(file.isDirectory()) {
-            if(file.getName().equals(ProvisionEnvironmentHistory.DEF_HISTORY_DIR)) {
+            if(file.getName().equals(ProvisionEnvironment.DEF_HISTORY_DIR)) {
                 return;
             }
             for(File f : file.listFiles()) {

@@ -26,7 +26,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.jboss.provision.history.ProvisionEnvironmentHistory;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionUnitInfo;
 

@@ -20,16 +20,13 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.history;
+package org.jboss.provision;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import org.jboss.provision.ProvisionEnvironment;
-import org.jboss.provision.ProvisionErrors;
-import org.jboss.provision.ProvisionException;
 import org.jboss.provision.audit.ProvisionEnvironmentJournal;
 import org.jboss.provision.audit.ProvisionUnitJournal;
 import org.jboss.provision.info.ProvisionEnvironmentInfo;
@@ -42,25 +39,24 @@ import org.jboss.provision.io.IoUtils;
  *
  * @author Alexey Loubyansky
  */
-public class ProvisionEnvironmentHistory {
+class ProvisionEnvironmentHistory {
 
-    public static final String DEF_HISTORY_DIR = ".pvh";
     private static final String UNITS = "units";
 
-    public static ProvisionEnvironmentHistory getInstance(ProvisionEnvironment env) {
+    static ProvisionEnvironmentHistory getInstance(ProvisionEnvironment env) {
         assert env != null : ProvisionErrors.nullArgument("env");
-        return new ProvisionEnvironmentHistory(new File(env.getEnvironmentHome(), DEF_HISTORY_DIR));
+        return new ProvisionEnvironmentHistory(new File(env.getEnvironmentHome(), ProvisionEnvironment.DEF_HISTORY_DIR));
     }
 
-    public static ProvisionEnvironmentHistory getInstance(File historyHome) {
+    static ProvisionEnvironmentHistory getInstance(File historyHome) {
         return new ProvisionEnvironmentHistory(historyHome);
     }
 
-    public static ProvisionEnvironmentHistory forEnvironment(File envHome) {
-        return new ProvisionEnvironmentHistory(new File(envHome, DEF_HISTORY_DIR));
+    static ProvisionEnvironmentHistory forEnvironment(File envHome) {
+        return new ProvisionEnvironmentHistory(new File(envHome, ProvisionEnvironment.DEF_HISTORY_DIR));
     }
 
-    public static boolean storesHistory(File dir) throws ProvisionException {
+    static boolean storesHistory(File dir) throws ProvisionException {
         assert dir != null : ProvisionErrors.nullArgument("dir");
         if(!dir.exists()) {
             return false;
@@ -78,7 +74,7 @@ public class ProvisionEnvironmentHistory {
         this.historyHome = historyHome;
     }
 
-    public File getHistoryHome() {
+    File getHistoryHome() {
         return historyHome;
     }
 
@@ -140,12 +136,12 @@ public class ProvisionEnvironmentHistory {
         return prevRecord.getUpdatedEnvironment();
     }
 
-    public ProvisionEnvironment getCurrentEnvironment() throws ProvisionException {
+    ProvisionEnvironment getCurrentEnvironment() throws ProvisionException {
         final EnvironmentHistoryRecord appliedInstr = EnvironmentHistoryRecord.loadLast(historyHome);
         return appliedInstr == null ? null : appliedInstr.getUpdatedEnvironment();
     }
 
-    public EnvironmentHistoryRecord getLastRecord() throws ProvisionException {
+    EnvironmentHistoryRecord getLastRecord() throws ProvisionException {
         return EnvironmentHistoryRecord.loadLast(historyHome);
     }
 
@@ -185,7 +181,7 @@ public class ProvisionEnvironmentHistory {
             }};
     }
 
-    public Iterator<ProvisionEnvironmentInfo> environmentIterator() {
+    Iterator<ProvisionEnvironmentInfo> environmentIterator() {
         return new Iterator<ProvisionEnvironmentInfo>() {
             final Iterator<EnvironmentHistoryRecord> delegate = appliedInstructions();
             @Override

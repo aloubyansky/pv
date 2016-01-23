@@ -29,8 +29,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import org.jboss.provision.history.EnvironmentHistoryRecord;
-import org.jboss.provision.history.ProvisionEnvironmentHistory;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionEnvironmentInfo;
 import org.jboss.provision.info.ProvisionUnitInfo;
@@ -41,6 +39,8 @@ import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
  * @author Alexey Loubyansky
  */
 public class ProvisionEnvironment extends ProvisionEnvironmentBase {
+
+    public static final String DEF_HISTORY_DIR = ".pvh";
 
     public static ProvisionEnvironmentBuilder builder() {
         return new ProvisionEnvironmentBuilder();

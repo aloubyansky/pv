@@ -43,7 +43,6 @@ import org.jboss.provision.UnitUpdatePolicy;
 import org.jboss.provision.audit.ProvisionUnitJournal;
 import org.jboss.provision.audit.UnitJournalRecord;
 import org.jboss.provision.audit.ProvisionEnvironmentJournal;
-import org.jboss.provision.history.ProvisionEnvironmentHistory;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.instruction.ContentItemInstruction;
 import org.jboss.provision.instruction.InstructionCondition;

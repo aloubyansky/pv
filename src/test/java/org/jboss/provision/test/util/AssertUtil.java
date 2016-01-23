@@ -33,7 +33,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.jboss.provision.history.ProvisionEnvironmentHistory;
+import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.instruction.ContentItemInstruction;
 import org.jboss.provision.util.HashUtils;
 import org.junit.Assert;
@@ -114,7 +114,7 @@ public class AssertUtil {
                 for (String t : targetNames) {
                     final File tFile = new File(target, t);
                     if (tFile.isDirectory()) {
-                        if(t.equals(ProvisionEnvironmentHistory.DEF_HISTORY_DIR) ||
+                        if(t.equals(ProvisionEnvironment.DEF_HISTORY_DIR) ||
                                 ignoreEmptyDirs && FSUtils.isEmptyDirBranch(tFile)) {
                             switch(ignoredDirs.size()) {
                                 case 0:

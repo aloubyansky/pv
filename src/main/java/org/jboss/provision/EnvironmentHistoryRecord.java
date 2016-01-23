@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.history;
+package org.jboss.provision;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -32,11 +32,6 @@ import java.util.UUID;
 
 import javax.xml.stream.XMLStreamException;
 
-import org.jboss.provision.ContentSource;
-import org.jboss.provision.ProvisionEnvironmentBuilder;
-import org.jboss.provision.ProvisionEnvironment;
-import org.jboss.provision.ProvisionErrors;
-import org.jboss.provision.ProvisionException;
 import org.jboss.provision.audit.AuditUtil;
 import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
@@ -51,7 +46,7 @@ import org.jboss.provision.xml.ProvisionXml;
  *
  * @author Alexey Loubyansky
  */
-public class EnvironmentHistoryRecord {
+class EnvironmentHistoryRecord {
 
     private static final String ENV_FILE = "env.properties";
     private static final String LAST_INSTR_TXT = "last.txt";
@@ -200,14 +195,14 @@ public class EnvironmentHistoryRecord {
         this.appliedInstruction = appliedInstruction;
     }
 
-    public ProvisionEnvironment getUpdatedEnvironment() throws ProvisionException {
+    ProvisionEnvironment getUpdatedEnvironment() throws ProvisionException {
         if(updatedEnv == null) {
             updatedEnv = AuditUtil.loadEnv(envFile);
         }
         return updatedEnv;
     }
 
-    public ProvisionEnvironmentInstruction getAppliedInstruction() throws ProvisionException {
+    ProvisionEnvironmentInstruction getAppliedInstruction() throws ProvisionException {
         if(appliedInstruction == null) {
             FileInputStream fis = null;
             try {
@@ -224,7 +219,7 @@ public class EnvironmentHistoryRecord {
         return appliedInstruction;
     }
 
-    public ContentSource getBackup() throws ProvisionException {
+    ContentSource getBackup() throws ProvisionException {
         final File instrDir = getInstructionDirectory();
         return ContentSource.forBackup(instrDir);
     }
