@@ -64,8 +64,7 @@ class ApplicationContextImpl implements ApplicationContext {
             @Override
             public ProvisionEnvironment commit(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction,
                     ProvisionEnvironmentJournal envJournal) throws ProvisionException {
-                return MutableEnvironmentHistory.newInstance(ProvisionEnvironmentHistory.getInstance(currentEnv).getHistoryHome())
-                        .doRecord(currentEnv, instruction, envJournal);
+                return ProvisionEnvironmentHistory.getInstance(currentEnv).record(currentEnv, instruction, envJournal);
             }
         };
 
@@ -73,8 +72,7 @@ class ApplicationContextImpl implements ApplicationContext {
             @Override
             public ProvisionEnvironment commit(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction,
                     ProvisionEnvironmentJournal envJournal) throws ProvisionException {
-                return MutableEnvironmentHistory.newInstance(ProvisionEnvironmentHistory.getInstance(currentEnv).getHistoryHome())
-                        .doRollbackLast(currentEnv);
+                return ProvisionEnvironmentHistory.getInstance(currentEnv).rollbackLast(currentEnv);
             }
         };
 
@@ -435,25 +433,6 @@ class ApplicationContextImpl implements ApplicationContext {
         ScheduledInstruction(File targetFile, ContentItemInstruction instruction) {
             this.targetFile = targetFile;
             this.instruction = instruction;
-        }
-    }
-
-    static class MutableEnvironmentHistory extends ProvisionEnvironmentHistory {
-
-        static MutableEnvironmentHistory newInstance(File historyHome) {
-            return new MutableEnvironmentHistory(historyHome);
-        }
-
-        private MutableEnvironmentHistory(File historyHome) {
-            super(historyHome);
-        }
-
-        ProvisionEnvironment doRecord(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction, ProvisionEnvironmentJournal envJournal) throws ProvisionException {
-            return record(currentEnv, instruction, envJournal);
-        }
-
-        ProvisionEnvironment doRollbackLast(ProvisionEnvironment currentEnv) throws ProvisionException {
-            return rollbackLast(currentEnv);
         }
     }
 }

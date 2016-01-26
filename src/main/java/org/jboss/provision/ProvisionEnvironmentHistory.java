@@ -41,7 +41,7 @@ import org.jboss.provision.io.IoUtils;
  */
 class ProvisionEnvironmentHistory {
 
-    private static final String UNITS = "units";
+    static final String UNITS = "units";
 
     static ProvisionEnvironmentHistory getInstance(ProvisionEnvironment env) {
         assert env != null : ProvisionErrors.nullArgument("env");
@@ -115,9 +115,8 @@ class ProvisionEnvironmentHistory {
     }
 
     protected ProvisionEnvironment rollbackLast(ProvisionEnvironment currentEnv) throws ProvisionException {
-        final ProvisionEnvironmentHistory history = ProvisionEnvironmentHistory.getInstance(currentEnv);
         final FileTaskList tasks = new FileTaskList();
-        final EnvironmentHistoryRecord prevRecord = EnvironmentHistoryRecord.scheduleDeleteLast(history.getHistoryHome(), tasks);
+        final EnvironmentHistoryRecord prevRecord = EnvironmentHistoryRecord.scheduleDeleteLast(historyHome, tasks);
         if(tasks.isEmpty()) {
             return currentEnv;
         }

@@ -151,7 +151,14 @@ class EnvironmentHistoryRecord {
                 throw ProvisionErrors.failedToUpdateHistory(e);
             }
         }
-        tasks.add(FileTask.delete(lastRecord.getInstructionDirectory()));
+        final File instrDir = lastRecord.getInstructionDirectory();
+        tasks.add(FileTask.delete(instrDir));
+
+        final File unitsDir = new File(historyDir, ProvisionEnvironmentHistory.UNITS);
+        for(String unitName : lastRecord.getAppliedInstruction().getUnitNames()) {
+            tasks.add(FileTask.delete(IoUtils.newFile(unitsDir, unitName, instrDir.getName())));
+        }
+
         return loadPrevious(lastRecord);
     }
 
