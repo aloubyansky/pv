@@ -25,6 +25,7 @@ package org.jboss.provision.info;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -34,7 +35,7 @@ import org.jboss.provision.ProvisionErrors;
  *
  * @author Alexey Loubyansky
  */
-public abstract class ProvisionUnitContentInfo extends ProvisionUnitInfo {
+public class ProvisionUnitContentInfo extends ProvisionUnitInfo {
 
     public static Builder forUnit(String name, String version) {
         return new Builder(name, version);
@@ -44,6 +45,7 @@ public abstract class ProvisionUnitContentInfo extends ProvisionUnitInfo {
 
         private final String name;
         private final String version;
+        private List<String> patches = Collections.emptyList();
         private Map<ContentPath, ContentItemInfo> content = Collections.emptyMap();
 
         private Builder(String name, String version) {
@@ -68,15 +70,15 @@ public abstract class ProvisionUnitContentInfo extends ProvisionUnitInfo {
         }
 
         public ProvisionUnitContentInfo build() {
-            return new ProvisionUnitContentInfo(name, version, content) {};
+            return new ProvisionUnitContentInfo(this);
         }
     };
 
     protected final Map<ContentPath, ContentItemInfo> content;
 
-    protected ProvisionUnitContentInfo(String name, String version, Map<ContentPath, ContentItemInfo> content) {
-        super(name, version);
-        this.content = content;
+    protected ProvisionUnitContentInfo(Builder builder) {
+        super(builder.name, builder.version, builder.patches);
+        this.content = builder.content;
     }
 
     public Set<ContentPath> getPaths() {

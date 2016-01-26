@@ -105,7 +105,7 @@ public class RollbackPatchAlreadyPatchedContentTestCase extends ApplicationTestB
         AssertUtil.assertNotIdentical(originalInstall.getHome(), testInstall.getHome(), true);
         AssertUtil.assertIdentical(testInstall.getHome(), tempDir, true);
 
-        assertCantRollback(env);
-        assertHistoryEmpty(env);
+        AssertUtil.assertCantRollback(env);
+        AssertUtil.assertHistoryEmpty(env);
     }
 }

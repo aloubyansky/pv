@@ -119,7 +119,7 @@ public class RollbackForcePatchOverContentConflictTestCase extends ApplicationTe
         AssertUtil.assertExpectedFilesNotInTarget(originalInstall.getHome(), testInstall.getHome(), false);
         AssertUtil.assertIdentical(tempDir, testInstall.getHome(), true);
 
-        assertHistoryEmpty(env);
-        assertCantRollback(env);
+        AssertUtil.assertHistoryEmpty(env);
+        AssertUtil.assertCantRollback(env);
     }
 }

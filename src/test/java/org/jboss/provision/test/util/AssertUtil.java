@@ -22,7 +22,9 @@
 
 package org.jboss.provision.test.util;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,6 +36,9 @@ import java.util.List;
 import java.util.Set;
 
 import org.jboss.provision.ProvisionEnvironment;
+import org.jboss.provision.ProvisionException;
+import org.jboss.provision.info.ProvisionEnvironmentInfo;
+import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.instruction.ContentItemInstruction;
 import org.jboss.provision.util.HashUtils;
 import org.junit.Assert;
@@ -267,6 +272,41 @@ public class AssertUtil {
         if(!FSUtils.isEmptyDirBranch(dir)) {
             Assert.fail(dir.getAbsolutePath() + " contains files in its branch");
         }
+    }
+
+    public static void assertHistoryEmpty(ProvisionEnvironment env) throws ProvisionException {
+        Assert.assertFalse(env.environmentHistory().hasNext());
+    }
+
+    public static void assertHistoryNotEmpty(ProvisionEnvironment env) throws ProvisionException {
+        Assert.assertNotNull(env.environmentHistory().hasNext());
+    }
+
+    public static void assertCantRollback(ProvisionEnvironment env) {
+        try {
+            env.rollbackLast();
+            fail("No history recorded until this point.");
+        } catch (ProvisionException e) {
+            // expected
+        }
+    }
+
+    public static void assertEnvInfo(ProvisionEnvironmentInfo envInfo, String unitName, String unitVersion) {
+        assertEnvInfo(envInfo, unitName, unitVersion, Collections.<String>emptyList());
+    }
+
+    public static void assertEnvInfo(ProvisionEnvironmentInfo envInfo, String unitName, String unitVersion, List<String> patches) {
+        assertEnvInfo(envInfo, unitName, unitVersion, patches, true);
+    }
+
+    public static void assertEnvInfo(ProvisionEnvironmentInfo envInfo, String unitName, String unitVersion, List<String> patches, boolean notMore) {
+        final ProvisionUnitInfo unitInfo = envInfo.getUnitInfo(unitName);
+        Assert.assertNotNull(unitInfo);
+        if(notMore) {
+            assertEquals(1, envInfo.getUnitNames().size());
+        }
+        assertEquals(unitVersion, unitInfo.getVersion());
+        assertEquals(patches, unitInfo.getPatches());
     }
 
     private static IllegalStateException errorNotADir(File f) {

@@ -57,7 +57,7 @@ public class RollbackOriginalInstallTestCase extends ApplicationTestBase {
         env.rollbackLast();
 
         AssertUtil.assertEmptyDirBranch(testInstall.getHome());
-        assertCantRollback(env);
-        assertHistoryEmpty(env);
+        AssertUtil.assertCantRollback(env);
+        AssertUtil.assertHistoryEmpty(env);
     }
 }

@@ -76,8 +76,16 @@ class EnvironmentHistoryRecord {
                 if(newVersion == null) {
                     // unit removed
                 } else {
-                    envBuilder.copyUnit(currentEnv.getUnitEnvironment(unitName));
-                    envBuilder.addUnit(unitName, newVersion);
+                    final ProvisionUnitEnvironment unitEnv = currentEnv.getUnitEnvironment(unitName);
+                    if(newVersion.equals(unitEnv.getUnitInfo().getVersion())) {
+                        if (unitInstr.getId() != null) {
+                            envBuilder.addPatchedUnit(unitEnv, unitInstr.getId());
+                        } else {
+                            envBuilder.copyUnit(unitEnv);
+                        }
+                    } else {
+                        envBuilder.addUpdatedUnit(unitEnv, newVersion);
+                    }
                 }
             } else {
                 envBuilder.copyUnit(currentEnv.getUnitEnvironment(unitName));

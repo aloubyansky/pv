@@ -26,7 +26,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.util.Collections;
 import java.util.Iterator;
 
 import org.jboss.provision.ProvisionEnvironment;
@@ -66,8 +65,7 @@ public class InstallUnitVersionTestCase extends ApplicationTestBase {
         final Iterator<ProvisionEnvironmentInfo> envHistory = env.environmentHistory();
         assertTrue(envHistory.hasNext());
         final ProvisionEnvironmentInfo historyInfo = envHistory.next();
-        assertEquals(Collections.singleton("unitA"), historyInfo.getUnitNames());
-        assertEquals("1.0", historyInfo.getUnitInfo("unitA").getVersion());
+        AssertUtil.assertEnvInfo(historyInfo, "unitA", "1.0");
         assertFalse(envHistory.hasNext());
 
         assertEquals(historyInfo, env.getEnvironmentInfo());

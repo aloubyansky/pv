@@ -100,7 +100,7 @@ public class RollbackPatchInMixedEnvTestCase extends ApplicationTestBase {
         AssertUtil.assertExpectedFilesNotInTarget(nextOriginal.getHome(), testInstall.getHome(), false);
         AssertUtil.assertIdentical(testInstall.getHome(), tempDir, true);
 
-        assertHistoryEmpty(env);
-        assertCantRollback(env);
+        AssertUtil.assertHistoryEmpty(env);
+        AssertUtil.assertCantRollback(env);
     }
 }

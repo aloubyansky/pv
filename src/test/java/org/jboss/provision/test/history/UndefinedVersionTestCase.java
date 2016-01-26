@@ -22,7 +22,6 @@
 
 package org.jboss.provision.test.history;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -35,6 +34,7 @@ import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.instruction.ProvisionPackage;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -59,7 +59,7 @@ public class UndefinedVersionTestCase extends ApplicationTestBase {
         AssertUtil.assertEmptyDirBranch(testInstall.getHome());
 
         final ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
-        assertFalse(env.environmentHistory().hasNext());
+        AssertUtil.assertHistoryEmpty(env);
 
         env.apply(archive);
 
@@ -67,8 +67,7 @@ public class UndefinedVersionTestCase extends ApplicationTestBase {
         assertTrue(envHistory.hasNext());
         final ProvisionEnvironmentInfo installedInfo = envHistory.next();
         assertFalse(envHistory.hasNext());
-        assertEquals(Collections.singleton(ProvisionUnitInfo.UNDEFINED_NAME), installedInfo.getUnitNames());
-        assertEquals(ProvisionUnitInfo.UNDEFINED_VERSION, installedInfo.getUnitInfo(ProvisionUnitInfo.UNDEFINED_NAME).getVersion());
+        AssertUtil.assertEnvInfo(installedInfo, ProvisionUnitInfo.UNDEFINED_NAME, ProvisionUnitInfo.UNDEFINED_VERSION);
 
         originalInstall.updateFileWithRandomContent("a.txt")
             .createFileWithRandomContent("d/d.txt");
@@ -86,7 +85,8 @@ public class UndefinedVersionTestCase extends ApplicationTestBase {
         assertTrue(envHistory.hasNext());
         final ProvisionEnvironmentInfo patchedInfo = envHistory.next();
 
-        assertEquals(installedInfo, patchedInfo);
+        Assert.assertNotEquals(installedInfo, patchedInfo);
+        AssertUtil.assertEnvInfo(patchedInfo, ProvisionUnitInfo.UNDEFINED_NAME, ProvisionUnitInfo.UNDEFINED_VERSION, Collections.singletonList("patch1"));
 
         ProvisionPackage.newBuilder()
             .setCurrentInstallationDir(testInstall.getHome())
@@ -94,7 +94,7 @@ public class UndefinedVersionTestCase extends ApplicationTestBase {
             .buildUninstall();
         env.apply(archive);
         AssertUtil.assertEmptyDirBranch(testInstall.getHome());
-        assertFalse(env.environmentHistory().hasNext());
+        AssertUtil.assertHistoryEmpty(env);
         assertTrue(env.getEnvironmentInfo().getUnitNames().isEmpty());
     }
 }

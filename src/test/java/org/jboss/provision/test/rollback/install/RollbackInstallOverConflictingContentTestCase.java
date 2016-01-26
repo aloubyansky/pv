@@ -90,6 +90,6 @@ public class RollbackInstallOverConflictingContentTestCase extends ApplicationTe
         env.rollbackLast();
 
         AssertUtil.assertIdentical(tmpDir, testInstall.getHome(), true);
-        assertHistoryEmpty(env);
+        AssertUtil.assertHistoryEmpty(env);
     }
 }

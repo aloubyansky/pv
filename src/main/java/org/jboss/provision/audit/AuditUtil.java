@@ -24,9 +24,11 @@ package org.jboss.provision.audit;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -58,6 +60,7 @@ public class AuditUtil {
     private static final String FALSE = "false";
     private static final String HASH = "hash";
     private static final String LOCATION = "location.";
+    private static final String PATCHES = ".patches";
     private static final String POLICY = ".policy";
     private static final String RELATIVE_PATH = "relative-path";
     private static final String REPLACED_HASH = "replaced-hash";
@@ -218,6 +221,8 @@ public class AuditUtil {
                     }
                 } else if(prop.startsWith(VERSION, i)) {
                     envBuilder.addUnit(unitName, props.getProperty(prop));
+                } else if(prop.startsWith(PATCHES, i)) {
+                    envBuilder.addUnitPatches(unitName, Arrays.asList(props.getProperty(prop).split(",")));
                 } else {
                     throw ProvisionErrors.unknownEnvironmentProperty(prop);
                 }
@@ -260,7 +265,25 @@ public class AuditUtil {
 
         for(String unitName : env.getUnitNames()) {
             final ProvisionUnitEnvironment unitEnv = env.getUnitEnvironment(unitName);
-            props.setProperty(unitName + VERSION, unitEnv.getUnitInfo().getVersion());
+            final ProvisionUnitInfo unitInfo = unitEnv.getUnitInfo();
+            props.setProperty(unitName + VERSION, unitInfo.getVersion());
+
+            final List<String> patches = unitInfo.getPatches();
+            switch(patches.size()) {
+                case 0:
+                    break;
+                case 1:
+                    props.setProperty(unitName + PATCHES, patches.get(0));
+                    break;
+                default:
+                    final StringBuilder buf = new StringBuilder();
+                    buf.append(patches.get(0));
+                    for(int i = 1; i < patches.size(); ++i) {
+                        buf.append(',').append(patches.get(i));
+                    }
+                    props.setProperty(unitName + PATCHES, buf.toString());
+            }
+
             final ContentPath unitHome = unitEnv.getHomePath();
             if(unitHome != null) {
                 props.setProperty(unitName + UNIT_HOME, unitHome.toString());

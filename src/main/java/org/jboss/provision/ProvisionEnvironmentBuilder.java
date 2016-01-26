@@ -22,8 +22,10 @@
 package org.jboss.provision;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.jboss.provision.info.ContentPath;
@@ -67,6 +69,25 @@ public class ProvisionEnvironmentBuilder {
         return this;
     }
 
+    public ProvisionEnvironmentBuilder addUnitPatches(final String unitName, final List<String> patches) {
+        assert unitName != null : ProvisionErrors.nullArgument("unitName");
+        assert patches != null : ProvisionErrors.nullArgument("patches");
+        final ProvisionUnitInfo unitInfo = unitInfos.get(unitName);
+        if(unitInfo == null) {
+            addUnit(ProvisionUnitInfo.createInfo(unitName, ProvisionUnitInfo.UNDEFINED_VERSION, patches));
+        } else {
+            List<String> currentPatches = unitInfo.getPatches();
+            if(currentPatches.isEmpty()) {
+                currentPatches = patches;
+            } else {
+                currentPatches = new ArrayList<String>(currentPatches);
+                currentPatches.addAll(patches);
+            }
+            addUnit(ProvisionUnitInfo.createInfo(unitName, unitInfo.getVersion(), currentPatches));
+        }
+        return this;
+    }
+
     public ProvisionEnvironmentBuilder addUnit(final String name, final String version) {
         assert name != null : ProvisionErrors.nullArgument("name");
         assert version != null : ProvisionErrors.nullArgument("version");
@@ -89,6 +110,38 @@ public class ProvisionEnvironmentBuilder {
     public ProvisionEnvironmentBuilder copyUnit(ProvisionUnitEnvironment unitEnv) throws ProvisionException {
         addUnit(unitEnv.getUnitInfo());
         final String unitName = unitEnv.getUnitInfo().getName();
+        if(unitEnv.getHomePath() != null) {
+            setUnitHome(unitName, unitEnv.getHomePath());
+        }
+        if(unitEnv.getUpdatePolicy() != null) {
+            setUnitUpdatePolicy(unitName, unitEnv.getUpdatePolicy());
+        }
+        return this;
+    }
+
+    public ProvisionEnvironmentBuilder addUpdatedUnit(ProvisionUnitEnvironment unitEnv, String newVersion) throws ProvisionException {
+        addUnit(unitEnv.getUnitInfo().getName(), newVersion);
+        final String unitName = unitEnv.getUnitInfo().getName();
+        if(unitEnv.getHomePath() != null) {
+            setUnitHome(unitName, unitEnv.getHomePath());
+        }
+        if(unitEnv.getUpdatePolicy() != null) {
+            setUnitUpdatePolicy(unitName, unitEnv.getUpdatePolicy());
+        }
+        return this;
+    }
+
+    public ProvisionEnvironmentBuilder addPatchedUnit(ProvisionUnitEnvironment unitEnv, String patchId) throws ProvisionException {
+        final ProvisionUnitInfo unitInfo = unitEnv.getUnitInfo();
+        final List<String> patches;
+        if(unitInfo.getPatches().isEmpty()) {
+            patches = Collections.singletonList(patchId);
+        } else {
+            patches = new ArrayList<String>(unitInfo.getPatches());
+            patches.add(patchId);
+        }
+        addUnit(ProvisionUnitInfo.createInfo(unitInfo.getName(), unitInfo.getVersion(), patches));
+        final String unitName = unitInfo.getName();
         if(unitEnv.getHomePath() != null) {
             setUnitHome(unitName, unitEnv.getHomePath());
         }

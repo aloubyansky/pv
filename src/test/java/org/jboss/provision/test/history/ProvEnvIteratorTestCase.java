@@ -27,6 +27,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -35,6 +36,7 @@ import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.info.ProvisionEnvironmentInfo;
 import org.jboss.provision.instruction.ProvisionPackage;
 import org.jboss.provision.test.application.ApplicationTestBase;
+import org.jboss.provision.test.util.AssertUtil;
 import org.junit.Test;
 
 /**
@@ -74,8 +76,7 @@ public class ProvEnvIteratorTestCase extends ApplicationTestBase {
 
         env.apply(archive);
         final ProvisionEnvironmentInfo info1_0 = env.getEnvironmentInfo();
-        assertEquals(Collections.singleton("unitA"), info1_0.getUnitNames());
-        assertEquals("1.0", info1_0.getUnitInfo("unitA").getVersion());
+        AssertUtil.assertEnvInfo(info1_0, "unitA", "1.0", Collections.<String>emptyList());
 
         originalInstall.createFileWithRandomContent("d/d/d/d.txt");
         ProvisionPackage.newBuilder()
@@ -85,8 +86,7 @@ public class ProvEnvIteratorTestCase extends ApplicationTestBase {
             .buildUpdate("unitA", "1.0", "1.1");
         env.apply(archive);
         final ProvisionEnvironmentInfo info1_1 = env.getEnvironmentInfo();
-        assertEquals(Collections.singleton("unitA"), info1_1.getUnitNames());
-        assertEquals("1.1", info1_1.getUnitInfo("unitA").getVersion());
+        AssertUtil.assertEnvInfo(info1_1, "unitA", "1.1", Collections.<String>emptyList());
 
         originalInstall.updateFileWithRandomContent("d/d/d/d.txt");
         ProvisionPackage.newBuilder()
@@ -96,22 +96,39 @@ public class ProvEnvIteratorTestCase extends ApplicationTestBase {
             .buildPatch("patch1", "unitA", "1.1");
         env.apply(archive);
         final ProvisionEnvironmentInfo infoPatch1 = env.getEnvironmentInfo();
-        assertEquals(Collections.singleton("unitA"), infoPatch1.getUnitNames());
-        assertEquals("1.1", infoPatch1.getUnitInfo("unitA").getVersion());
+        AssertUtil.assertEnvInfo(infoPatch1, "unitA", "1.1", Collections.singletonList("patch1"));
+
+        originalInstall.updateFileWithRandomContent("d/d/d/d.txt");
+        ProvisionPackage.newBuilder()
+            .setCurrentInstallationDir(testInstall.getHome())
+            .setTargetInstallationDir(originalInstall.getHome())
+            .setPackageOutputFile(archive)
+            .buildPatch("patch2", "unitA", "1.1");
+        env.apply(archive);
+        final ProvisionEnvironmentInfo infoPatch2 = env.getEnvironmentInfo();
+        AssertUtil.assertEnvInfo(infoPatch2, "unitA", "1.1", Arrays.asList("patch1", "patch2"));
 
         final Iterator<ProvisionEnvironmentInfo> i = env.environmentHistory();
 
         assertTrue(i.hasNext());
         ProvisionEnvironmentInfo envInfo = i.next();
+        assertEquals(infoPatch2, envInfo);
+        AssertUtil.assertEnvInfo(envInfo, "unitA", "1.1", Arrays.asList("patch1", "patch2"));
+
+        assertTrue(i.hasNext());
+        envInfo = i.next();
         assertEquals(infoPatch1, envInfo);
+        AssertUtil.assertEnvInfo(envInfo, "unitA", "1.1", Collections.singletonList("patch1"));
 
         assertTrue(i.hasNext());
         envInfo = i.next();
         assertEquals(info1_1, envInfo);
+        AssertUtil.assertEnvInfo(envInfo, "unitA", "1.1", Collections.<String>emptyList());
 
         assertTrue(i.hasNext());
         envInfo = i.next();
         assertEquals(info1_0, envInfo);
+        AssertUtil.assertEnvInfo(envInfo, "unitA", "1.0", Collections.<String>emptyList());
 
         assertFalse(i.hasNext());
         try {

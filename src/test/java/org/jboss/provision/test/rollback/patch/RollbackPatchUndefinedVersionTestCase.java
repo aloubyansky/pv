@@ -86,7 +86,7 @@ public class RollbackPatchUndefinedVersionTestCase extends ApplicationTestBase {
         AssertUtil.assertNotIdentical(nextOriginal.getHome(), testInstall.getHome(), true);
         AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome(), true);
 
-        assertHistoryEmpty(env);
-        assertCantRollback(env);
+        AssertUtil.assertHistoryEmpty(env);
+        AssertUtil.assertCantRollback(env);
     }
 }

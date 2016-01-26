@@ -108,12 +108,12 @@ public class RollbackUnitVersionUpdateTestCase extends ApplicationTestBase {
         Assert.assertNotEquals(updatedInfo, rolledBackInfo);
         Assert.assertEquals(originalInfo, rolledBackInfo);
 
-        assertHistoryNotEmpty(env);
+        AssertUtil.assertHistoryNotEmpty(env);
 
         env.rollbackLast();
         AssertUtil.assertEmptyDirBranch(testInstall.getHome());
         assertTrue(env.getEnvironmentInfo().getUnitNames().isEmpty());
-        assertHistoryEmpty(env);
-        assertCantRollback(env);
+        AssertUtil.assertHistoryEmpty(env);
+        AssertUtil.assertCantRollback(env);
     }
 }

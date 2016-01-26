@@ -21,6 +21,9 @@
  */
 package org.jboss.provision.info;
 
+import java.util.Collections;
+import java.util.List;
+
 import org.jboss.provision.ProvisionErrors;
 
 
@@ -37,17 +40,23 @@ public class ProvisionUnitInfo {
     public static final ProvisionUnitInfo UNDEFINED_INFO = createInfo(UNDEFINED_NAME, UNDEFINED_VERSION);
 
     public static ProvisionUnitInfo createInfo(String name, String version) {
-        return new ProvisionUnitInfo(name, version);
+        return new ProvisionUnitInfo(name, version, Collections.<String>emptyList());
+    }
+
+    public static ProvisionUnitInfo createInfo(String name, String version, List<String> patches) {
+        return new ProvisionUnitInfo(name, version, patches);
     }
 
     protected final String name;
     protected final String version;
+    protected final List<String> patches;
 
-    protected ProvisionUnitInfo(String name, String version) {
+    protected ProvisionUnitInfo(String name, String version, List<String> patches) {
         assert name != null : ProvisionErrors.nullArgument("name");
-        //assert version != null : ProvisionErrors.nullArgument("version");
+        assert patches != null : ProvisionErrors.nullArgument("patches");
         this.name = name;
         this.version = version;
+        this.patches = patches;
     }
     /**
      * Name of the unit.
@@ -67,12 +76,17 @@ public class ProvisionUnitInfo {
         return version;
     }
 
+    public List<String> getPatches() {
+        return patches;
+    }
+
     @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ((name == null) ? 0 : name.hashCode());
+        result = prime * result + name.hashCode();
         result = prime * result + ((version == null) ? 0 : version.hashCode());
+        result = prime * result + patches.hashCode();
         return result;
     }
 
@@ -94,6 +108,9 @@ public class ProvisionUnitInfo {
             if (other.version != null)
                 return false;
         } else if (!version.equals(other.version)) {
+            return false;
+        }
+        if (!patches.equals(other.patches)) {
             return false;
         }
         return true;
