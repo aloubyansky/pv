@@ -72,7 +72,7 @@ class EnvironmentHistoryRecord {
             if(updatedUnits.remove(unitName)) {
                 final ProvisionUnitInstruction unitInstr = instruction.getUnitInstruction(unitName);
                 // WARN this assumes the unit instruction conditions have been satisfied!!!
-                final String newVersion = unitInstr.getVersion();
+                final String newVersion = unitInstr.getResultingVersion();
                 if(newVersion == null) {
                     // unit removed
                 } else {
@@ -86,10 +86,10 @@ class EnvironmentHistoryRecord {
         if(!updatedUnits.isEmpty()) {
             for(String newUnit : updatedUnits) {
                 final ProvisionUnitInstruction unitInstr = instruction.getUnitInstruction(newUnit);
-                if(unitInstr.getReplacedVersion() != null) {
+                if(unitInstr.getRequiredVersion() != null) {
                     throw ProvisionErrors.unitIsNotInstalled(newUnit);
                 }
-                envBuilder.addUnit(ProvisionUnitInfo.createInfo(unitInstr.getName(), unitInstr.getVersion()));
+                envBuilder.addUnit(ProvisionUnitInfo.createInfo(unitInstr.getUnitName(), unitInstr.getResultingVersion()));
             }
         }
         return new EnvironmentHistoryRecord(envBuilder.build(), instruction);

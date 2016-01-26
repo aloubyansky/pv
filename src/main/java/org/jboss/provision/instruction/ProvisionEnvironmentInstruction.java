@@ -84,17 +84,17 @@ public class ProvisionEnvironmentInstruction {
         final Builder builder = builder();
         for(String unitName : getUnitNames()) {
             final ProvisionUnitInstruction unitInstr = getUnitInstruction(unitName);
-            final String replacedVersion = unitInstr.getReplacedVersion();
-            final String version = unitInstr.getVersion();
+            final String version = unitInstr.getRequiredVersion();
+            final String resultingVersion = unitInstr.getResultingVersion();
             final ProvisionUnitInstruction.Builder unitInstBuilder;
-            if(replacedVersion == null) {
-                unitInstBuilder = ProvisionUnitInstruction.uninstallUnit(unitName, unitInstr.getVersion());
-            } else if(version == null) {
-                unitInstBuilder = ProvisionUnitInstruction.installUnit(unitName, unitInstr.getVersion());
-            } else if(replacedVersion.equals(version)) {
-                unitInstBuilder = ProvisionUnitInstruction.patchUnit(unitName, unitInstr.getVersion(), "rollback-" + unitInstr.getId());
+            if(version == null) {
+                unitInstBuilder = ProvisionUnitInstruction.uninstallUnit(unitName, resultingVersion);
+            } else if(resultingVersion == null) {
+                unitInstBuilder = ProvisionUnitInstruction.installUnit(unitName, version);
+            } else if(version.equals(resultingVersion)) {
+                unitInstBuilder = ProvisionUnitInstruction.patchUnit(unitName, version, "rollback-" + unitInstr.getId());
             } else {
-                unitInstBuilder = ProvisionUnitInstruction.replaceUnit(unitName, replacedVersion, unitInstr.getVersion());
+                unitInstBuilder = ProvisionUnitInstruction.replaceUnit(unitName, resultingVersion, version);
             }
             for(ContentItemInstruction contentInst : unitInstr.getContentInstructions()) {
                 unitInstBuilder.addContentInstruction(contentInst.getRollback());
@@ -115,16 +115,16 @@ public class ProvisionEnvironmentInstruction {
             return new ProvisionEnvironmentInstruction(units);
         }
 
-        public Builder add(ProvisionUnitInstruction unit) {
-            assert unit != null : ProvisionErrors.nullArgument("unit");
+        public Builder add(ProvisionUnitInstruction unitInstr) {
+            assert unitInstr != null : ProvisionErrors.nullArgument("unit");
             switch(units.size()) {
                 case 0:
-                    units = Collections.singletonMap(unit.getName(), unit);
+                    units = Collections.singletonMap(unitInstr.getUnitName(), unitInstr);
                     break;
                 case 1:
                     units = new HashMap<String, ProvisionUnitInstruction>(units);
                 default:
-                    units.put(unit.getName(), unit);
+                    units.put(unitInstr.getUnitName(), unitInstr);
             }
             return this;
         }

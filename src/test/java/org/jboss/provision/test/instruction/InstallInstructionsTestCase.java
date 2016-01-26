@@ -59,9 +59,9 @@ public class InstallInstructionsTestCase extends TestWithInstallationBuilder {
 
         assertNotNull(install);
         assertNull(install.getId());
-        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getName(), install.getName());
-        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), install.getVersion());
-        assertNull(install.getReplacedVersion());
+        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getName(), install.getUnitName());
+        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), install.getResultingVersion());
+        assertNull(install.getRequiredVersion());
 
         assertEquals(1, install.getConditions().size()); // version condition
 

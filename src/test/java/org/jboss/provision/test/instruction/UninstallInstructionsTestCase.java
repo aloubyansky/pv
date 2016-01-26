@@ -59,9 +59,9 @@ public class UninstallInstructionsTestCase extends TestWithInstallationBuilder {
 
         assertNotNull(install);
         assertNull(install.getId());
-        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getName(), install.getName());
-        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), install.getReplacedVersion());
-        assertNull(install.getVersion());
+        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getName(), install.getUnitName());
+        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), install.getRequiredVersion());
+        assertNull(install.getResultingVersion());
 
         assertEquals(1, install.getConditions().size()); // version condition
 

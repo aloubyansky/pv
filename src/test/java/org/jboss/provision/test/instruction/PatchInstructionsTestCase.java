@@ -68,9 +68,9 @@ public class PatchInstructionsTestCase extends TestWithInstallationBuilder {
 
         assertNotNull(replace);
         assertEquals("patch1", replace.getId());
-        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getName(), replace.getName());
-        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), replace.getVersion());
-        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), replace.getReplacedVersion());
+        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getName(), replace.getUnitName());
+        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), replace.getRequiredVersion());
+        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), replace.getResultingVersion());
 
         assertEquals(1, replace.getConditions().size()); // version condition
 

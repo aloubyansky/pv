@@ -87,9 +87,9 @@ public class InstallPackagingTestCase extends PackagingTestBase {
         final ProvisionUnitInstruction unit = instruction.getUnitInstruction(ProvisionUnitInfo.UNDEFINED_INFO.getName());
         assertNotNull(unit);
 
-        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getName(), unit.getName());
-        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), unit.getVersion());
-        assertNull(unit.getReplacedVersion());
+        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getName(), unit.getUnitName());
+        assertEquals(ProvisionUnitInfo.UNDEFINED_INFO.getVersion(), unit.getResultingVersion());
+        assertNull(unit.getRequiredVersion());
         assertNull(unit.getId());
 
         assertEquals(1, unit.getConditions().size());  // version check condition

@@ -247,7 +247,7 @@ class ProvisionXml_1_0 implements XMLStreamConstants, XMLElementReader<ParsingRe
             ParseUtils.missingRequiredAttributes(reader, Attribute.TO.name);
         }
 
-        final Builder builder = ProvisionUnitInstruction.replaceUnit(name, to, from);
+        final Builder builder = ProvisionUnitInstruction.replaceUnit(name, from, to);
         readContentInstructions(reader, builder);
         return builder.build();
     }
@@ -398,33 +398,33 @@ class ProvisionXml_1_0 implements XMLStreamConstants, XMLElementReader<ParsingRe
                 HashUtils.hexStringToByteArray(replacedHash)).build();
     }
 
-    protected void writeUnit(XMLExtendedStreamWriter writer, ProvisionUnitInstruction unit) throws XMLStreamException {
+    protected void writeUnit(XMLExtendedStreamWriter writer, ProvisionUnitInstruction unitInstr) throws XMLStreamException {
 
-        if(unit.getReplacedVersion() == null) {
-            // INSTALL
-            writer.writeStartElement(Element.INSTALL.name);
-            writer.writeAttribute(Attribute.NAME.name, unit.getName());
-            writer.writeAttribute(Attribute.VERSION.name, unit.getVersion());
-        } else if(unit.getVersion() == null) {
+        if(unitInstr.getResultingVersion() == null) {
             // UNINSTALL
             writer.writeStartElement(Element.UNINSTALL.name);
-            writer.writeAttribute(Attribute.NAME.name, unit.getName());
-            writer.writeAttribute(Attribute.VERSION.name, unit.getReplacedVersion());
-        } else if(unit.getReplacedVersion().equals(unit.getVersion())) {
+            writer.writeAttribute(Attribute.NAME.name, unitInstr.getUnitName());
+            writer.writeAttribute(Attribute.VERSION.name, unitInstr.getRequiredVersion());
+        } else if(unitInstr.getRequiredVersion() == null) {
+            // INSTALL
+            writer.writeStartElement(Element.INSTALL.name);
+            writer.writeAttribute(Attribute.NAME.name, unitInstr.getUnitName());
+            writer.writeAttribute(Attribute.VERSION.name, unitInstr.getResultingVersion());
+        } else if(unitInstr.getResultingVersion().equals(unitInstr.getRequiredVersion())) {
             // PATCH
             writer.writeStartElement(Element.PATCH.name);
-            writer.writeAttribute(Attribute.NAME.name, unit.getName());
-            writer.writeAttribute(Attribute.VERSION.name, unit.getVersion());
-            writer.writeAttribute(Attribute.PATCH_ID.name, unit.getId());
+            writer.writeAttribute(Attribute.NAME.name, unitInstr.getUnitName());
+            writer.writeAttribute(Attribute.VERSION.name, unitInstr.getRequiredVersion());
+            writer.writeAttribute(Attribute.PATCH_ID.name, unitInstr.getId());
         } else {
             // UPDATE
             writer.writeStartElement(Element.UPDATE.name);
-            writer.writeAttribute(Attribute.NAME.name, unit.getName());
-            writer.writeAttribute(Attribute.FROM.name, unit.getReplacedVersion());
-            writer.writeAttribute(Attribute.TO.name, unit.getVersion());
+            writer.writeAttribute(Attribute.NAME.name, unitInstr.getUnitName());
+            writer.writeAttribute(Attribute.FROM.name, unitInstr.getRequiredVersion());
+            writer.writeAttribute(Attribute.TO.name, unitInstr.getResultingVersion());
         }
 
-        for(ContentItemInstruction item : unit.getContentInstructions()) {
+        for(ContentItemInstruction item : unitInstr.getContentInstructions()) {
             write(writer, item);
         }
 

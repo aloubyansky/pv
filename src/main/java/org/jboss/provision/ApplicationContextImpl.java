@@ -44,6 +44,7 @@ import org.jboss.provision.audit.ProvisionUnitJournal;
 import org.jboss.provision.audit.UnitJournalRecord;
 import org.jboss.provision.audit.ProvisionEnvironmentJournal;
 import org.jboss.provision.info.ContentPath;
+import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.instruction.ContentItemInstruction;
 import org.jboss.provision.instruction.InstructionCondition;
 import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
@@ -174,10 +175,13 @@ class ApplicationContextImpl implements ApplicationContext {
             final ProvisionUnitInstruction unitInstr = instructions.getUnitInstruction(unitName);
             this.unitEnv = env.getUnitEnvironment(unitName);
             if(unitEnv == null) {
-                if(unitInstr.getReplacedVersion() != null) {
+                if(unitInstr.getRequiredVersion() != null) {
                     throw ProvisionErrors.unknownUnit(unitName);
                 }
-                unitEnv = ProvisionUnitEnvironment.builder().setParentEnv(env).setUnitInfo(unitInstr.getReplacedUnitInfo()).build();
+                unitEnv = ProvisionUnitEnvironment.builder()
+                        .setParentEnv(env)
+                        .setUnitInfo(ProvisionUnitInfo.createInfo(unitInstr.getUnitName(), unitInstr.getRequiredVersion()))
+                        .build();
             }
             scheduleTasks(unitInstr);
         }

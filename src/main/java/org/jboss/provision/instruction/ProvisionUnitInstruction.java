@@ -27,27 +27,35 @@ import java.util.Collections;
 import java.util.List;
 
 import org.jboss.provision.ProvisionErrors;
-import org.jboss.provision.info.ProvisionUnitInfo;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-public abstract class ProvisionUnitInstruction extends ProvisionUnitInfo {
+public abstract class ProvisionUnitInstruction {
 
     public static Builder installUnit(String name, String version) {
-        return new Builder(name, version, null, null);
-    }
-
-    public static Builder uninstallUnit(String name, String version) {
+        assert name != null : ProvisionErrors.nullArgument("name");
+        assert version != null : ProvisionErrors.nullArgument("version");
         return new Builder(name, null, version, null);
     }
 
-    public static Builder replaceUnit(String name, String version, String replacedVersion) {
-        return new Builder(name, version, replacedVersion, null);
+    public static Builder uninstallUnit(String name, String version) {
+        assert name != null : ProvisionErrors.nullArgument("name");
+        assert version != null : ProvisionErrors.nullArgument("version");
+        return new Builder(name, version, null, null);
+    }
+
+    public static Builder replaceUnit(String name, String version, String resultingVersion) {
+        assert name != null : ProvisionErrors.nullArgument("name");
+        assert version != null : ProvisionErrors.nullArgument("version");
+        assert resultingVersion != null : ProvisionErrors.nullArgument("resultingVersion");
+        return new Builder(name, version, resultingVersion, null);
     }
 
     public static Builder patchUnit(String name, String version, String patchId) {
+        assert name != null : ProvisionErrors.nullArgument("name");
+        assert version != null : ProvisionErrors.nullArgument("version");
         assert patchId != null : ProvisionErrors.nullArgument("patchId");
         return new Builder(name, version, version, patchId);
     }
@@ -56,21 +64,21 @@ public abstract class ProvisionUnitInstruction extends ProvisionUnitInfo {
 
         private final String id;
         private final String name;
-        private final String version;
-        private final String replacedVersion;
+        private final String resultingVersion;
+        private final String requiredVersion;
         private boolean required = true;
 
         private List<InstructionCondition> conditions;
         private List<ContentItemInstruction> contentInstructions = Collections.emptyList();
         private List<IntegrationTask> integrationTasks = Collections.emptyList();
 
-        private Builder(String name, String version, String replacedVersion, String id) {
+        private Builder(String name, String requiredVersion, String resultingVersion, String id) {
             assert name != null : ProvisionErrors.nullArgument("name");
             this.id = id;
             this.name = name;
-            this.version = version;
-            this.replacedVersion = replacedVersion;
-            conditions = Collections.<InstructionCondition>singletonList(new UnitVersionCondition(name, replacedVersion));
+            this.requiredVersion = requiredVersion;
+            this.resultingVersion = resultingVersion;
+            conditions = Collections.<InstructionCondition>singletonList(new UnitVersionCondition(name, requiredVersion));
         }
 
         public Builder setRequired(boolean required) {
@@ -116,24 +124,25 @@ public abstract class ProvisionUnitInstruction extends ProvisionUnitInfo {
         }
 
         public ProvisionUnitInstruction build() {
-            return new ProvisionUnitInstruction(id, name, version, replacedVersion, required, conditions, contentInstructions, integrationTasks) {};
+            return new ProvisionUnitInstruction(this) {};
         }
     }
 
-    protected ProvisionUnitInstruction(String id, String name, String version, String replacedVersion,
-            boolean required, List<InstructionCondition> conditions, List<ContentItemInstruction> contentInstructions,
-            List<IntegrationTask> integrationTasks) {
-        super(name, version);
-        this.id = id;
-        this.replacedVersion = replacedVersion;
-        this.required = required;
-        this.conditions = conditions;
-        this.contentInstructions = contentInstructions;
-        this.integrationTasks = integrationTasks;
+    protected ProvisionUnitInstruction(Builder builder) {
+        this.id = builder.id;
+        this.unitName = builder.name;
+        this.requiredVersion = builder.requiredVersion;
+        this.resultingVersion = builder.resultingVersion;
+        this.required = builder.required;
+        this.conditions = builder.conditions;
+        this.contentInstructions = builder.contentInstructions;
+        this.integrationTasks = builder.integrationTasks;
     }
 
     private final String id;
-    private final String replacedVersion;
+    private final String unitName;
+    private final String requiredVersion;
+    private final String resultingVersion;
     private boolean required = true;
     private final List<InstructionCondition> conditions;
     private final List<ContentItemInstruction> contentInstructions;
@@ -143,8 +152,16 @@ public abstract class ProvisionUnitInstruction extends ProvisionUnitInfo {
         return id;
     }
 
-    public String getReplacedVersion() {
-        return replacedVersion;
+    public String getUnitName() {
+        return unitName;
+    }
+
+    public String getRequiredVersion() {
+        return requiredVersion;
+    }
+
+    public String getResultingVersion() {
+        return resultingVersion;
     }
 
     public List<InstructionCondition> getConditions() {
@@ -163,33 +180,18 @@ public abstract class ProvisionUnitInstruction extends ProvisionUnitInfo {
         return contentInstructions;
     }
 
-    public ProvisionUnitInfo getReplacedUnitInfo() {
-        return ProvisionUnitInfo.createInfo(name, replacedVersion);
-    }
-
-    public UnitInstructionType getType() {
-        if(this.replacedVersion == null) {
-            return UnitInstructionType.INSTALL;
-        }
-        if(this.version == null) {
-            return UnitInstructionType.UNINSTALL;
-        }
-        if(replacedVersion.equals(version)) {
-            return UnitInstructionType.PATCH;
-        }
-        return UnitInstructionType.REPLACE;
-    }
-
     @Override
     public int hashCode() {
         final int prime = 31;
-        int result = super.hashCode();
+        int result = 1;
         result = prime * result + ((conditions == null) ? 0 : conditions.hashCode());
         result = prime * result + ((contentInstructions == null) ? 0 : contentInstructions.hashCode());
         result = prime * result + ((id == null) ? 0 : id.hashCode());
         result = prime * result + ((integrationTasks == null) ? 0 : integrationTasks.hashCode());
-        result = prime * result + ((replacedVersion == null) ? 0 : replacedVersion.hashCode());
         result = prime * result + (required ? 1231 : 1237);
+        result = prime * result + ((resultingVersion == null) ? 0 : resultingVersion.hashCode());
+        result = prime * result + ((unitName == null) ? 0 : unitName.hashCode());
+        result = prime * result + ((requiredVersion == null) ? 0 : requiredVersion.hashCode());
         return result;
     }
 
@@ -197,9 +199,9 @@ public abstract class ProvisionUnitInstruction extends ProvisionUnitInfo {
     public boolean equals(Object obj) {
         if (this == obj)
             return true;
-        if (!super.equals(obj))
+        if (obj == null)
             return false;
-        if (!(obj instanceof ProvisionUnitInstruction))
+        if (getClass() != obj.getClass())
             return false;
         ProvisionUnitInstruction other = (ProvisionUnitInstruction) obj;
         if (conditions == null) {
@@ -222,12 +224,22 @@ public abstract class ProvisionUnitInstruction extends ProvisionUnitInfo {
                 return false;
         } else if (!integrationTasks.equals(other.integrationTasks))
             return false;
-        if (replacedVersion == null) {
-            if (other.replacedVersion != null)
-                return false;
-        } else if (!replacedVersion.equals(other.replacedVersion))
-            return false;
         if (required != other.required)
+            return false;
+        if (resultingVersion == null) {
+            if (other.resultingVersion != null)
+                return false;
+        } else if (!resultingVersion.equals(other.resultingVersion))
+            return false;
+        if (unitName == null) {
+            if (other.unitName != null)
+                return false;
+        } else if (!unitName.equals(other.unitName))
+            return false;
+        if (requiredVersion == null) {
+            if (other.requiredVersion != null)
+                return false;
+        } else if (!requiredVersion.equals(other.requiredVersion))
             return false;
         return true;
     }
