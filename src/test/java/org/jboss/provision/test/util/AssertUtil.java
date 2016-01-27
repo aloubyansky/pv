@@ -291,15 +291,19 @@ public class AssertUtil {
         }
     }
 
-    public static void assertEnvInfo(ProvisionEnvironmentInfo envInfo, String unitName, String unitVersion) {
-        assertEnvInfo(envInfo, unitName, unitVersion, Collections.<String>emptyList());
+    public static ProvisionUnitInfo assertEnvInfo(ProvisionEnvironmentInfo envInfo, String unitName, String unitVersion) {
+        return assertUnitInfo(envInfo, unitName, unitVersion, Collections.<String>emptyList());
     }
 
-    public static void assertEnvInfo(ProvisionEnvironmentInfo envInfo, String unitName, String unitVersion, List<String> patches) {
-        assertEnvInfo(envInfo, unitName, unitVersion, patches, true);
+    public static ProvisionUnitInfo assertUnitInfo(ProvisionEnvironmentInfo envInfo, String unitName, String unitVersion, List<String> patches) {
+        return assertEnvInfo(envInfo, unitName, unitVersion, patches, true);
     }
 
-    public static void assertEnvInfo(ProvisionEnvironmentInfo envInfo, String unitName, String unitVersion, List<String> patches, boolean notMore) {
+    public static ProvisionUnitInfo assertUnitInfo(ProvisionEnvironmentInfo envInfo, ProvisionUnitInfo unitInfo) {
+        return assertEnvInfo(envInfo, unitInfo.getName(), unitInfo.getVersion(), unitInfo.getPatches(), true);
+    }
+
+    public static ProvisionUnitInfo assertEnvInfo(ProvisionEnvironmentInfo envInfo, String unitName, String unitVersion, List<String> patches, boolean notMore) {
         final ProvisionUnitInfo unitInfo = envInfo.getUnitInfo(unitName);
         Assert.assertNotNull(unitInfo);
         if(notMore) {
@@ -307,6 +311,18 @@ public class AssertUtil {
         }
         assertEquals(unitVersion, unitInfo.getVersion());
         assertEquals(patches, unitInfo.getPatches());
+        return unitInfo;
+    }
+
+    public static void assertEnvInfo(ProvisionEnvironmentInfo envInfo, ProvisionUnitInfo... unitInfo) {
+        int i = 0;
+        final Set<String> unitNames = new HashSet<String>(unitInfo.length);
+        while(i < unitInfo.length) {
+            final ProvisionUnitInfo ui = unitInfo[i++];
+            unitNames.add(ui.getName());
+            assertEnvInfo(envInfo, ui.getName(), ui.getVersion(), ui.getPatches(), false);
+        }
+        assertEquals(unitNames, envInfo.getUnitNames());
     }
 
     private static IllegalStateException errorNotADir(File f) {

@@ -76,7 +76,7 @@ public class EnvironmentHistoryIteratorTestCase extends ApplicationTestBase {
 
         env.apply(archive);
         final ProvisionEnvironmentInfo info1_0 = env.getEnvironmentInfo();
-        AssertUtil.assertEnvInfo(info1_0, "unitA", "1.0", Collections.<String>emptyList());
+        AssertUtil.assertUnitInfo(info1_0, "unitA", "1.0", Collections.<String>emptyList());
 
         originalInstall.createFileWithRandomContent("d/d/d/d.txt");
         ProvisionPackage.newBuilder()
@@ -86,7 +86,7 @@ public class EnvironmentHistoryIteratorTestCase extends ApplicationTestBase {
             .buildUpdate("unitA", "1.0", "1.1");
         env.apply(archive);
         final ProvisionEnvironmentInfo info1_1 = env.getEnvironmentInfo();
-        AssertUtil.assertEnvInfo(info1_1, "unitA", "1.1", Collections.<String>emptyList());
+        AssertUtil.assertUnitInfo(info1_1, "unitA", "1.1", Collections.<String>emptyList());
 
         originalInstall.updateFileWithRandomContent("d/d/d/d.txt");
         ProvisionPackage.newBuilder()
@@ -96,7 +96,7 @@ public class EnvironmentHistoryIteratorTestCase extends ApplicationTestBase {
             .buildPatch("patch1", "unitA", "1.1");
         env.apply(archive);
         final ProvisionEnvironmentInfo infoPatch1 = env.getEnvironmentInfo();
-        AssertUtil.assertEnvInfo(infoPatch1, "unitA", "1.1", Collections.singletonList("patch1"));
+        AssertUtil.assertUnitInfo(infoPatch1, "unitA", "1.1", Collections.singletonList("patch1"));
 
         originalInstall.updateFileWithRandomContent("d/d/d/d.txt");
         ProvisionPackage.newBuilder()
@@ -106,29 +106,29 @@ public class EnvironmentHistoryIteratorTestCase extends ApplicationTestBase {
             .buildPatch("patch2", "unitA", "1.1");
         env.apply(archive);
         final ProvisionEnvironmentInfo infoPatch2 = env.getEnvironmentInfo();
-        AssertUtil.assertEnvInfo(infoPatch2, "unitA", "1.1", Arrays.asList("patch1", "patch2"));
+        AssertUtil.assertUnitInfo(infoPatch2, "unitA", "1.1", Arrays.asList("patch1", "patch2"));
 
         final Iterator<ProvisionEnvironmentInfo> i = env.environmentHistory();
 
         assertTrue(i.hasNext());
         ProvisionEnvironmentInfo envInfo = i.next();
         assertEquals(infoPatch2, envInfo);
-        AssertUtil.assertEnvInfo(envInfo, "unitA", "1.1", Arrays.asList("patch1", "patch2"));
+        AssertUtil.assertUnitInfo(envInfo, "unitA", "1.1", Arrays.asList("patch1", "patch2"));
 
         assertTrue(i.hasNext());
         envInfo = i.next();
         assertEquals(infoPatch1, envInfo);
-        AssertUtil.assertEnvInfo(envInfo, "unitA", "1.1", Collections.singletonList("patch1"));
+        AssertUtil.assertUnitInfo(envInfo, "unitA", "1.1", Collections.singletonList("patch1"));
 
         assertTrue(i.hasNext());
         envInfo = i.next();
         assertEquals(info1_1, envInfo);
-        AssertUtil.assertEnvInfo(envInfo, "unitA", "1.1", Collections.<String>emptyList());
+        AssertUtil.assertUnitInfo(envInfo, "unitA", "1.1", Collections.<String>emptyList());
 
         assertTrue(i.hasNext());
         envInfo = i.next();
         assertEquals(info1_0, envInfo);
-        AssertUtil.assertEnvInfo(envInfo, "unitA", "1.0", Collections.<String>emptyList());
+        AssertUtil.assertUnitInfo(envInfo, "unitA", "1.0", Collections.<String>emptyList());
 
         assertFalse(i.hasNext());
         try {

@@ -86,7 +86,7 @@ public class UndefinedVersionTestCase extends ApplicationTestBase {
         final ProvisionEnvironmentInfo patchedInfo = envHistory.next();
 
         Assert.assertNotEquals(installedInfo, patchedInfo);
-        AssertUtil.assertEnvInfo(patchedInfo, ProvisionUnitInfo.UNDEFINED_NAME, ProvisionUnitInfo.UNDEFINED_VERSION, Collections.singletonList("patch1"));
+        AssertUtil.assertUnitInfo(patchedInfo, ProvisionUnitInfo.UNDEFINED_NAME, ProvisionUnitInfo.UNDEFINED_VERSION, Collections.singletonList("patch1"));
 
         ProvisionPackage.newBuilder()
             .setCurrentInstallationDir(testInstall.getHome())

@@ -167,7 +167,7 @@ class EnvironmentHistoryRecord {
             final File unitDir = new File(unitsDir, unitName);
             final File unitInstrDir = new File(unitDir, instrDir.getName());
             final File unitLastInstrTxt = new File(unitDir, LAST_INSTR_TXT);
-            final String prevUnitInstrId = lastRecord.getPreviousInstructionDirName();
+            final String prevUnitInstrId = loadPreviousInstructionId(unitInstrDir);
             if(prevUnitInstrId != null) {
                 try {
                     tasks.add(FileTask.override(unitLastInstrTxt, prevUnitInstrId));
