@@ -43,7 +43,7 @@ import org.junit.Test;
  *
  * @author Alexey Loubyansky
  */
-public class ProvEnvIteratorTestCase extends ApplicationTestBase {
+public class EnvironmentHistoryIteratorTestCase extends ApplicationTestBase {
 
     @Test
     public void testEmptyHistory() throws Exception {

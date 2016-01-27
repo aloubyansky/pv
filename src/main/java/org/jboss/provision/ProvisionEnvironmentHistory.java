@@ -27,11 +27,11 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+import org.jboss.provision.EnvironmentHistoryRecord.UnitBackupRecord;
 import org.jboss.provision.audit.ProvisionEnvironmentJournal;
-import org.jboss.provision.audit.ProvisionUnitJournal;
 import org.jboss.provision.info.ProvisionEnvironmentInfo;
+import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
-import org.jboss.provision.io.FileTask;
 import org.jboss.provision.io.FileTaskList;
 import org.jboss.provision.io.IoUtils;
 
@@ -40,8 +40,6 @@ import org.jboss.provision.io.IoUtils;
  * @author Alexey Loubyansky
  */
 class ProvisionEnvironmentHistory {
-
-    static final String UNITS = "units";
 
     static ProvisionEnvironmentHistory getInstance(ProvisionEnvironment env) {
         assert env != null : ProvisionErrors.nullArgument("env");
@@ -85,26 +83,7 @@ class ProvisionEnvironmentHistory {
             IoUtils.recursiveDelete(historyHome);
         } else {
             final FileTaskList tasks = new FileTaskList();
-            historyRecord.schedulePersistence(historyHome, tasks);
-
-            final String instrId = historyRecord.getInstructionDirectory().getName();
-            final File unitsDir = new File(historyHome, UNITS);
-            if(!unitsDir.exists() && !unitsDir.mkdirs()) {
-                throw new ProvisionException(ProvisionErrors.couldNotCreateDir(unitsDir));
-            }
-            for(ProvisionUnitJournal unitJournal : envJournal.getUnitJournals()) {
-                final String unitName = unitJournal.getUnitEnvironment().getUnitInfo().getName();
-                final File unitBackupDir = IoUtils.newFile(unitsDir, unitName, instrId);
-                if(!unitJournal.getContentBackupDir().exists()) {
-                    tasks.add(FileTask.mkdirs(unitBackupDir));
-                } else {
-                    if (unitBackupDir.exists()) {
-                        throw ProvisionErrors.pathAlreadyExists(unitBackupDir);
-                    }
-                    tasks.add(FileTask.copy(unitJournal.getContentBackupDir(), unitBackupDir));
-                }
-            }
-
+            historyRecord.schedulePersistence(historyHome, envJournal, tasks);
             try {
                 tasks.safeExecute();
             } catch (IOException e) {
@@ -171,7 +150,44 @@ class ProvisionEnvironmentHistory {
                     if (appliedInstr == null) {
                         appliedInstr = EnvironmentHistoryRecord.loadLast(historyHome);
                     } else {
-                        appliedInstr = EnvironmentHistoryRecord.loadPrevious(appliedInstr);
+                        appliedInstr = appliedInstr.getPrevious();
+                    }
+                } catch(ProvisionException e) {
+                    throw new IllegalStateException(e);
+                }
+                doNext = false;
+            }};
+    }
+
+    Iterator<UnitBackupRecord> unitBackupRecords(final String unitName) {
+        assert unitName != null : ProvisionErrors.nullArgument("unitName");
+        return new Iterator<UnitBackupRecord>() {
+            boolean doNext = true;
+            UnitBackupRecord record;
+            @Override
+            public boolean hasNext() {
+                if(doNext) {
+                    doNext();
+                }
+                return record != null;
+            }
+            @Override
+            public UnitBackupRecord next() {
+                if(hasNext()) {
+                    doNext = true;
+                        return record;
+                }
+                throw new NoSuchElementException();
+            }
+            protected void doNext() {
+                if(!doNext) {
+                    return;
+                }
+                try {
+                    if (record == null) {
+                        record = UnitBackupRecord.loadLast(historyHome, unitName);
+                    } else {
+                        record = record.getPrevious();
                     }
                 } catch(ProvisionException e) {
                     throw new IllegalStateException(e);
@@ -191,6 +207,23 @@ class ProvisionEnvironmentHistory {
             public ProvisionEnvironmentInfo next() {
                 try {
                     return delegate.next().getUpdatedEnvironment().getEnvironmentInfo();
+                } catch (ProvisionException e) {
+                    throw new IllegalStateException(e);
+                }
+            }};
+    }
+
+    Iterator<ProvisionUnitInfo> unitIterator(final String unitName) {
+        return new Iterator<ProvisionUnitInfo>() {
+            final Iterator<UnitBackupRecord> delegate = unitBackupRecords(unitName);
+            @Override
+            public boolean hasNext() {
+                return delegate.hasNext();
+            }
+            @Override
+            public ProvisionUnitInfo next() {
+                try {
+                    return delegate.next().getUpdatedUnitInfo();
                 } catch (ProvisionException e) {
                     throw new IllegalStateException(e);
                 }

@@ -122,6 +122,10 @@ public class ProvisionEnvironment extends ProvisionEnvironmentBase {
         return ProvisionEnvironmentHistory.getInstance(this).environmentIterator();
     }
 
+    public Iterator<ProvisionUnitInfo> unitHistory(String unitName) throws ProvisionException {
+        return ProvisionEnvironmentHistory.getInstance(this).unitIterator(unitName);
+    }
+
     public void apply(File packageFile) throws ProvisionException {
         assert packageFile != null : ProvisionErrors.nullArgument("packageFile");
         final ApplicationContextImpl appCtx = new ApplicationContextImpl(this, ContentSource.forZip(packageFile));

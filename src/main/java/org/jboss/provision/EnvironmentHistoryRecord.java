@@ -33,6 +33,8 @@ import java.util.UUID;
 import javax.xml.stream.XMLStreamException;
 
 import org.jboss.provision.audit.AuditUtil;
+import org.jboss.provision.audit.ProvisionEnvironmentJournal;
+import org.jboss.provision.audit.ProvisionUnitJournal;
 import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
 import org.jboss.provision.instruction.ProvisionUnitInstruction;
@@ -47,6 +49,9 @@ import org.jboss.provision.xml.ProvisionXml;
  * @author Alexey Loubyansky
  */
 class EnvironmentHistoryRecord {
+
+    static final String UNITS = "units";
+    static final String BACKUP = "backup";
 
     private static final String ENV_FILE = "env.properties";
     private static final String LAST_INSTR_TXT = "last.txt";
@@ -118,6 +123,18 @@ class EnvironmentHistoryRecord {
         return new File(historyDir, dirName);
     }
 
+    static String loadPreviousInstructionId(File instrDir) throws ProvisionException {
+        final File prevInstrTxt = new File(instrDir, PREV_INSTR_TXT);
+        if(!prevInstrTxt.exists()) {
+            return null;
+        }
+        try {
+            return FileUtils.readFile(prevInstrTxt);
+        } catch (IOException e) {
+            throw ProvisionErrors.readError(prevInstrTxt, e);
+        }
+    }
+
     static EnvironmentHistoryRecord loadLast(File historyDir) throws ProvisionException {
         final File instrDir = getLastAppliedInstrDir(historyDir);
         if(instrDir == null) {
@@ -126,40 +143,44 @@ class EnvironmentHistoryRecord {
         return loadInstruction(instrDir);
     }
 
-    static EnvironmentHistoryRecord loadPrevious(EnvironmentHistoryRecord instr) throws ProvisionException {
-        if(instr == null) {
-            return null;
-        }
-        final String prevDir = instr.getPreviousInstructionDirName();
-        if(prevDir == null) {
-            return null;
-        }
-        return loadInstruction(new File(instr.envFile.getParentFile().getParentFile(), prevDir));
-    }
-
     static EnvironmentHistoryRecord scheduleDeleteLast(File historyDir, FileTaskList tasks) throws ProvisionException {
         final EnvironmentHistoryRecord lastRecord = loadLast(historyDir);
         if(lastRecord == null) {
             return null;
         }
+        final File lastInstrTxt = new File(historyDir, LAST_INSTR_TXT);
         final String prevRecordDir = lastRecord.getPreviousInstructionDirName();
         if(prevRecordDir != null) {
-            final File lastInstrTxt = new File(historyDir, LAST_INSTR_TXT);
             try {
                 tasks.add(FileTask.override(lastInstrTxt, prevRecordDir));
             } catch (IOException e) {
                 throw ProvisionErrors.failedToUpdateHistory(e);
             }
+        } else {
+            tasks.add(FileTask.delete(lastInstrTxt));
         }
         final File instrDir = lastRecord.getInstructionDirectory();
         tasks.add(FileTask.delete(instrDir));
 
-        final File unitsDir = new File(historyDir, ProvisionEnvironmentHistory.UNITS);
+        final File unitsDir = new File(historyDir, UNITS);
         for(String unitName : lastRecord.getAppliedInstruction().getUnitNames()) {
-            tasks.add(FileTask.delete(IoUtils.newFile(unitsDir, unitName, instrDir.getName())));
+            final File unitDir = new File(unitsDir, unitName);
+            final File unitInstrDir = new File(unitDir, instrDir.getName());
+            final File unitLastInstrTxt = new File(unitDir, LAST_INSTR_TXT);
+            final String prevUnitInstrId = lastRecord.getPreviousInstructionDirName();
+            if(prevUnitInstrId != null) {
+                try {
+                    tasks.add(FileTask.override(unitLastInstrTxt, prevUnitInstrId));
+                } catch (IOException e) {
+                    throw ProvisionErrors.failedToUpdateHistory(e);
+                }
+                tasks.add(FileTask.delete(unitInstrDir));
+            } else {
+                tasks.add(FileTask.delete(unitDir));
+            }
         }
 
-        return loadPrevious(lastRecord);
+        return lastRecord.getPrevious();
     }
 
     private static EnvironmentHistoryRecord loadInstruction(final File instrDir) throws ProvisionException {
@@ -247,21 +268,18 @@ class EnvironmentHistoryRecord {
     }
 
     String getPreviousInstructionDirName() throws ProvisionException {
-        if(instrXml == null) {
-            throw ProvisionErrors.instructionIsNotAssociatedWithFile();
-        }
-        final File prevInstrTxt = new File(instrXml.getParentFile(), PREV_INSTR_TXT);
-        if(!prevInstrTxt.exists()) {
-            return null;
-        }
-        try {
-            return FileUtils.readFile(prevInstrTxt);
-        } catch (IOException e) {
-            throw ProvisionErrors.readError(prevInstrTxt, e);
-        }
+        return loadPreviousInstructionId(getInstructionDirectory());
     }
 
-    void schedulePersistence(File historyDir, FileTaskList tasks) throws ProvisionException {
+    EnvironmentHistoryRecord getPrevious() throws ProvisionException {
+        final String prevDir = getPreviousInstructionDirName();
+        if(prevDir == null) {
+            return null;
+        }
+        return loadInstruction(new File(envFile.getParentFile().getParentFile(), prevDir));
+    }
+
+    void schedulePersistence(File historyDir, ProvisionEnvironmentJournal envJournal, FileTaskList tasks) throws ProvisionException {
         assert historyDir != null : ProvisionErrors.nullArgument("historyDir");
         final File instrDir = new File(historyDir, UUID.randomUUID().toString());
         if(instrDir.exists()) {
@@ -291,6 +309,91 @@ class EnvironmentHistoryRecord {
             }
         } catch (IOException e) {
             throw ProvisionErrors.failedToUpdateHistory(e);
+        }
+
+        final String instrId = instrDir.getName();
+        final File unitsDir = new File(historyDir, UNITS);
+        if(!unitsDir.exists() && !unitsDir.mkdirs()) {
+            throw new ProvisionException(ProvisionErrors.couldNotCreateDir(unitsDir));
+        }
+        for(ProvisionUnitJournal unitJournal : envJournal.getUnitJournals()) {
+            final String unitName = unitJournal.getUnitEnvironment().getUnitInfo().getName();
+            final File unitDir = new File(unitsDir, unitName);
+            final File unitInstrDir = new File(unitDir, instrId);
+            final File unitBackupDir = new File(unitInstrDir, BACKUP);
+            if(!unitJournal.getContentBackupDir().exists()) {
+                tasks.add(FileTask.mkdirs(unitBackupDir));
+            } else {
+                if (unitBackupDir.exists()) {
+                    throw ProvisionErrors.pathAlreadyExists(unitBackupDir);
+                }
+                tasks.add(FileTask.copy(unitJournal.getContentBackupDir(), unitBackupDir));
+            }
+
+            final File unitPrevInstrTxt = getFileToPersist(unitInstrDir, PREV_INSTR_TXT);
+            final File unitLastInstrTxt = new File(unitDir, LAST_INSTR_TXT);
+            final File unitLastAppliedInstrDir = getLastAppliedInstrDir(unitDir);
+            if(unitLastAppliedInstrDir != null && unitLastAppliedInstrDir.exists()) {
+                tasks.add(FileTask.write(unitPrevInstrTxt, unitLastAppliedInstrDir.getName()));
+            }
+            try {
+                if(unitLastInstrTxt.exists()) {
+                    tasks.add(FileTask.override(unitLastInstrTxt, unitInstrDir.getName()));
+                } else {
+                    tasks.add(FileTask.write(unitLastInstrTxt, unitInstrDir.getName()));
+                }
+            } catch (IOException e) {
+                throw ProvisionErrors.failedToUpdateHistory(e);
+            }
+        }
+    }
+
+    static class UnitBackupRecord {
+
+        private static File getLastUnitRecordDir(File historyDir, String unitName) throws ProvisionException {
+            final File unitDir = IoUtils.newFile(historyDir, UNITS, unitName);
+            if(!unitDir.exists()) {
+                return null;
+            }
+            return getLastAppliedInstrDir(unitDir);
+        }
+
+        static UnitBackupRecord loadLast(File historyDir, String unitName) throws ProvisionException {
+            final File instrDir = getLastUnitRecordDir(historyDir, unitName);
+            if(instrDir == null) {
+                return null;
+            }
+            return new UnitBackupRecord(unitName, instrDir);
+        }
+
+        final String unitName;
+        final File recordDir;
+
+        protected UnitBackupRecord(String unitName, File recordDir) {
+            assert unitName != null : ProvisionErrors.nullArgument("unitName");
+            assert recordDir != null : ProvisionErrors.nullArgument("recordDir");
+            this.unitName = unitName;
+            this.recordDir = recordDir;
+        }
+
+        EnvironmentHistoryRecord getEnvironmentRecord() throws ProvisionException {
+            return loadInstruction(new File(recordDir.getParentFile().getParentFile().getParentFile(), recordDir.getName()));
+        }
+
+        ProvisionUnitInfo getUpdatedUnitInfo() throws ProvisionException {
+            return getEnvironmentRecord().getUpdatedEnvironment().getUnitEnvironment(unitName).getUnitInfo();
+        }
+
+        String getPreviousRecordDirName() throws ProvisionException {
+            return loadPreviousInstructionId(recordDir);
+        }
+
+        UnitBackupRecord getPrevious() throws ProvisionException {
+            final String prevDir = getPreviousRecordDirName();
+            if(prevDir == null) {
+                return null;
+            }
+            return new UnitBackupRecord(unitName, new File(recordDir.getParentFile(), prevDir));
         }
     }
 }

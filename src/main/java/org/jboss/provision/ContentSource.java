@@ -96,7 +96,6 @@ public abstract class ContentSource implements Closeable {
             throw ProvisionErrors.pathDoesNotExist(instrDir);
         }
         return new ContentSource() {
-            final String units = "units";
             final String instrId = instrDir.getName();
             final File historyDir = instrDir.getParentFile();
 
@@ -126,7 +125,7 @@ public abstract class ContentSource implements Closeable {
             }
 
             protected File getBaseDir(ProvisionUnitEnvironment unitEnv) {
-                return IoUtils.newFile(historyDir, units, unitEnv.getUnitInfo().getName(), instrId);
+                return IoUtils.newFile(historyDir, EnvironmentHistoryRecord.UNITS, unitEnv.getUnitInfo().getName(), instrId, EnvironmentHistoryRecord.BACKUP);
             }
 
             protected InputStream getInputStream(final File baseDir, ContentPath path, boolean errorIfNotResolved) throws ProvisionException {
