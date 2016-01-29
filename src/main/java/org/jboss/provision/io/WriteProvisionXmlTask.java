@@ -46,7 +46,7 @@ class WriteProvisionXmlTask extends FileTask {
     }
 
     @Override
-    void execute() throws IOException {
+    protected void execute() throws IOException {
         FileWriter writer = null;
         try {
             writer = new FileWriter(target);
@@ -59,6 +59,7 @@ class WriteProvisionXmlTask extends FileTask {
     }
 
     @Override
+    protected
     void rollback() throws IOException {
         IoUtils.recursiveDelete(target);
     }

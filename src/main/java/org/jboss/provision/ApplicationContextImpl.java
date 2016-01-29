@@ -151,18 +151,25 @@ class ApplicationContextImpl implements ApplicationContext {
 
     private void revertPerformedInstructions(ProvisionEnvironmentJournal envJournal) throws ProvisionException {
         for(ProvisionUnitJournal unitJournal : envJournal.getUnitJournals()) {
-            for(UnitJournalRecord record : unitJournal.getRecorded()) {
-                final File targetFile = unitJournal.getUnitEnvironment().resolvePath(record.getInstruction().getPath());
-                if(record.getBackupFile() == null) {
-                    if(!IoUtils.recursiveDelete(targetFile)) {
-                        throw ProvisionErrors.failedToDelete(targetFile);
-                    }
-                } else {
-                    try {
-                        IoUtils.copyFile(record.getBackupFile(), targetFile);
-                    } catch (IOException e) {
-                        throw ProvisionErrors.failedToCopy(record.getInstruction().getPath(), targetFile);
-                    }
+            revertRecords(unitJournal.getUnitEnvironment(), unitJournal.getAdds(), true);
+            revertRecords(unitJournal.getUnitEnvironment(), unitJournal.getUpdates(), true);
+            revertRecords(unitJournal.getUnitEnvironment(), unitJournal.getDeletes(), false);
+        }
+    }
+
+    protected void revertRecords(ProvisionUnitEnvironment unitEnv, List<UnitJournalRecord> records, boolean copied)
+            throws ProvisionException {
+        for(UnitJournalRecord record : records) {
+            final File targetFile = unitEnv.resolvePath(record.getInstruction().getPath());
+            if(record.getBackupFile() == null) {
+                if(copied && !IoUtils.recursiveDelete(targetFile)) {
+                    throw ProvisionErrors.failedToDelete(targetFile);
+                }
+            } else {
+                try {
+                    IoUtils.copyFile(record.getBackupFile(), targetFile);
+                } catch (IOException e) {
+                    throw ProvisionErrors.failedToCopy(record.getInstruction().getPath(), targetFile);
                 }
             }
         }

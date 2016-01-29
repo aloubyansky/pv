@@ -38,10 +38,11 @@ class WritePropertiesFileTask extends FileTask {
         this.props = props;
     }
     @Override
-    void execute() throws IOException {
+    protected void execute() throws IOException {
         FileUtils.writeProperties(trgFile, props);
     }
     @Override
+    protected
     void rollback() throws IOException {
         IoUtils.recursiveDelete(trgFile);
     }

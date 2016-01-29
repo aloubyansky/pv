@@ -123,6 +123,10 @@ class ProvisionEnvironmentHistory {
         return EnvironmentHistoryRecord.loadLast(historyHome);
     }
 
+    UnitBackupRecord getLastUnitRecord(String unitName) throws ProvisionException {
+        return UnitBackupRecord.loadLast(historyHome, unitName);
+    }
+
     Iterator<EnvironmentHistoryRecord> appliedInstructions() {
         return new Iterator<EnvironmentHistoryRecord>() {
             boolean doNext = true;

@@ -23,10 +23,12 @@
 package org.jboss.provision;
 
 import java.io.File;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.jboss.provision.EnvironmentHistoryRecord.UnitBackupRecord;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionUnitInfo;
 
@@ -115,6 +117,14 @@ public class ProvisionUnitEnvironment extends ProvisionEnvironmentBase {
 
     public ContentPath getHomePath() {
         return unitHome;
+    }
+
+    public Collection<ContentPath> getContentPaths() throws ProvisionException {
+        final UnitBackupRecord unitRecord = ProvisionEnvironmentHistory.getInstance((ProvisionEnvironment)this.getParentEnv()).getLastUnitRecord(unitInfo.getName());
+        if(unitRecord == null) {
+            return Collections.emptySet();
+        }
+        return unitRecord.loadPaths();
     }
 
     protected void reset(ProvisionUnitEnvironment env) {

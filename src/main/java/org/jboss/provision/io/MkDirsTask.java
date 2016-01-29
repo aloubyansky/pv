@@ -38,7 +38,7 @@ class MkDirsTask extends FileTask {
         this.trgFile = f;
     }
     @Override
-    void execute() throws IOException {
+    protected void execute() throws IOException {
         if(trgFile.exists()) {
             return;
         }
@@ -48,6 +48,7 @@ class MkDirsTask extends FileTask {
         }
     }
     @Override
+    protected
     void rollback() throws IOException {
         if(created) {
             IoUtils.recursiveDelete(trgFile);

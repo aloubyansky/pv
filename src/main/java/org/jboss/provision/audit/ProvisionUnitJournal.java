@@ -39,7 +39,11 @@ public interface ProvisionUnitJournal {
 
     void record(ContentItemInstruction instruction, File replacedFile) throws ProvisionException;
 
-    List<UnitJournalRecord> getRecorded();
+    List<UnitJournalRecord> getAdds();
+
+    List<UnitJournalRecord> getDeletes();
+
+    List<UnitJournalRecord> getUpdates();
 
     void load() throws ProvisionException;
 

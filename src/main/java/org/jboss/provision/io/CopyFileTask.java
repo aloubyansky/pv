@@ -34,10 +34,11 @@ class CopyFileTask extends TwoFilesTask {
         super(src, trg);
     }
     @Override
-    void execute() throws IOException {
+    protected void execute() throws IOException {
         IoUtils.copyFile(src, trg);
     }
     @Override
+    protected
     void rollback() throws IOException {
         IoUtils.recursiveDelete(trg);
     }

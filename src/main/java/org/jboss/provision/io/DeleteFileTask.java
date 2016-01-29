@@ -35,10 +35,11 @@ class DeleteFileTask extends FileTask {
         this.f = f;
     }
     @Override
-    void execute() throws IOException {
+    protected void execute() throws IOException {
         IoUtils.recursiveDelete(f);
     }
     @Override
+    protected
     void rollback() throws IOException {
         throw new UnsupportedOperationException();
     }

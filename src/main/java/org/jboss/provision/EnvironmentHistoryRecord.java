@@ -22,10 +22,15 @@
 
 package org.jboss.provision;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -35,6 +40,8 @@ import javax.xml.stream.XMLStreamException;
 import org.jboss.provision.audit.AuditUtil;
 import org.jboss.provision.audit.ProvisionEnvironmentJournal;
 import org.jboss.provision.audit.ProvisionUnitJournal;
+import org.jboss.provision.audit.UnitJournalRecord;
+import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
 import org.jboss.provision.instruction.ProvisionUnitInstruction;
@@ -56,6 +63,7 @@ class EnvironmentHistoryRecord {
     private static final String ENV_FILE = "env.properties";
     private static final String LAST_INSTR_TXT = "last.txt";
     private static final String PREV_INSTR_TXT = "prev.txt";
+    private static final String UNIT_PATHS = "paths.txt";
 
     static EnvironmentHistoryRecord create(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction) throws ProvisionException {
         final ProvisionEnvironmentBuilder envBuilder = ProvisionEnvironment.builder();
@@ -319,8 +327,8 @@ class EnvironmentHistoryRecord {
         for(ProvisionUnitJournal unitJournal : envJournal.getUnitJournals()) {
             final String unitName = unitJournal.getUnitEnvironment().getUnitInfo().getName();
             final File unitDir = new File(unitsDir, unitName);
-            final File unitInstrDir = new File(unitDir, instrId);
-            final File unitBackupDir = new File(unitInstrDir, BACKUP);
+            final File unitInstrDir = getFileToPersist(unitDir, instrId);
+            final File unitBackupDir = getFileToPersist(unitInstrDir, BACKUP);
             if(!unitJournal.getContentBackupDir().exists()) {
                 tasks.add(FileTask.mkdirs(unitBackupDir));
             } else {
@@ -336,6 +344,45 @@ class EnvironmentHistoryRecord {
             if(unitLastAppliedInstrDir != null && unitLastAppliedInstrDir.exists()) {
                 tasks.add(FileTask.write(unitPrevInstrTxt, unitLastAppliedInstrDir.getName()));
             }
+
+            final Set<ContentPath> unitPaths = loadUnitCurrentPaths(unitLastAppliedInstrDir);
+            if(unitPaths.isEmpty()) {
+                for(UnitJournalRecord record : unitJournal.getAdds()) {
+                    unitPaths.add(record.getInstruction().getPath());
+                }
+            } else {
+                if(!unitJournal.getDeletes().isEmpty()) {
+                    for(UnitJournalRecord record : unitJournal.getDeletes()) {
+                        unitPaths.remove(record.getInstruction().getPath());
+                    }
+                }
+                if(!unitJournal.getAdds().isEmpty()) {
+                    for(UnitJournalRecord record : unitJournal.getAdds()) {
+                        unitPaths.add(record.getInstruction().getPath());
+                    }
+                }
+            }
+            final File pathsFile = getFileToPersist(unitInstrDir, UNIT_PATHS);
+            tasks.add(new FileTask() {
+                @Override
+                protected void execute() throws IOException {
+                    BufferedWriter writer = null;
+                    try {
+                        writer = new BufferedWriter(new FileWriter(pathsFile));
+                        for(ContentPath path : unitPaths) {
+                            writer.write(path.toString());
+                            writer.newLine();
+                        }
+                    } finally {
+                        IoUtils.safeClose(writer);
+                    }
+                }
+                @Override
+                protected void rollback() throws IOException {
+                    IoUtils.recursiveDelete(pathsFile);
+                }
+            });
+
             try {
                 if(unitLastInstrTxt.exists()) {
                     tasks.add(FileTask.override(unitLastInstrTxt, unitInstrDir.getName()));
@@ -346,6 +393,30 @@ class EnvironmentHistoryRecord {
                 throw ProvisionErrors.failedToUpdateHistory(e);
             }
         }
+    }
+
+    static Set<ContentPath> loadUnitCurrentPaths(File unitInstrDir) throws ProvisionException {
+        Set<ContentPath> paths = new HashSet<ContentPath>();
+        final File pathsFile = new File(unitInstrDir, UNIT_PATHS);
+        if(pathsFile.exists()) {
+            BufferedReader reader = null;
+            try {
+                reader = new BufferedReader(new FileReader(pathsFile));
+                String line = reader.readLine();
+                while(line != null) {
+                    paths.add(ContentPath.forPath(line));
+                    line = reader.readLine();
+                }
+                return paths;
+            } catch (FileNotFoundException e) {
+                throw ProvisionErrors.pathDoesNotExist(pathsFile);
+            } catch (IOException e) {
+                throw ProvisionErrors.readError(pathsFile, e);
+            } finally {
+                IoUtils.safeClose(reader);
+            }
+        }
+        return paths;
     }
 
     static class UnitBackupRecord {
@@ -374,6 +445,10 @@ class EnvironmentHistoryRecord {
             assert recordDir != null : ProvisionErrors.nullArgument("recordDir");
             this.unitName = unitName;
             this.recordDir = recordDir;
+        }
+
+        Collection<ContentPath> loadPaths() throws ProvisionException {
+            return loadUnitCurrentPaths(recordDir);
         }
 
         EnvironmentHistoryRecord getEnvironmentRecord() throws ProvisionException {

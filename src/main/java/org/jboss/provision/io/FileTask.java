@@ -61,11 +61,11 @@ public abstract class FileTask {
         return new WriteProvisionXmlTask(target, instruction);
     }
 
-    abstract void execute() throws IOException;
+    protected abstract void execute() throws IOException;
 
-    abstract void rollback() throws IOException;
+    protected abstract void rollback() throws IOException;
 
-    void safeRollback() {
+    protected void safeRollback() {
         try {
             rollback();
         } catch(RuntimeException | Error | IOException e) {

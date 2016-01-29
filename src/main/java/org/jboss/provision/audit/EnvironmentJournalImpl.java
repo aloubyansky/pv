@@ -162,7 +162,10 @@ class EnvironmentJournalImpl implements ProvisionEnvironmentJournal {
         private final File unitAuditDir;
         private final File contentBackupDir;
         private final File instrDir;
-        private List<UnitJournalRecord> recorded = Collections.emptyList();
+        private List<UnitJournalRecord> adds = Collections.emptyList();
+        private List<UnitJournalRecord> deletes = Collections.emptyList();
+        private List<UnitJournalRecord> updates = Collections.emptyList();
+        private int recordCount = 1;
 
         protected UnitAuditJournalImpl(ProvisionUnitEnvironment unitEnv, File unitAuditDir) {
             assert unitEnv != null : ProvisionErrors.nullArgument("unitEnv");
@@ -198,21 +201,54 @@ class EnvironmentJournalImpl implements ProvisionEnvironmentJournal {
             }
 
             final UnitJournalRecord record = new AuditRecordImpl(instruction, backup);
-            switch(recorded.size()) {
-                case 0:
-                    recorded = Collections.singletonList(record);
-                    break;
-                case 1:
-                    recorded = new ArrayList<UnitJournalRecord>(recorded);
-                default:
-                    recorded.add(record);
+
+            if(instruction.getContentHash() == null) {
+                switch(deletes.size()) {
+                    case 0:
+                        deletes = Collections.singletonList(record);
+                        break;
+                    case 1:
+                        deletes = new ArrayList<UnitJournalRecord>(deletes);
+                    default:
+                        deletes.add(record);
+                }
+            } else if(instruction.getReplacedHash() == null) {
+                switch(adds.size()) {
+                    case 0:
+                        adds = Collections.singletonList(record);
+                        break;
+                    case 1:
+                        adds = new ArrayList<UnitJournalRecord>(adds);
+                    default:
+                        adds.add(record);
+                }
+            } else {
+                switch(updates.size()) {
+                    case 0:
+                        updates = Collections.singletonList(record);
+                        break;
+                    case 1:
+                        updates = new ArrayList<UnitJournalRecord>(updates);
+                    default:
+                        updates.add(record);
+                }
             }
-            AuditUtil.record(instruction, IoUtils.newFile(instrDir, recorded.size() + INSTR_FILE_SUFFIX));
+            AuditUtil.record(instruction, IoUtils.newFile(instrDir, recordCount++ + INSTR_FILE_SUFFIX));
         }
 
         @Override
-        public List<UnitJournalRecord> getRecorded() {
-            return recorded;
+        public List<UnitJournalRecord> getAdds() {
+            return adds;
+        }
+
+        @Override
+        public List<UnitJournalRecord> getDeletes() {
+            return deletes;
+        }
+
+        @Override
+        public List<UnitJournalRecord> getUpdates() {
+            return updates;
         }
 
         @Override
@@ -221,7 +257,7 @@ class EnvironmentJournalImpl implements ProvisionEnvironmentJournal {
                 throw ProvisionErrors.auditJournalIsRecording();
             }
             assertDirToLoad(unitAuditDir);
-            recorded = new ArrayList<UnitJournalRecord>();
+            adds = new ArrayList<UnitJournalRecord>();
             final List<String> names = Arrays.asList(instrDir.list());
             Collections.sort(names);
             for (String name : names) {
@@ -234,7 +270,7 @@ class EnvironmentJournalImpl implements ProvisionEnvironmentJournal {
                 if (!backupFile.exists()) {
                     backupFile = null;
                 }
-                recorded.add(new AuditRecordImpl(instruction, backupFile));
+                adds.add(new AuditRecordImpl(instruction, backupFile));
             }
         }
 

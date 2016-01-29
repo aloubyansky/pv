@@ -37,10 +37,11 @@ class WriteFileTask extends FileTask {
         this.content = content;
     }
     @Override
-    void execute() throws IOException {
+    protected void execute() throws IOException {
         FileUtils.writeFile(trgFile, content);
     }
     @Override
+    protected
     void rollback() throws IOException {
         IoUtils.recursiveDelete(trgFile);
     }

@@ -54,6 +54,16 @@ class ContentHashCondition implements InstructionCondition {
         if(expectedHash == null) {
             // the path is not expected to exist
             if(targetFile.exists()) {
+                byte[] actualHash;
+                try {
+                    actualHash = HashUtils.hashFile(targetFile);
+                } catch (IOException e) {
+                    throw ProvisionErrors.hashCalculationFailed(targetFile, e);
+                }
+                if(Arrays.equals(newHash, actualHash)) {
+                    // the existing content matches the new one
+                    return false;
+                }
                 throw ProvisionErrors.pathAlreadyExists(targetFile);
             }
         } else {

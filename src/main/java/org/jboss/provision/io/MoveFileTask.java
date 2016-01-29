@@ -37,11 +37,12 @@ class MoveFileTask extends CopyFileTask {
         super(src, trg);
     }
     @Override
-    void execute() throws IOException {
+    protected void execute() throws IOException {
         super.execute();
         IoUtils.recursiveDelete(src);
     }
     @Override
+    protected
     void rollback() throws IOException {
         IoUtils.copy(trg, src);
         super.rollback();

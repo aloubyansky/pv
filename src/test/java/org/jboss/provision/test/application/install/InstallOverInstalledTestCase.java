@@ -26,7 +26,9 @@ import static org.junit.Assert.fail;
 
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.ProvisionException;
+import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.instruction.ProvisionPackage;
+import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
 import org.junit.Test;
@@ -63,5 +65,30 @@ public class InstallOverInstalledTestCase extends ApplicationTestBase {
         } catch(ProvisionException e) {
             // expected
         }
+    }
+
+    @Test
+    public void testContentOnly() throws Exception {
+
+        // tests that matched content does not cause problems during installation
+        originalInstall.createFileWithRandomContent("a.txt")
+            .createFileWithRandomContent("b/b.txt")
+            .createFileWithRandomContent("c/c/c.txt")
+            .createDir("d/e/f");
+
+        ProvisionPackage.newBuilder()
+            .setTargetInstallationDir(originalInstall.getHome())
+            .setPackageOutputFile(archive)
+            .buildInstall();
+
+        IoUtils.copyFile(originalInstall.getHome(), testInstall.getHome());
+        AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome());
+
+        final ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
+        AssertUtil.assertHistoryEmpty(env);
+        env.apply(archive);
+
+        AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome(), true);
+        AssertUtil.assertEnvInfo(env.getEnvironmentInfo(), ProvisionUnitInfo.UNDEFINED_NAME, ProvisionUnitInfo.UNDEFINED_VERSION);
     }
 }

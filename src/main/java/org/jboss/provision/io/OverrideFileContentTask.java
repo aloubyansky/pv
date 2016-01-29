@@ -52,13 +52,14 @@ class OverrideFileContentTask extends WriteFileTask {
         }
     }
     @Override
-    void execute() throws IOException {
+    protected void execute() throws IOException {
         if(backup != null) {
             IoUtils.copy(trgFile, backup);
         }
         super.execute();
     }
     @Override
+    protected
     void rollback() throws IOException {
         IoUtils.copy(backup, trgFile);
         IoUtils.recursiveDelete(backup);
