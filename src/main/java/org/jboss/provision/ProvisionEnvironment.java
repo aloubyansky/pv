@@ -112,6 +112,18 @@ public class ProvisionEnvironment extends ProvisionEnvironmentBase {
         return unitEnvs.get(unitName);
     }
 
+    void removeUnit(String unitName) throws ProvisionException {
+        assert unitName != null : ProvisionErrors.nullArgument("untiName");
+        if(!unitEnvs.containsKey(unitName)) {
+            throw ProvisionErrors.unitIsNotInstalled(unitName);
+        }
+        if(unitEnvs.size() == 1) {
+            unitEnvs = Collections.<String, ProvisionUnitEnvironment>emptyMap();
+        } else {
+            unitEnvs.remove(unitName);
+        }
+    }
+
     public UnitUpdatePolicy resolveUnitPolicy(String unitName) {
         assert unitName != null : ProvisionErrors.nullArgument("unitName");
         final ProvisionUnitEnvironment unitEnv = unitEnvs.get(unitName);
@@ -140,6 +152,10 @@ public class ProvisionEnvironment extends ProvisionEnvironmentBase {
         final ApplicationContextImpl appCtx = new ApplicationContextImpl(this, record.getBackup());
         ProvisionEnvironmentInstruction rollback = record.getAppliedInstruction().getRollback();
         reset(appCtx.apply(rollback, ApplicationContextImpl.CommitCallback.ROLLBACK));
+    }
+
+    public void uninstall(String unitName) throws ProvisionException {
+        ProvisionEnvironmentHistory.getInstance(this).uninstall(this, unitName);
     }
 
     protected void reset(ProvisionEnvironment env) {

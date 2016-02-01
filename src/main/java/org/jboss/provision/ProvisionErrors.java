@@ -24,11 +24,13 @@ package org.jboss.provision;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Set;
 import java.util.zip.ZipException;
 
 import javax.xml.stream.XMLStreamException;
 
 import org.jboss.provision.info.ContentPath;
+import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.instruction.ContentItemInstruction;
 import org.jboss.provision.util.HashUtils;
 
@@ -229,5 +231,14 @@ public class ProvisionErrors {
 
     public static ProvisionException noHistoryRecordedUntilThisPoint() {
         return new ProvisionException("No history recorded until this point.");
+    }
+
+    public static ProvisionException failedToUninstallUnit(ProvisionUnitInfo unitInfo, IOException e) {
+        return new ProvisionException("Failed to uninstall unit " + unitInfo.getName() + "-" + unitInfo.getVersion(), e);
+    }
+
+    public static ProvisionException instructionTargetsOtherThanRequestedUnits(String targetUnit, Set<String> affectedUnits) {
+        return new ProvisionException("Can't clean up history for unit " + targetUnit +
+                " as one of the instructions applied affects other units too " + affectedUnits);
     }
 }

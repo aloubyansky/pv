@@ -24,14 +24,18 @@ package org.jboss.provision;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import org.jboss.provision.EnvironmentHistoryRecord.UnitBackupRecord;
 import org.jboss.provision.audit.ProvisionEnvironmentJournal;
+import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionEnvironmentInfo;
 import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
+import org.jboss.provision.io.FileTask;
 import org.jboss.provision.io.FileTaskList;
 import org.jboss.provision.io.IoUtils;
 
@@ -114,6 +118,42 @@ class ProvisionEnvironmentHistory {
         return prevRecord.getUpdatedEnvironment();
     }
 
+    protected ProvisionEnvironment uninstall(ProvisionEnvironment currentEnv, String unitName) throws ProvisionException {
+        final ProvisionUnitEnvironment unitEnv = currentEnv.getUnitEnvironment(unitName);
+        if(unitEnv == null) {
+            throw ProvisionErrors.unitIsNotInstalled(unitName);
+        }
+        final FileTaskList tasks = new FileTaskList();
+
+        final File unitHistoryDir = getUnitHistoryDir(unitName);
+        for(File unitInstrDir : unitHistoryDir.listFiles()) {
+            if(!unitInstrDir.isDirectory()) {
+                continue;
+            }
+            final EnvironmentHistoryRecord envInstr = EnvironmentHistoryRecord.loadInstruction(historyHome, unitInstrDir.getName());
+            final Set<String> affectedUnits = envInstr.getAppliedInstruction().getUnitNames();
+            if(!Collections.singleton(unitName).equals(affectedUnits)) {
+                throw ProvisionErrors.instructionTargetsOtherThanRequestedUnits(unitName, affectedUnits);
+            }
+            envInstr.scheduleDelete(historyHome, tasks);
+        }
+
+        for(ContentPath path : unitEnv.getContentPaths()) {
+            tasks.add(FileTask.delete(unitEnv.resolvePath(path))); // TODO unless it is a shared path
+        }
+        tasks.add(FileTask.delete(unitHistoryDir));
+
+        if(!tasks.isEmpty()) {
+            try {
+                tasks.safeExecute();
+            } catch (IOException e) {
+                throw ProvisionErrors.failedToUninstallUnit(unitEnv.getUnitInfo(), e);
+            }
+        }
+        currentEnv.removeUnit(unitName);
+        return currentEnv;
+    }
+
     ProvisionEnvironment getCurrentEnvironment() throws ProvisionException {
         final EnvironmentHistoryRecord appliedInstr = EnvironmentHistoryRecord.loadLast(historyHome);
         return appliedInstr == null ? null : appliedInstr.getUpdatedEnvironment();
@@ -121,6 +161,10 @@ class ProvisionEnvironmentHistory {
 
     EnvironmentHistoryRecord getLastRecord() throws ProvisionException {
         return EnvironmentHistoryRecord.loadLast(historyHome);
+    }
+
+    File getUnitHistoryDir(String unitName) {
+        return UnitBackupRecord.getUnitHistoryDir(historyHome, unitName);
     }
 
     UnitBackupRecord getLastUnitRecord(String unitName) throws ProvisionException {

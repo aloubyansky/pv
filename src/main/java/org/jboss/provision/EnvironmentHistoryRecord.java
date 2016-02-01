@@ -63,6 +63,7 @@ class EnvironmentHistoryRecord {
     private static final String ENV_FILE = "env.properties";
     private static final String LAST_INSTR_TXT = "last.txt";
     private static final String PREV_INSTR_TXT = "prev.txt";
+    private static final String NEXT_INSTR_TXT = "next.txt";
     private static final String UNIT_PATHS = "paths.txt";
 
     static EnvironmentHistoryRecord create(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction) throws ProvisionException {
@@ -117,18 +118,24 @@ class EnvironmentHistoryRecord {
     }
 
     static File getLastAppliedInstrDir(final File historyDir) throws ProvisionException {
+        final String lastId = loadLastInstrId(historyDir);
+        if(lastId == null) {
+            return null;
+        }
+        return new File(historyDir, lastId);
+    }
+
+    protected static String loadLastInstrId(final File historyDir) throws ProvisionException {
         assert historyDir != null : ProvisionErrors.nullArgument("historyDir");
         final File lastTxt = IoUtils.newFile(historyDir, LAST_INSTR_TXT);
         if(!lastTxt.exists()) {
             return null;
         }
-        String dirName;
         try {
-            dirName = FileUtils.readFile(lastTxt);
+            return FileUtils.readFile(lastTxt);
         } catch (IOException e) {
             throw ProvisionErrors.readError(IoUtils.newFile(historyDir, LAST_INSTR_TXT), e);
         }
-        return new File(historyDir, dirName);
     }
 
     static String loadPreviousInstructionId(File instrDir) throws ProvisionException {
@@ -140,6 +147,18 @@ class EnvironmentHistoryRecord {
             return FileUtils.readFile(prevInstrTxt);
         } catch (IOException e) {
             throw ProvisionErrors.readError(prevInstrTxt, e);
+        }
+    }
+
+    static String loadNextInstructionId(File instrDir) throws ProvisionException {
+        final File nextInstrTxt = new File(instrDir, NEXT_INSTR_TXT);
+        if(!nextInstrTxt.exists()) {
+            return null;
+        }
+        try {
+            return FileUtils.readFile(nextInstrTxt);
+        } catch (IOException e) {
+            throw ProvisionErrors.readError(nextInstrTxt, e);
         }
     }
 
@@ -164,6 +183,10 @@ class EnvironmentHistoryRecord {
             } catch (IOException e) {
                 throw ProvisionErrors.failedToUpdateHistory(e);
             }
+            final File nextRecordTxt = IoUtils.newFile(historyDir, prevRecordDir, NEXT_INSTR_TXT);
+            if(nextRecordTxt.exists()) {
+                tasks.add(FileTask.delete(nextRecordTxt));
+            }
         } else {
             tasks.add(FileTask.delete(lastInstrTxt));
         }
@@ -183,12 +206,20 @@ class EnvironmentHistoryRecord {
                     throw ProvisionErrors.failedToUpdateHistory(e);
                 }
                 tasks.add(FileTask.delete(unitInstrDir));
+                final File unitNextInstr = IoUtils.newFile(unitDir, prevUnitInstrId, NEXT_INSTR_TXT);
+                if(unitNextInstr.exists()) {
+                    tasks.add(FileTask.delete(unitNextInstr));
+                }
             } else {
                 tasks.add(FileTask.delete(unitDir));
             }
         }
 
         return lastRecord.getPrevious();
+    }
+
+    static EnvironmentHistoryRecord loadInstruction(final File historyHome, final String instrId) throws ProvisionException {
+        return loadInstruction(new File(historyHome, instrId));
     }
 
     private static EnvironmentHistoryRecord loadInstruction(final File instrDir) throws ProvisionException {
@@ -289,7 +320,8 @@ class EnvironmentHistoryRecord {
 
     void schedulePersistence(File historyDir, ProvisionEnvironmentJournal envJournal, FileTaskList tasks) throws ProvisionException {
         assert historyDir != null : ProvisionErrors.nullArgument("historyDir");
-        final File instrDir = new File(historyDir, UUID.randomUUID().toString());
+        final String instrId = UUID.randomUUID().toString();
+        final File instrDir = new File(historyDir, instrId);
         if(instrDir.exists()) {
             if(!instrDir.isDirectory()) {
                 throw new ProvisionException(ProvisionErrors.notADir(instrDir));
@@ -308,18 +340,19 @@ class EnvironmentHistoryRecord {
         tasks.add(FileTask.writeProvisionXml(instrXml, appliedInstruction));
         if(lastAppliedInstrDir != null && lastAppliedInstrDir.exists()) {
             tasks.add(FileTask.write(prevInstrTxt, lastAppliedInstrDir.getName()));
+            final File nextInstrTxt = getFileToPersist(lastAppliedInstrDir, NEXT_INSTR_TXT);
+            tasks.add(FileTask.write(nextInstrTxt, instrId));
         }
         try {
             if(lastInstrTxt.exists()) {
-                tasks.add(FileTask.override(lastInstrTxt, instrDir.getName()));
+                tasks.add(FileTask.override(lastInstrTxt, instrId));
             } else {
-                tasks.add(FileTask.write(lastInstrTxt, instrDir.getName()));
+                tasks.add(FileTask.write(lastInstrTxt, instrId));
             }
         } catch (IOException e) {
             throw ProvisionErrors.failedToUpdateHistory(e);
         }
 
-        final String instrId = instrDir.getName();
         final File unitsDir = new File(historyDir, UNITS);
         if(!unitsDir.exists() && !unitsDir.mkdirs()) {
             throw new ProvisionException(ProvisionErrors.couldNotCreateDir(unitsDir));
@@ -343,6 +376,8 @@ class EnvironmentHistoryRecord {
             final File unitLastAppliedInstrDir = getLastAppliedInstrDir(unitDir);
             if(unitLastAppliedInstrDir != null && unitLastAppliedInstrDir.exists()) {
                 tasks.add(FileTask.write(unitPrevInstrTxt, unitLastAppliedInstrDir.getName()));
+                final File nextUnitInstrTxt = getFileToPersist(unitLastAppliedInstrDir, NEXT_INSTR_TXT);
+                tasks.add(FileTask.write(nextUnitInstrTxt, instrId));
             }
 
             final Set<ContentPath> unitPaths = loadUnitCurrentPaths(unitLastAppliedInstrDir);
@@ -385,14 +420,84 @@ class EnvironmentHistoryRecord {
 
             try {
                 if(unitLastInstrTxt.exists()) {
-                    tasks.add(FileTask.override(unitLastInstrTxt, unitInstrDir.getName()));
+                    tasks.add(FileTask.override(unitLastInstrTxt, instrId));
                 } else {
-                    tasks.add(FileTask.write(unitLastInstrTxt, unitInstrDir.getName()));
+                    tasks.add(FileTask.write(unitLastInstrTxt, instrId));
                 }
             } catch (IOException e) {
                 throw ProvisionErrors.failedToUpdateHistory(e);
             }
         }
+
+    }
+
+    void scheduleDelete(File historyDir, FileTaskList tasks) throws ProvisionException {
+        final ProvisionEnvironmentInstruction envInstr = this.getAppliedInstruction();
+        final String instrId = getInstructionDirectory().getName();
+        for(String unitName : envInstr.getUnitNames()) {
+            UnitBackupRecord.scheduleDelete(historyDir, unitName, instrId, tasks);
+        }
+
+        final File recordDir = new File(historyDir, instrId);
+        if(!recordDir.exists()) {
+            return;
+        }
+
+        final String prevRecordId = loadPreviousInstructionId(recordDir);
+        final String nextRecordId = loadNextInstructionId(recordDir);
+        if(prevRecordId != null) {
+            final File nextRecordTxt = IoUtils.newFile(historyDir, prevRecordId, NEXT_INSTR_TXT);
+            if(nextRecordId != null) {
+                if(nextRecordTxt.exists()) {
+                    try {
+                        tasks.add(FileTask.override(nextRecordTxt, nextRecordId));
+                    } catch (IOException e) {
+                        throw ProvisionErrors.failedToUpdateHistory(e);
+                    }
+                } else {
+                    throw new IllegalStateException("next record must exist");
+                }
+            } else {
+                tasks.add(FileTask.delete(nextRecordTxt));
+            }
+        }
+        if(nextRecordId != null) {
+            final File prevRecordTxt = IoUtils.newFile(historyDir, nextRecordId, PREV_INSTR_TXT);
+            if(prevRecordId != null) {
+                if(prevRecordTxt.exists()) {
+                    try {
+                        tasks.add(FileTask.override(prevRecordTxt, prevRecordId));
+                    } catch (IOException e) {
+                        throw ProvisionErrors.failedToUpdateHistory(e);
+                    }
+                } else {
+                    throw new IllegalStateException("previous record must exist");
+                }
+            } else {
+                tasks.add(FileTask.delete(prevRecordTxt));
+            }
+        }
+
+        final String lastRecordId = loadLastInstrId(historyDir);
+        if(lastRecordId != null && lastRecordId.equals(instrId)) {
+            if(nextRecordId != null) {
+                try {
+                    tasks.add(FileTask.override(new File(historyDir, LAST_INSTR_TXT), nextRecordId));
+                } catch (IOException e) {
+                    throw ProvisionErrors.failedToUpdateHistory(e);
+                }
+            } else if(prevRecordId != null) {
+                try {
+                    tasks.add(FileTask.override(new File(historyDir, LAST_INSTR_TXT), prevRecordId));
+                } catch (IOException e) {
+                    throw ProvisionErrors.failedToUpdateHistory(e);
+                }
+            } else {
+                tasks.add(FileTask.delete(new File(historyDir, LAST_INSTR_TXT)));
+            }
+        }
+
+        tasks.add(FileTask.delete(recordDir));
     }
 
     static Set<ContentPath> loadUnitCurrentPaths(File unitInstrDir) throws ProvisionException {
@@ -421,8 +526,75 @@ class EnvironmentHistoryRecord {
 
     static class UnitBackupRecord {
 
+        static File getUnitHistoryDir(File historyDir, String unitName) {
+            return IoUtils.newFile(historyDir, UNITS, unitName);
+        }
+
+        public static void scheduleDelete(File historyDir, String unitName, String recordId, FileTaskList tasks) throws ProvisionException {
+            final File unitDir = getUnitHistoryDir(historyDir, unitName);
+            final File recordDir = new File(unitDir, recordId);
+            if(!recordDir.exists()) {
+                return;
+            }
+            final String prevRecordId = loadPreviousInstructionId(recordDir);
+            final String nextRecordId = loadNextInstructionId(recordDir);
+            if(prevRecordId != null) {
+                final File nextRecordTxt = IoUtils.newFile(unitDir, prevRecordId, NEXT_INSTR_TXT);
+                if(nextRecordId != null) {
+                    if(nextRecordTxt.exists()) {
+                        try {
+                            tasks.add(FileTask.override(nextRecordTxt, nextRecordId));
+                        } catch (IOException e) {
+                            throw ProvisionErrors.failedToUpdateHistory(e);
+                        }
+                    } else {
+                        throw new IllegalStateException("next record must exist");
+                    }
+                } else {
+                    tasks.add(FileTask.delete(nextRecordTxt));
+                }
+            }
+            if(nextRecordId != null) {
+                final File prevRecordTxt = IoUtils.newFile(unitDir, nextRecordId, PREV_INSTR_TXT);
+                if(prevRecordId != null) {
+                    if(prevRecordTxt.exists()) {
+                        try {
+                            tasks.add(FileTask.override(prevRecordTxt, prevRecordId));
+                        } catch (IOException e) {
+                            throw ProvisionErrors.failedToUpdateHistory(e);
+                        }
+                    } else {
+                        throw new IllegalStateException("previous record must exist");
+                    }
+                } else {
+                    tasks.add(FileTask.delete(prevRecordTxt));
+                }
+            }
+
+            final String lastRecordId = loadLastInstrId(historyDir);
+            if(lastRecordId != null && lastRecordId.equals(recordId)) {
+                if(nextRecordId != null) {
+                    try {
+                        tasks.add(FileTask.override(new File(historyDir, LAST_INSTR_TXT), nextRecordId));
+                    } catch (IOException e) {
+                        throw ProvisionErrors.failedToUpdateHistory(e);
+                    }
+                } else if(prevRecordId != null) {
+                    try {
+                        tasks.add(FileTask.override(new File(historyDir, LAST_INSTR_TXT), prevRecordId));
+                    } catch (IOException e) {
+                        throw ProvisionErrors.failedToUpdateHistory(e);
+                    }
+                } else {
+                    tasks.add(FileTask.delete(new File(historyDir, LAST_INSTR_TXT)));
+                }
+            }
+
+            tasks.add(FileTask.delete(recordDir));
+        }
+
         private static File getLastUnitRecordDir(File historyDir, String unitName) throws ProvisionException {
-            final File unitDir = IoUtils.newFile(historyDir, UNITS, unitName);
+            final File unitDir = getUnitHistoryDir(historyDir, unitName);
             if(!unitDir.exists()) {
                 return null;
             }
@@ -469,6 +641,18 @@ class EnvironmentHistoryRecord {
                 return null;
             }
             return new UnitBackupRecord(unitName, new File(recordDir.getParentFile(), prevDir));
+        }
+
+        String getNextRecordDirName() throws ProvisionException {
+            return loadNextInstructionId(recordDir);
+        }
+
+        UnitBackupRecord getNext() throws ProvisionException {
+            final String nextDir = getNextRecordDirName();
+            if(nextDir == null) {
+                return null;
+            }
+            return new UnitBackupRecord(unitName, new File(recordDir.getParentFile(), nextDir));
         }
     }
 }
