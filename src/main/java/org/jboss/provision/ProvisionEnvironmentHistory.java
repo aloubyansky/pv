@@ -29,7 +29,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
-import org.jboss.provision.EnvironmentHistoryRecord.UnitBackupRecord;
+import org.jboss.provision.UnitInstructionHistory.UnitRecord;
 import org.jboss.provision.audit.ProvisionEnvironmentJournal;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionEnvironmentInfo;
@@ -50,14 +50,14 @@ class ProvisionEnvironmentHistory {
         return new ProvisionEnvironmentHistory(new File(env.getEnvironmentHome(), ProvisionEnvironment.DEF_HISTORY_DIR));
     }
 
-    static ProvisionEnvironmentHistory getInstance(File historyHome) {
+/*    static ProvisionEnvironmentHistory getInstance(File historyHome) {
         return new ProvisionEnvironmentHistory(historyHome);
     }
 
     static ProvisionEnvironmentHistory forEnvironment(File envHome) {
         return new ProvisionEnvironmentHistory(new File(envHome, ProvisionEnvironment.DEF_HISTORY_DIR));
     }
-
+*/
     static boolean storesHistory(File dir) throws ProvisionException {
         assert dir != null : ProvisionErrors.nullArgument("dir");
         if(!dir.exists()) {
@@ -66,7 +66,7 @@ class ProvisionEnvironmentHistory {
         if(!dir.isDirectory()) {
             return false;
         }
-        return EnvironmentHistoryRecord.getLastAppliedInstrDir(dir) != null;
+        return EnvInstructionHistory.getInstance(dir).getLastAppliedId() != null;
     }
 
     private final File historyHome;
@@ -81,13 +81,13 @@ class ProvisionEnvironmentHistory {
     }
 
     protected ProvisionEnvironment record(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction, ProvisionEnvironmentJournal envJournal) throws ProvisionException {
-        final EnvironmentHistoryRecord historyRecord = EnvironmentHistoryRecord.create(currentEnv, instruction);
+        final EnvInstructionHistory.EnvRecord historyRecord = EnvInstructionHistory.getInstance(historyHome).createRecord(currentEnv, instruction);
         final ProvisionEnvironment updatedEnv = historyRecord.getUpdatedEnvironment();
         if(updatedEnv.getUnitNames().isEmpty()) { // delete the history when the environment is uninstalled
             IoUtils.recursiveDelete(historyHome);
         } else {
             final FileTaskList tasks = new FileTaskList();
-            historyRecord.schedulePersistence(historyHome, envJournal, tasks);
+            historyRecord.schedulePersistence(envJournal, tasks);
             try {
                 tasks.safeExecute();
             } catch (IOException e) {
@@ -99,7 +99,9 @@ class ProvisionEnvironmentHistory {
 
     protected ProvisionEnvironment rollbackLast(ProvisionEnvironment currentEnv) throws ProvisionException {
         final FileTaskList tasks = new FileTaskList();
-        final EnvironmentHistoryRecord prevRecord = EnvironmentHistoryRecord.scheduleDeleteLast(historyHome, tasks);
+        final EnvInstructionHistory.EnvRecord lastRecord = EnvInstructionHistory.getInstance(historyHome).loadLastApplied();
+        lastRecord.scheduleDelete(tasks);
+        final EnvInstructionHistory.EnvRecord prevRecord = lastRecord.getPrevious();
         if(tasks.isEmpty()) {
             return currentEnv;
         }
@@ -125,23 +127,20 @@ class ProvisionEnvironmentHistory {
         }
         final FileTaskList tasks = new FileTaskList();
 
-        final File unitHistoryDir = getUnitHistoryDir(unitName);
-        for(File unitInstrDir : unitHistoryDir.listFiles()) {
-            if(!unitInstrDir.isDirectory()) {
-                continue;
-            }
-            final EnvironmentHistoryRecord envInstr = EnvironmentHistoryRecord.loadInstruction(historyHome, unitInstrDir.getName());
+        final UnitInstructionHistory unitHistory = UnitInstructionHistory.getInstance(EnvInstructionHistory.getInstance(historyHome), unitName);
+        for(String recordId : unitHistory.getRecordIds()) {
+            final EnvInstructionHistory.EnvRecord envInstr = EnvInstructionHistory.getInstance(historyHome).loadRecord(recordId);
             final Set<String> affectedUnits = envInstr.getAppliedInstruction().getUnitNames();
             if(!Collections.singleton(unitName).equals(affectedUnits)) {
                 throw ProvisionErrors.instructionTargetsOtherThanRequestedUnits(unitName, affectedUnits);
             }
-            envInstr.scheduleDelete(historyHome, tasks);
+            envInstr.scheduleDelete(tasks);
         }
 
         for(ContentPath path : unitEnv.getContentPaths()) {
             tasks.add(FileTask.delete(unitEnv.resolvePath(path))); // TODO unless it is a shared path
         }
-        tasks.add(FileTask.delete(unitHistoryDir));
+        tasks.add(FileTask.delete(unitHistory.recordsDir));
 
         if(!tasks.isEmpty()) {
             try {
@@ -155,26 +154,22 @@ class ProvisionEnvironmentHistory {
     }
 
     ProvisionEnvironment getCurrentEnvironment() throws ProvisionException {
-        final EnvironmentHistoryRecord appliedInstr = EnvironmentHistoryRecord.loadLast(historyHome);
+        final EnvInstructionHistory.EnvRecord appliedInstr = EnvInstructionHistory.getInstance(historyHome).loadLastApplied();
         return appliedInstr == null ? null : appliedInstr.getUpdatedEnvironment();
     }
 
-    EnvironmentHistoryRecord getLastRecord() throws ProvisionException {
-        return EnvironmentHistoryRecord.loadLast(historyHome);
+    EnvInstructionHistory.EnvRecord getLastEnvironmentRecord() throws ProvisionException {
+        return EnvInstructionHistory.getInstance(historyHome).loadLastApplied();
     }
 
-    File getUnitHistoryDir(String unitName) {
-        return UnitBackupRecord.getUnitHistoryDir(historyHome, unitName);
+    UnitInstructionHistory.UnitRecord getLastUnitRecord(String unitName) throws ProvisionException {
+        return UnitInstructionHistory.getInstance(EnvInstructionHistory.getInstance(historyHome), unitName).loadLast();
     }
 
-    UnitBackupRecord getLastUnitRecord(String unitName) throws ProvisionException {
-        return UnitBackupRecord.loadLast(historyHome, unitName);
-    }
-
-    Iterator<EnvironmentHistoryRecord> appliedInstructions() {
-        return new Iterator<EnvironmentHistoryRecord>() {
+    Iterator<EnvInstructionHistory.EnvRecord> appliedInstructions() {
+        return new Iterator<EnvInstructionHistory.EnvRecord>() {
             boolean doNext = true;
-            EnvironmentHistoryRecord appliedInstr;
+            EnvInstructionHistory.EnvRecord appliedInstr;
             @Override
             public boolean hasNext() {
                 if(doNext) {
@@ -183,7 +178,7 @@ class ProvisionEnvironmentHistory {
                 return appliedInstr != null;
             }
             @Override
-            public EnvironmentHistoryRecord next() {
+            public EnvInstructionHistory.EnvRecord next() {
                 if(hasNext()) {
                     doNext = true;
                         return appliedInstr;
@@ -196,7 +191,7 @@ class ProvisionEnvironmentHistory {
                 }
                 try {
                     if (appliedInstr == null) {
-                        appliedInstr = EnvironmentHistoryRecord.loadLast(historyHome);
+                        appliedInstr = EnvInstructionHistory.getInstance(historyHome).loadLastApplied();
                     } else {
                         appliedInstr = appliedInstr.getPrevious();
                     }
@@ -207,11 +202,11 @@ class ProvisionEnvironmentHistory {
             }};
     }
 
-    Iterator<UnitBackupRecord> unitBackupRecords(final String unitName) {
+    Iterator<UnitRecord> unitBackupRecords(final String unitName) {
         assert unitName != null : ProvisionErrors.nullArgument("unitName");
-        return new Iterator<UnitBackupRecord>() {
+        return new Iterator<UnitRecord>() {
             boolean doNext = true;
-            UnitBackupRecord record;
+            UnitRecord record;
             @Override
             public boolean hasNext() {
                 if(doNext) {
@@ -220,7 +215,7 @@ class ProvisionEnvironmentHistory {
                 return record != null;
             }
             @Override
-            public UnitBackupRecord next() {
+            public UnitRecord next() {
                 if(hasNext()) {
                     doNext = true;
                         return record;
@@ -233,7 +228,7 @@ class ProvisionEnvironmentHistory {
                 }
                 try {
                     if (record == null) {
-                        record = UnitBackupRecord.loadLast(historyHome, unitName);
+                        record = UnitInstructionHistory.getInstance(EnvInstructionHistory.getInstance(historyHome), unitName).loadLast();
                     } else {
                         record = record.getPrevious();
                     }
@@ -246,7 +241,7 @@ class ProvisionEnvironmentHistory {
 
     Iterator<ProvisionEnvironmentInfo> environmentIterator() {
         return new Iterator<ProvisionEnvironmentInfo>() {
-            final Iterator<EnvironmentHistoryRecord> delegate = appliedInstructions();
+            final Iterator<EnvInstructionHistory.EnvRecord> delegate = appliedInstructions();
             @Override
             public boolean hasNext() {
                 return delegate.hasNext();
@@ -263,7 +258,7 @@ class ProvisionEnvironmentHistory {
 
     Iterator<ProvisionUnitInfo> unitIterator(final String unitName) {
         return new Iterator<ProvisionUnitInfo>() {
-            final Iterator<UnitBackupRecord> delegate = unitBackupRecords(unitName);
+            final Iterator<UnitRecord> delegate = unitBackupRecords(unitName);
             @Override
             public boolean hasNext() {
                 return delegate.hasNext();

@@ -131,11 +131,11 @@ public class ProvisionEnvironment extends ProvisionEnvironmentBase {
     }
 
     public Iterator<ProvisionEnvironmentInfo> environmentHistory() throws ProvisionException {
-        return ProvisionEnvironmentHistory.getInstance(this).environmentIterator();
+        return getHistory().environmentIterator();
     }
 
     public Iterator<ProvisionUnitInfo> unitHistory(String unitName) throws ProvisionException {
-        return ProvisionEnvironmentHistory.getInstance(this).unitIterator(unitName);
+        return getHistory().unitIterator(unitName);
     }
 
     public void apply(File packageFile) throws ProvisionException {
@@ -145,7 +145,7 @@ public class ProvisionEnvironment extends ProvisionEnvironmentBase {
     }
 
     public void rollbackLast() throws ProvisionException {
-        final EnvironmentHistoryRecord record = ProvisionEnvironmentHistory.getInstance(this).getLastRecord();
+        final EnvInstructionHistory.EnvRecord record = getHistory().getLastEnvironmentRecord();
         if(record == null) {
             throw ProvisionErrors.noHistoryRecordedUntilThisPoint();
         }
@@ -155,7 +155,11 @@ public class ProvisionEnvironment extends ProvisionEnvironmentBase {
     }
 
     public void uninstall(String unitName) throws ProvisionException {
-        ProvisionEnvironmentHistory.getInstance(this).uninstall(this, unitName);
+        getHistory().uninstall(this, unitName);
+    }
+
+    ProvisionEnvironmentHistory getHistory() {
+        return ProvisionEnvironmentHistory.getInstance(this);
     }
 
     protected void reset(ProvisionEnvironment env) {

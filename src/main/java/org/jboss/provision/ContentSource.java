@@ -39,9 +39,9 @@ import org.jboss.provision.io.IoUtils;
  *
  * @author Alexey Loubyansky
  */
-public abstract class ContentSource implements Closeable {
+abstract class ContentSource implements Closeable {
 
-    public static ContentSource forZip(final File f) throws ProvisionException {
+    static ContentSource forZip(final File f) throws ProvisionException {
         assert f != null : ProvisionErrors.nullArgument("f");
         if(!f.exists()) {
             throw ProvisionErrors.pathDoesNotExist(f);
@@ -90,26 +90,20 @@ public abstract class ContentSource implements Closeable {
         };
     }
 
-    public static ContentSource forBackup(final File instrDir) throws ProvisionException {
-        assert instrDir != null : ProvisionErrors.nullArgument("backupDir");
-        if(!instrDir.exists()) {
-            throw ProvisionErrors.pathDoesNotExist(instrDir);
-        }
+    static ContentSource forBackup(final EnvInstructionHistory.EnvRecord envRecord) throws ProvisionException {
         return new ContentSource() {
-            final String instrId = instrDir.getName();
-            final File historyDir = instrDir.getParentFile();
 
             @Override
             public void close() throws IOException {
             }
 
-            public boolean isAvailable(ProvisionUnitEnvironment unitEnv, ContentPath path) {
+            public boolean isAvailable(ProvisionUnitEnvironment unitEnv, ContentPath path) throws ProvisionException {
                 return new File(getBaseDir(unitEnv), path.getFSRelativePath()).exists();
             }
 
             @Override
             public InputStream getInputStream(ProvisionEnvironment env, ContentPath path, boolean errorIfNotResolved) throws ProvisionException {
-                return getInputStream(historyDir, path, errorIfNotResolved);
+                return getInputStream(envRecord.getRecordDir(), path, errorIfNotResolved);
             }
 
             @Override
@@ -124,8 +118,8 @@ public abstract class ContentSource implements Closeable {
                 return getInputStream(unitDir, path, errorIfNotResolved);
             }
 
-            protected File getBaseDir(ProvisionUnitEnvironment unitEnv) {
-                return IoUtils.newFile(historyDir, EnvironmentHistoryRecord.UNITS, unitEnv.getUnitInfo().getName(), instrId, EnvironmentHistoryRecord.BACKUP);
+            protected File getBaseDir(ProvisionUnitEnvironment unitEnv) throws ProvisionException {
+                return UnitInstructionHistory.getBackupDir(envRecord.getEnvironmentHistory(), unitEnv.getUnitInfo().getName(), envRecord.getRecordDir().getName());
             }
 
             protected InputStream getInputStream(final File baseDir, ContentPath path, boolean errorIfNotResolved) throws ProvisionException {
@@ -142,17 +136,17 @@ public abstract class ContentSource implements Closeable {
         };
     }
 
-    public abstract boolean isAvailable(ProvisionUnitEnvironment unitEnv, ContentPath path);
+    abstract boolean isAvailable(ProvisionUnitEnvironment unitEnv, ContentPath path) throws ProvisionException;
 
-    public InputStream getInputStream(ProvisionEnvironment env, ContentPath path) throws ProvisionException {
+    InputStream getInputStream(ProvisionEnvironment env, ContentPath path) throws ProvisionException {
         return getInputStream(env, path, true);
     }
 
-    public abstract InputStream getInputStream(ProvisionEnvironment env, ContentPath path, boolean errorIfNotResolved) throws ProvisionException;
+    abstract InputStream getInputStream(ProvisionEnvironment env, ContentPath path, boolean errorIfNotResolved) throws ProvisionException;
 
-    public InputStream getInputStream(ProvisionUnitEnvironment unitEnv, ContentPath path) throws ProvisionException {
+    InputStream getInputStream(ProvisionUnitEnvironment unitEnv, ContentPath path) throws ProvisionException {
         return getInputStream(unitEnv, path, true);
     }
 
-    public abstract InputStream getInputStream(ProvisionUnitEnvironment unitEnv, ContentPath path, boolean errorIfNotResolved) throws ProvisionException;
+    abstract InputStream getInputStream(ProvisionUnitEnvironment unitEnv, ContentPath path, boolean errorIfNotResolved) throws ProvisionException;
 }

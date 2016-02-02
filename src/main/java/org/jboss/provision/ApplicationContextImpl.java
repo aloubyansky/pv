@@ -64,7 +64,7 @@ class ApplicationContextImpl implements ApplicationContext {
             @Override
             public ProvisionEnvironment commit(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction,
                     ProvisionEnvironmentJournal envJournal) throws ProvisionException {
-                return ProvisionEnvironmentHistory.getInstance(currentEnv).record(currentEnv, instruction, envJournal);
+                return currentEnv.getHistory().record(currentEnv, instruction, envJournal);
             }
         };
 
@@ -72,7 +72,7 @@ class ApplicationContextImpl implements ApplicationContext {
             @Override
             public ProvisionEnvironment commit(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction,
                     ProvisionEnvironmentJournal envJournal) throws ProvisionException {
-                return ProvisionEnvironmentHistory.getInstance(currentEnv).rollbackLast(currentEnv);
+                return currentEnv.getHistory().rollbackLast(currentEnv);
             }
         };
 

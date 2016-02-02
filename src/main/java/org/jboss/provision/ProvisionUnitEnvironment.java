@@ -28,7 +28,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.jboss.provision.EnvironmentHistoryRecord.UnitBackupRecord;
+import org.jboss.provision.UnitInstructionHistory.UnitRecord;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionUnitInfo;
 
@@ -120,7 +120,7 @@ public class ProvisionUnitEnvironment extends ProvisionEnvironmentBase {
     }
 
     public Collection<ContentPath> getContentPaths() throws ProvisionException {
-        final UnitBackupRecord unitRecord = ProvisionEnvironmentHistory.getInstance((ProvisionEnvironment)this.getParentEnv()).getLastUnitRecord(unitInfo.getName());
+        final UnitRecord unitRecord = ((ProvisionEnvironment)this.getParentEnv()).getHistory().getLastUnitRecord(unitInfo.getName());
         if(unitRecord == null) {
             return Collections.emptySet();
         }
