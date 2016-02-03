@@ -22,17 +22,60 @@
 
 package org.jboss.provision.io;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  *
  * @author Alexey Loubyansky
  */
 public class FileTaskList {
+
     private List<FileTask> tasks = Collections.emptyList();
+    private Set<String> deletedPaths = Collections.<String>emptySet();
+    private Map<String,String> written = Collections.<String, String>emptyMap();
+
+    public FileTaskList delete(File f) {
+        switch(deletedPaths.size()) {
+            case 0:
+                deletedPaths = Collections.singleton(f.getAbsolutePath());
+                break;
+            case 1:
+                deletedPaths = new HashSet<String>(deletedPaths);
+            default:
+                deletedPaths.add(f.getAbsolutePath());
+        }
+        return add(FileTask.delete(f));
+    }
+
+    public FileTaskList override(File f, String content) throws IOException {
+        switch(written.size()) {
+            case 0:
+                written = Collections.singletonMap(f.getAbsolutePath(), content);
+                break;
+            case 1:
+                written = new HashMap<String, String>(written);
+            default:
+                written.put(f.getAbsolutePath(), content);
+        }
+        return add(FileTask.override(f, content));
+    }
+
+    public boolean isDeleted(File f) {
+        return deletedPaths.contains(f.getAbsolutePath());
+    }
+
+    public String getWrittenContent(File f) {
+        return written.get(f.getAbsolutePath());
+    }
+
     public FileTaskList add(FileTask task) {
         switch(tasks.size()) {
             case 0:
@@ -45,9 +88,11 @@ public class FileTaskList {
         }
         return this;
     }
+
     public void safeExecute() throws IOException {
         safeExecute(true);
     }
+
     public void safeExecute(boolean cleanupOnSuccess) throws IOException {
         int i = 0;
         while(i < tasks.size()) {
@@ -67,14 +112,17 @@ public class FileTaskList {
             }
         }
     }
+
     public void safeRollback() {
         for(FileTask task : tasks) {
             task.safeRollback();
         }
     }
+
     public boolean isEmpty() {
         return tasks.isEmpty();
     }
+
     public void clear() {
         tasks = Collections.emptyList();
     }

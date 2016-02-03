@@ -35,7 +35,6 @@ import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionEnvironmentInfo;
 import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
-import org.jboss.provision.io.FileTask;
 import org.jboss.provision.io.FileTaskList;
 import org.jboss.provision.io.IoUtils;
 
@@ -127,20 +126,21 @@ class ProvisionEnvironmentHistory {
         }
         final FileTaskList tasks = new FileTaskList();
 
-        final UnitInstructionHistory unitHistory = UnitInstructionHistory.getInstance(EnvInstructionHistory.getInstance(historyHome), unitName);
+        final EnvInstructionHistory envInstrHistory = EnvInstructionHistory.getInstance(historyHome);
+        final UnitInstructionHistory unitHistory = UnitInstructionHistory.getInstance(envInstrHistory, unitName);
         for(String recordId : unitHistory.getRecordIds()) {
-            final EnvInstructionHistory.EnvRecord envInstr = EnvInstructionHistory.getInstance(historyHome).loadRecord(recordId);
-            final Set<String> affectedUnits = envInstr.getAppliedInstruction().getUnitNames();
+            final EnvInstructionHistory.EnvRecord envRecord = envInstrHistory.loadRecord(recordId);
+            final Set<String> affectedUnits = envRecord.getAppliedInstruction().getUnitNames();
             if(!Collections.singleton(unitName).equals(affectedUnits)) {
                 throw ProvisionErrors.instructionTargetsOtherThanRequestedUnits(unitName, affectedUnits);
             }
-            envInstr.scheduleDelete(tasks);
+            envRecord.scheduleDelete(tasks);
         }
 
         for(ContentPath path : unitEnv.getContentPaths()) {
-            tasks.add(FileTask.delete(unitEnv.resolvePath(path))); // TODO unless it is a shared path
+            tasks.delete(unitEnv.resolvePath(path)); // TODO unless it is a shared path
         }
-        tasks.add(FileTask.delete(unitHistory.recordsDir));
+        tasks.delete(unitHistory.recordsDir);
 
         if(!tasks.isEmpty()) {
             try {
