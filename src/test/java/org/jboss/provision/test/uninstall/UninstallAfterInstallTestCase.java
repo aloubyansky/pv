@@ -24,8 +24,6 @@ package org.jboss.provision.test.uninstall;
 
 import static org.junit.Assert.assertTrue;
 
-import java.util.Arrays;
-
 import org.jboss.provision.ProvisionEnvironment;
 import org.jboss.provision.instruction.ProvisionPackage;
 import org.jboss.provision.test.application.ApplicationTestBase;
@@ -36,7 +34,7 @@ import org.junit.Test;
  *
  * @author Alexey Loubyansky
  */
-public class UninstallUnitAfterUpdatesTestCase extends ApplicationTestBase {
+public class UninstallAfterInstallTestCase extends ApplicationTestBase {
 
     @Test
     public void testMain() throws Exception {
@@ -53,35 +51,12 @@ public class UninstallUnitAfterUpdatesTestCase extends ApplicationTestBase {
             .buildInstall("unitA", "1.0");
         env.apply(archive);
 
-        originalInstall.updateFileWithRandomContent("unit_a/a.txt");
-        ProvisionPackage.newBuilder()
-            .setTargetInstallationDir(originalInstall.getHome())
-            .setCurrentInstallationDir(testInstall.getHome())
-            .setPackageOutputFile(archive)
-            .buildUpdate("unitA", "1.0", "1.1");
-        env.apply(archive);
-
-        originalInstall.updateFileWithRandomContent("unit_a/a.txt");
-        ProvisionPackage.newBuilder()
-            .setTargetInstallationDir(originalInstall.getHome())
-            .setCurrentInstallationDir(testInstall.getHome())
-            .setPackageOutputFile(archive)
-            .buildPatch("patch1", "unitA", "1.1");
-        env.apply(archive);
-
-        originalInstall.updateFileWithRandomContent("unit_a/a.txt");
-        ProvisionPackage.newBuilder()
-            .setTargetInstallationDir(originalInstall.getHome())
-            .setCurrentInstallationDir(testInstall.getHome())
-            .setPackageOutputFile(archive)
-            .buildPatch("patch2", "unitA", "1.1");
-        env.apply(archive);
-
-        AssertUtil.assertUnitInfo(env.getEnvironmentInfo(), "unitA", "1.1", Arrays.asList("patch1", "patch2"));
+        AssertUtil.assertEnvInfo(env.getEnvironmentInfo(), "unitA", "1.0");
 
         env.uninstall("unitA");
 
         assertTrue(env.getEnvironmentInfo().getUnitNames().isEmpty());
         AssertUtil.assertHistoryEmpty(env);
+        AssertUtil.assertEmptyDirBranch(testInstall.getHome());
     }
 }
