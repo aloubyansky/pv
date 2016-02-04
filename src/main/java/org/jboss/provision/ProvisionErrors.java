@@ -241,4 +241,8 @@ public class ProvisionErrors {
         return new ProvisionException("Can't clean up history for unit " + targetUnit +
                 " as one of the instructions applied affects other units too " + affectedUnits);
     }
+
+    public static ProvisionException historyRecordMissingForInstruction(String unitName, String id) {
+        return new ProvisionException(unitName + " history is missing a record for environment instruction " + id);
+    }
 }

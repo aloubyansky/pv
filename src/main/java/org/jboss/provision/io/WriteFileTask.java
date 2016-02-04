@@ -31,7 +31,7 @@ import java.io.IOException;
  */
 class WriteFileTask extends FileTask {
     final File trgFile;
-    private final String content;
+    protected final String content;
     WriteFileTask(File f, String content) {
         this.trgFile = f;
         this.content = content;
@@ -44,5 +44,9 @@ class WriteFileTask extends FileTask {
     protected
     void rollback() throws IOException {
         IoUtils.recursiveDelete(trgFile);
+    }
+    @Override
+    public String toString() {
+        return "WriteFileTask [trgFile=" + trgFile.getAbsolutePath() + ", content='" + content + "']";
     }
 }

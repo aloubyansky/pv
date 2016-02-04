@@ -159,7 +159,10 @@ class EnvInstructionHistory extends InstructionHistory {
 
         ProvisionEnvironment getUpdatedEnvironment() throws ProvisionException {
             if (updatedEnv == null) {
-                updatedEnv = AuditUtil.loadEnv(envFile);
+                final ProvisionEnvironmentBuilder envBuilder = ProvisionEnvironment.builder();
+                AuditUtil.loadEnv(envBuilder, envFile);
+                UnitInstructionHistory.loadUnitEnvs(EnvInstructionHistory.this, envBuilder, getRecordDir().getName());
+                updatedEnv = envBuilder.build();
             }
             return updatedEnv;
         }
@@ -201,18 +204,22 @@ class EnvInstructionHistory extends InstructionHistory {
             tasks.add(AuditUtil.createRecordTask(updatedEnv, envFile));
             instrXml = getFileToPersist(recordDir, ProvisionXml.PROVISION_XML);
             tasks.add(FileTask.writeProvisionXml(instrXml, appliedInstruction));
+            Set<String> notAffectedUnits = new HashSet<String>(updatedEnv.getUnitNames());
             for(ProvisionUnitJournal unitJournal : envJournal.getUnitJournals()) {
-                UnitInstructionHistory.getInstance(EnvInstructionHistory.this, unitJournal.getUnitEnvironment().getUnitInfo().getName())
-                    .schedulePersistence(recordId, unitJournal, tasks);
+                final String unitName = unitJournal.getUnitEnvironment().getUnitInfo().getName();
+                UnitInstructionHistory.getInstance(EnvInstructionHistory.this, unitName).schedulePersistence(recordId, updatedEnv.getUnitEnvironment(unitName), unitJournal, tasks);
+                notAffectedUnits.remove(unitName);
+            }
+            if(!notAffectedUnits.isEmpty()) {
+                for(String unitName : notAffectedUnits) {
+                    UnitInstructionHistory.getInstance(EnvInstructionHistory.this, unitName).schedulePersistence(recordId, tasks);
+                }
             }
         }
 
         void scheduleDelete(FileTaskList tasks) throws ProvisionException {
-            final ProvisionEnvironmentInstruction envInstr = this.getAppliedInstruction();
             final String recordId = getRecordDir().getName();
-            for(String unitName : envInstr.getUnitNames()) {
-                UnitInstructionHistory.getInstance(EnvInstructionHistory.this, unitName).scheduleDelete(recordId, tasks);
-            }
+            UnitInstructionHistory.scheduleDelete(EnvInstructionHistory.this, tasks, recordId);
             super.scheduleDelete(recordId, tasks);
         }
 

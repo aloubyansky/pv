@@ -36,12 +36,14 @@ import java.util.List;
 import java.util.Set;
 
 import org.jboss.provision.EnvInstructionHistory.EnvRecord;
+import org.jboss.provision.audit.AuditUtil;
 import org.jboss.provision.audit.ProvisionUnitJournal;
 import org.jboss.provision.audit.UnitJournalRecord;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.io.FileTask;
 import org.jboss.provision.io.FileTaskList;
+import org.jboss.provision.io.FileUtils;
 import org.jboss.provision.io.IoUtils;
 
 /**
@@ -50,6 +52,7 @@ import org.jboss.provision.io.IoUtils;
  */
 public class UnitInstructionHistory extends InstructionHistory {
 
+    private static final String ENV_PROPS = "env.properties";
     private static final String UNITS = "units";
     private static final String BACKUP = "backup";
     private static final String UNIT_PATHS = "paths.txt";
@@ -60,6 +63,39 @@ public class UnitInstructionHistory extends InstructionHistory {
 
     static UnitInstructionHistory getInstance(EnvInstructionHistory envHistory, String unitName) {
         return new UnitInstructionHistory(envHistory, unitName);
+    }
+
+    static void loadUnitEnvs(EnvInstructionHistory envHistory, ProvisionEnvironmentBuilder envBuilder, String recordId) throws ProvisionException {
+        final File unitsDir = new File(envHistory.recordsDir, UNITS);
+        if(!unitsDir.exists()) {
+            return;
+        }
+        for(File unitDir : unitsDir.listFiles()) {
+            File persistedRecord = new File(unitDir, recordId);
+            if (persistedRecord.exists()) {
+                if (persistedRecord.isFile()) {
+                    try {
+                        persistedRecord = new File(unitDir, FileUtils.readFile(persistedRecord));
+                    } catch (IOException e) {
+                        throw ProvisionErrors.readError(persistedRecord, e);
+                    }
+                    if (!persistedRecord.exists()) {
+                        throw ProvisionErrors.historyRecordMissingForInstruction(unitDir.getName(), recordId);
+                    }
+                }
+                AuditUtil.loadUnitEnv(envBuilder, new File(persistedRecord, ENV_PROPS));
+            }
+        }
+    }
+
+    static void scheduleDelete(EnvInstructionHistory envHistory, FileTaskList tasks, String recordId) throws ProvisionException {
+        final File unitsDir = new File(envHistory.recordsDir, UNITS);
+        if(!unitsDir.exists()) {
+            return;
+        }
+        for(String unitName : unitsDir.list()) {
+            getInstance(envHistory, unitName).scheduleDelete(recordId, tasks);
+        }
     }
 
     private final EnvInstructionHistory envHistory;
@@ -87,8 +123,12 @@ public class UnitInstructionHistory extends InstructionHistory {
         return new UnitRecord(recordDir);
     }
 
-    void schedulePersistence(String id, ProvisionUnitJournal unitJournal, FileTaskList tasks) throws ProvisionException {
-        createRecord(id).schedulePersistence(unitJournal, tasks);
+    void schedulePersistence(String id, ProvisionUnitEnvironment updatedEnv, ProvisionUnitJournal unitJournal, FileTaskList tasks) throws ProvisionException {
+        createRecord(id).schedulePersistence(updatedEnv, unitJournal, tasks);
+    }
+
+    void schedulePersistence(String id, FileTaskList tasks) throws ProvisionException {
+        createRecord(id).schedulePersistence(tasks);
     }
 
     void scheduleDelete(String id, FileTaskList tasks) throws ProvisionException {
@@ -191,7 +231,15 @@ public class UnitInstructionHistory extends InstructionHistory {
             return envRecord.getUpdatedEnvironment().getUnitEnvironment(unitName).getUnitInfo();
         }
 
-        void schedulePersistence(ProvisionUnitJournal unitJournal, FileTaskList tasks) throws ProvisionException {
+        void schedulePersistence(FileTaskList tasks) throws ProvisionException {
+            final String lastRecordId = getLastAppliedId();
+            if(lastRecordId == null) {
+                return;
+            }
+            tasks.add(FileTask.write(recordDir, lastRecordId));
+        }
+
+        void schedulePersistence(ProvisionUnitEnvironment updatedEnv, ProvisionUnitJournal unitJournal, FileTaskList tasks) throws ProvisionException {
             super.schedulePersistence(recordDir.getName(), tasks);
             final File unitBackupDir = getFileToPersist(recordDir, BACKUP);
             if(!unitJournal.getContentBackupDir().exists()) {
@@ -202,6 +250,8 @@ public class UnitInstructionHistory extends InstructionHistory {
                 }
                 tasks.add(FileTask.copy(unitJournal.getContentBackupDir(), unitBackupDir));
             }
+
+            tasks.add(AuditUtil.createRecordTask(updatedEnv, getFileToPersist(recordDir, ENV_PROPS)));
 
             final Set<ContentPath> unitPaths = loadUnitCurrentPaths(getLastAppliedDir());
             if(unitPaths.isEmpty()) {
@@ -243,7 +293,11 @@ public class UnitInstructionHistory extends InstructionHistory {
         }
 
         void scheduleDelete(FileTaskList tasks) throws ProvisionException {
-            super.scheduleDelete(recordDir.getName(), tasks);
+            if(recordDir.isDirectory()) {
+                super.scheduleDelete(recordDir.getName(), tasks);
+            } else if (recordDir.exists()) {
+                tasks.delete(recordDir);
+            }
         }
     }
 }

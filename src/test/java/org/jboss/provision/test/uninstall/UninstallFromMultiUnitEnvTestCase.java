@@ -42,6 +42,7 @@ import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
 import org.jboss.provision.test.util.FSUtils;
 import org.jboss.provision.test.util.InstallationBuilder;
+import org.jboss.provision.test.util.TreeUtil;
 import org.junit.Test;
 
 /**
@@ -72,7 +73,7 @@ public class UninstallFromMultiUnitEnvTestCase extends ApplicationTestBase {
             .createFileWithRandomContent("c/c/c.txt");
         unitBInstall.createFileWithRandomContent("unitB-a.txt")
             .createFileWithRandomContent("b/unitB-b.txt")
-            .createFileWithRandomContent("c/c/unotB-c.txt");
+            .createFileWithRandomContent("c/c/unitB-c.txt");
 
         final ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
 
@@ -138,6 +139,16 @@ public class UninstallFromMultiUnitEnvTestCase extends ApplicationTestBase {
         env.apply(archive);
 
         IoUtils.recursiveDelete(tmp);
+        IoUtils.copyFile(originalInstall.getHome(), tmp);
+        originalInstall.updateFileWithRandomContent("d/d/d/d.txt");
+        ProvisionPackage.newBuilder()
+            .setCurrentInstallationDir(tmp)
+            .setTargetInstallationDir(originalInstall.getHome())
+            .setPackageOutputFile(archive)
+            .buildPatch("patch3", "unitA", "1.1");
+        env.apply(archive);
+
+        IoUtils.recursiveDelete(tmp);
         IoUtils.copyFile(unitBInstall.getHome(), tmp);
         unitBInstall.updateFileWithRandomContent("d/d/d/unitB_d.txt");
         ProvisionPackage.newBuilder()
@@ -147,6 +158,7 @@ public class UninstallFromMultiUnitEnvTestCase extends ApplicationTestBase {
             .buildPatch("patch2", "unitB", "1.1");
         env.apply(archive);
 
+        final ProvisionUnitInfo unitA_patch3 = ProvisionUnitInfo.createInfo("unitA", "1.1", Arrays.asList("patch1", "patch2", "patch3"));
         final ProvisionUnitInfo unitA_patch2 = ProvisionUnitInfo.createInfo("unitA", "1.1", Arrays.asList("patch1", "patch2"));
         final ProvisionUnitInfo unitA_patch1 = ProvisionUnitInfo.createInfo("unitA", "1.1", Collections.singletonList("patch1"));
         final ProvisionUnitInfo unitA_1_1 = ProvisionUnitInfo.createInfo("unitA", "1.1");
@@ -156,11 +168,12 @@ public class UninstallFromMultiUnitEnvTestCase extends ApplicationTestBase {
         final ProvisionUnitInfo unitB_1_1 = ProvisionUnitInfo.createInfo("unitB", "1.1");
         final ProvisionUnitInfo unitB_1_0 = ProvisionUnitInfo.createInfo("unitB", "1.0");
 
-        assertHistory(env.unitHistory("unitA"), unitA_patch2, unitA_patch1, unitA_1_1, unitA_1_0);
+        assertHistory(env.unitHistory("unitA"), unitA_patch3, unitA_patch2, unitA_patch1, unitA_1_1, unitA_1_0);
         assertHistory(env.unitHistory("unitB"), unitB_patch2, unitB_patch1, unitB_1_1, unitB_1_0);
 
         Iterator<ProvisionEnvironmentInfo> i = env.environmentHistory();
-        AssertUtil.assertEnvInfo(i.next(), unitA_patch2, unitB_patch2);
+        AssertUtil.assertEnvInfo(i.next(), unitA_patch3, unitB_patch2);
+        AssertUtil.assertEnvInfo(i.next(), unitA_patch3, unitB_patch1);
         AssertUtil.assertEnvInfo(i.next(), unitA_patch2, unitB_patch1);
         AssertUtil.assertEnvInfo(i.next(), unitA_patch1, unitB_patch1);
         AssertUtil.assertEnvInfo(i.next(), unitA_patch1, unitB_1_1);
@@ -170,15 +183,98 @@ public class UninstallFromMultiUnitEnvTestCase extends ApplicationTestBase {
         AssertUtil.assertEnvInfo(i.next(), unitA_1_0);
         assertFalse(i.hasNext());
 
-        env.uninstall("unitA");
-        assertEquals(Collections.singleton("unitB"), env.getUnitNames());
+        AssertUtil.assertNotIdentical(unitBInstall.getHome(), testInstall.getHome(), true);
 
+        env.uninstall("unitA");
+
+        assertEquals(Collections.singleton("unitB"), env.getUnitNames());
         i = env.environmentHistory();
         AssertUtil.assertEnvInfo(i.next(), unitB_patch2);
         AssertUtil.assertEnvInfo(i.next(), unitB_patch1);
         AssertUtil.assertEnvInfo(i.next(), unitB_1_1);
         AssertUtil.assertEnvInfo(i.next(), unitB_1_0);
         assertFalse(i.hasNext());
+
+        AssertUtil.assertIdentical(unitBInstall.getHome(), testInstall.getHome());
+
+        ProvisionPackage.newBuilder()
+            .setTargetInstallationDir(originalInstall.getHome())
+            .setPackageOutputFile(archive)
+            .buildInstall("unitC", "7.0");
+        env.apply(archive);
+
+        IoUtils.recursiveDelete(tmp);
+        IoUtils.copyFile(originalInstall.getHome(), tmp);
+        originalInstall.updateFileWithRandomContent("d/d/d/d.txt");
+        ProvisionPackage.newBuilder()
+            .setCurrentInstallationDir(tmp)
+            .setTargetInstallationDir(originalInstall.getHome())
+            .setPackageOutputFile(archive)
+            .buildPatch("patch1", "unitC", "7.0");
+        env.apply(archive);
+
+        IoUtils.recursiveDelete(tmp);
+        IoUtils.copyFile(unitBInstall.getHome(), tmp);
+        unitBInstall.updateFileWithRandomContent("d/d/d/unitB_d.txt");
+        ProvisionPackage.newBuilder()
+            .setCurrentInstallationDir(tmp)
+            .setTargetInstallationDir(unitBInstall.getHome())
+            .setPackageOutputFile(archive)
+            .buildPatch("patch3", "unitB", "1.1");
+        env.apply(archive);
+
+        IoUtils.recursiveDelete(tmp);
+        IoUtils.copyFile(originalInstall.getHome(), tmp);
+        originalInstall.updateFileWithRandomContent("d/d/d/d.txt");
+        ProvisionPackage.newBuilder()
+            .setCurrentInstallationDir(tmp)
+            .setTargetInstallationDir(originalInstall.getHome())
+            .setPackageOutputFile(archive)
+            .buildPatch("patch2", "unitC", "7.0");
+        env.apply(archive);
+
+        final ProvisionUnitInfo unitB_patch3 = ProvisionUnitInfo.createInfo("unitB", "1.1", Arrays.asList("patch1", "patch2", "patch3"));
+        final ProvisionUnitInfo unitC_7_0 = ProvisionUnitInfo.createInfo("unitC", "7.0");
+        final ProvisionUnitInfo unitC_patch1 = ProvisionUnitInfo.createInfo("unitC", "7.0", Collections.singletonList("patch1"));
+        final ProvisionUnitInfo unitC_patch2 = ProvisionUnitInfo.createInfo("unitC", "7.0", Arrays.asList("patch1", "patch2"));
+
+
+        assertHistory(env.unitHistory("unitB"), unitB_patch3, unitB_patch2, unitB_patch1, unitB_1_1, unitB_1_0);
+        assertHistory(env.unitHistory("unitC"), unitC_patch2, unitC_patch1, unitC_7_0);
+
+        i = env.environmentHistory();
+        AssertUtil.assertEnvInfo(i.next(), unitB_patch3, unitC_patch2);
+        AssertUtil.assertEnvInfo(i.next(), unitB_patch3, unitC_patch1);
+        AssertUtil.assertEnvInfo(i.next(), unitB_patch2, unitC_patch1);
+        AssertUtil.assertEnvInfo(i.next(), unitB_patch2, unitC_7_0);
+        AssertUtil.assertEnvInfo(i.next(), unitB_patch2);
+        AssertUtil.assertEnvInfo(i.next(), unitB_patch1);
+        AssertUtil.assertEnvInfo(i.next(), unitB_1_1);
+        AssertUtil.assertEnvInfo(i.next(), unitB_1_0);
+        assertFalse(i.hasNext());
+
+        AssertUtil.assertNotIdentical(originalInstall.getHome(), testInstall.getHome(), true);
+
+        env.uninstall("unitB");
+
+        assertEquals(Collections.singleton("unitC"), env.getUnitNames());
+        assertHistory(env.unitHistory("unitC"), unitC_patch2, unitC_patch1, unitC_7_0);
+        i = env.environmentHistory();
+        AssertUtil.assertEnvInfo(i.next(), unitC_patch2);
+        AssertUtil.assertEnvInfo(i.next(), unitC_patch1);
+        AssertUtil.assertEnvInfo(i.next(), unitC_7_0);
+        assertFalse(i.hasNext());
+
+        AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome());
+
+        env.uninstall("unitC");
+
+        AssertUtil.assertHistoryEmpty(env);
+        assertTrue(env.getUnitNames().isEmpty());
+        assertTrue(env.getEnvironmentInfo().getUnitNames().isEmpty());
+        AssertUtil.assertEmptyDirBranch(testInstall.getHome());
+        TreeUtil.logTree(testInstall.getHome());
+
     }
 
     protected void assertHistory(Iterator<ProvisionUnitInfo> i, ProvisionUnitInfo... info) {

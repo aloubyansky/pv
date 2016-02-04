@@ -27,10 +27,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  *
@@ -38,42 +36,102 @@ import java.util.Set;
  */
 public class FileTaskList {
 
+    private enum FsOp {
+        DELETE,
+        OVERRIDE
+    }
+
+    private static class TaskDescription {
+        static TaskDescription delete(int index) {
+            return new TaskDescription(index, FsOp.DELETE, null);
+        }
+        static TaskDescription override(int index, String content) {
+            return new TaskDescription(index, FsOp.OVERRIDE, content);
+        }
+        private final int index;
+        private FsOp op;
+        private String content;
+        TaskDescription(int index, FsOp op, String content) {
+            this.index = index;
+            this.op = op;
+            this.content = content;
+        }
+        void override(String content) {
+            op = FsOp.OVERRIDE;
+            this.content = content;
+        }
+        void delete() {
+            op = FsOp.DELETE;
+            content = null;
+        }
+    }
+
     private List<FileTask> tasks = Collections.emptyList();
-    private Set<String> deletedPaths = Collections.<String>emptySet();
-    private Map<String,String> written = Collections.<String, String>emptyMap();
+    private Map<String, TaskDescription> addedDescr = Collections.<String, TaskDescription>emptyMap();
 
     public FileTaskList delete(File f) {
-        switch(deletedPaths.size()) {
+        final String path = f.getAbsolutePath();
+        TaskDescription descr = addedDescr.get(path);
+        if(descr != null) {
+            if(descr.op == FsOp.DELETE) {
+                return this;
+            }
+            replace(descr.index, FileTask.delete(f));
+            descr.delete();
+            return this;
+        }
+        descr = TaskDescription.delete(tasks.size());
+        switch(addedDescr.size()) {
             case 0:
-                deletedPaths = Collections.singleton(f.getAbsolutePath());
+                addedDescr = Collections.singletonMap(path, descr);
                 break;
             case 1:
-                deletedPaths = new HashSet<String>(deletedPaths);
+                addedDescr = new HashMap<String, TaskDescription>(addedDescr);
             default:
-                deletedPaths.add(f.getAbsolutePath());
+                addedDescr.put(path, descr);
         }
         return add(FileTask.delete(f));
     }
 
     public FileTaskList override(File f, String content) throws IOException {
-        switch(written.size()) {
+        final String path = f.getAbsolutePath();
+        TaskDescription descr = addedDescr.get(path);
+        if(descr != null) {
+            if(descr.op == FsOp.OVERRIDE) {
+                descr.override(content);
+            }
+            replace(descr.index, FileTask.override(f, content));
+            return this;
+        }
+        descr = TaskDescription.override(tasks.size(), content);
+        switch(addedDescr.size()) {
             case 0:
-                written = Collections.singletonMap(f.getAbsolutePath(), content);
+                addedDescr = Collections.singletonMap(path, descr);
                 break;
             case 1:
-                written = new HashMap<String, String>(written);
+                addedDescr = new HashMap<String, TaskDescription>(addedDescr);
             default:
-                written.put(f.getAbsolutePath(), content);
+                addedDescr.put(path, descr);
         }
         return add(FileTask.override(f, content));
     }
 
+    private void replace(int index, FileTask task) {
+        if(tasks.size() == 1) {
+            tasks = Collections.singletonList(task);
+        } else {
+            tasks.set(index, task);
+        }
+    }
+
     public boolean isDeleted(File f) {
-        return deletedPaths.contains(f.getAbsolutePath());
+        final TaskDescription descr = addedDescr.get(f.getAbsolutePath());
+        return descr != null && descr.op == FsOp.DELETE;
     }
 
     public String getWrittenContent(File f) {
-        return written.get(f.getAbsolutePath());
+        final TaskDescription descr = addedDescr.get(f.getAbsolutePath());
+        return descr == null ? null : descr.content;
     }
 
     public FileTaskList add(FileTask task) {
@@ -125,5 +183,10 @@ public class FileTaskList {
 
     public void clear() {
         tasks = Collections.emptyList();
+    }
+
+    @Override
+    public String toString() {
+        return "FileTaskList [tasks=" + tasks + "]";
     }
 }

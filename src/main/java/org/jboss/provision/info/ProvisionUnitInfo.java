@@ -115,4 +115,9 @@ public class ProvisionUnitInfo {
         }
         return true;
     }
+
+    @Override
+    public String toString() {
+        return "ProvisionUnitInfo [name=" + name + ", version=" + version + ", patches=" + patches + "]";
+    }
 }

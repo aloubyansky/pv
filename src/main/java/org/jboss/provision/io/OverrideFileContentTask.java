@@ -68,4 +68,9 @@ class OverrideFileContentTask extends WriteFileTask {
     public void cleanup() throws IOException {
         IoUtils.recursiveDelete(backup);
     }
+    @Override
+    public String toString() {
+        return "OverrideFileContentTask [trgFile=" + trgFile.getAbsolutePath() + ", content='" + content + "']";
+    }
+
 }

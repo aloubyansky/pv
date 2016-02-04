@@ -99,6 +99,25 @@ abstract class InstructionHistory {
         }
     }
 
+    String getPreviousRecordId(FileTaskList tasks, File recordDir) throws ProvisionException {
+        final File prevInstrTxt = new File(recordDir, PREV_INSTR_TXT);
+        String prevId = tasks.getWrittenContent(prevInstrTxt);
+        if(prevId == null) {
+            if(!prevInstrTxt.exists()) {
+                return null;
+            }
+            try {
+                prevId = FileUtils.readFile(prevInstrTxt);
+            } catch (IOException e) {
+                throw ProvisionErrors.readError(prevInstrTxt, e);
+            }
+        }
+        if(tasks.isDeleted(new File(recordsDir, prevId))) {
+            return null;
+        }
+        return prevId;
+    }
+
     String getPreviousRecordId(File recordDir) throws ProvisionException {
         final File prevInstrTxt = new File(recordDir, PREV_INSTR_TXT);
         if(!prevInstrTxt.exists()) {
@@ -109,6 +128,25 @@ abstract class InstructionHistory {
         } catch (IOException e) {
             throw ProvisionErrors.readError(prevInstrTxt, e);
         }
+    }
+
+    String getNextRecordId(FileTaskList tasks, File recordDir) throws ProvisionException {
+        final File nextInstrTxt = new File(recordDir, NEXT_INSTR_TXT);
+        String nextId = tasks.getWrittenContent(nextInstrTxt);
+        if (nextId == null) {
+            if (!nextInstrTxt.exists()) {
+                return null;
+            }
+            try {
+                nextId = FileUtils.readFile(nextInstrTxt);
+            } catch (IOException e) {
+                throw ProvisionErrors.readError(nextInstrTxt, e);
+            }
+        }
+        if(tasks.isDeleted(new File(recordsDir, nextId))) {
+            return null;
+        }
+        return nextId;
     }
 
     String getNextRecordId(File recordDir) throws ProvisionException {
@@ -173,33 +211,23 @@ abstract class InstructionHistory {
                 return;
             }
 
-            String prevRecordId = InstructionHistory.this.getPreviousRecordId(recordDir);
-            if(prevRecordId != null && tasks.isDeleted(new File(recordsDir, prevRecordId))) {
-                prevRecordId = null;
-            }
-            String nextRecordId = InstructionHistory.this.getNextRecordId(recordDir);
-            if(nextRecordId != null && tasks.isDeleted(new File(recordsDir, nextRecordId))) {
-                nextRecordId = null;
-            }
+            final String prevRecordId = InstructionHistory.this.getPreviousRecordId(tasks, recordDir);
+            final String nextRecordId = InstructionHistory.this.getNextRecordId(tasks, recordDir);
 
             if (prevRecordId != null) {
-                if(tasks.isDeleted(new File(recordsDir, prevRecordId))) {
-                    prevRecordId = null;
-                } else {
-                    final File nextRecordTxt = IoUtils.newFile(recordsDir, prevRecordId, NEXT_INSTR_TXT);
-                    if (nextRecordId != null) {
-                        if (nextRecordTxt.exists()) {
-                            try {
-                                tasks.override(nextRecordTxt, nextRecordId);
-                            } catch (IOException e) {
-                                throw ProvisionErrors.failedToUpdateHistory(e);
-                            }
-                        } else {
-                            throw new IllegalStateException("next record must exist");
+                final File nextRecordTxt = IoUtils.newFile(recordsDir, prevRecordId, NEXT_INSTR_TXT);
+                if (nextRecordId != null) {
+                    if (nextRecordTxt.exists()) {
+                        try {
+                            tasks.override(nextRecordTxt, nextRecordId);
+                        } catch (IOException e) {
+                            throw ProvisionErrors.failedToUpdateHistory(e);
                         }
                     } else {
-                        tasks.delete(nextRecordTxt);
+                        throw new IllegalStateException("next record must exist");
                     }
+                } else {
+                    tasks.delete(nextRecordTxt);
                 }
             }
             if (nextRecordId != null) {
@@ -221,7 +249,13 @@ abstract class InstructionHistory {
 
             final String lastRecordId = getLastAppliedId(tasks);
             if (lastRecordId != null && lastRecordId.equals(recordId)) {
-                if (prevRecordId != null) {
+                if (nextRecordId != null) {
+                    try {
+                        tasks.override(new File(recordsDir, LAST_INSTR_TXT), nextRecordId);
+                    } catch (IOException e) {
+                        throw ProvisionErrors.failedToUpdateHistory(e);
+                    }
+                } else if (prevRecordId != null) {
                     try {
                         tasks.override(new File(recordsDir, LAST_INSTR_TXT), prevRecordId);
                     } catch (IOException e) {

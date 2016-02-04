@@ -43,4 +43,9 @@ class DeleteFileTask extends FileTask {
     void rollback() throws IOException {
         throw new UnsupportedOperationException();
     }
+    @Override
+    public String toString() {
+        return "DeleteFileTask [f=" + f.getAbsolutePath() + "]";
+    }
+
 }
