@@ -42,7 +42,6 @@ import org.jboss.provision.test.application.ApplicationTestBase;
 import org.jboss.provision.test.util.AssertUtil;
 import org.jboss.provision.test.util.FSUtils;
 import org.jboss.provision.test.util.InstallationBuilder;
-import org.jboss.provision.test.util.TreeUtil;
 import org.junit.Test;
 
 /**
@@ -273,8 +272,6 @@ public class UninstallFromMultiUnitEnvTestCase extends ApplicationTestBase {
         assertTrue(env.getUnitNames().isEmpty());
         assertTrue(env.getEnvironmentInfo().getUnitNames().isEmpty());
         AssertUtil.assertEmptyDirBranch(testInstall.getHome());
-        TreeUtil.logTree(testInstall.getHome());
-
     }
 
     protected void assertHistory(Iterator<ProvisionUnitInfo> i, ProvisionUnitInfo... info) {

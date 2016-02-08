@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2015, Red Hat, Inc., and individual contributors
+ * Copyright 2016, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -19,34 +19,35 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-
 package org.jboss.provision.io;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+
+import org.jboss.provision.ProvisionErrors;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-class WriteFileTask extends FileTask {
-    final File trgFile;
-    protected final String content;
-    WriteFileTask(File f, String content) {
-        this.trgFile = f;
-        this.content = content;
+class CopyContentWriter extends ContentWriter {
+    private final File f;
+    CopyContentWriter(File f, File target) {
+        super(target);
+        assert f != null : ProvisionErrors.nullArgument("file");
+        this.f = f;
     }
     @Override
-    protected void execute() throws IOException {
-        FileUtils.writeFile(trgFile, content);
+    public File getContentFile() {
+        return f;
     }
     @Override
-    protected
-    void rollback() throws IOException {
-        IoUtils.recursiveDelete(trgFile);
+    public void execute() throws IOException {
+        IoUtils.copyFile(f, target);
     }
     @Override
-    public String toString() {
-        return "WriteFileTask [trgFile=" + trgFile.getAbsolutePath() + ", content='" + content + "']";
+    public void write(BufferedWriter writer) throws IOException {
+        throw new UnsupportedOperationException();
     }
 }

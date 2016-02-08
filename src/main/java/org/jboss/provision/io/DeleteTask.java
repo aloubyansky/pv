@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2015, Red Hat, Inc., and individual contributors
+ * Copyright 2016, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -19,48 +19,29 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-
 package org.jboss.provision.io;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-
-import javax.xml.stream.XMLStreamException;
-
-import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
-import org.jboss.provision.xml.ProvisionXml;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-class WriteProvisionXmlTask extends FileTask {
-
-    protected final File target;
-    protected final ProvisionEnvironmentInstruction instruction;
-
-    WriteProvisionXmlTask(File target, ProvisionEnvironmentInstruction instruction) {
-        this.target = target;
-        this.instruction = instruction;
+class DeleteTask extends ContentTask {
+    protected DeleteTask(File target) {
+        super(target);
     }
-
     @Override
-    protected void execute() throws IOException {
-        FileWriter writer = null;
-        try {
-            writer = new FileWriter(target);
-            ProvisionXml.marshal(writer, instruction);
-        } catch (XMLStreamException e) {
-            throw new IOException(e);
-        } finally {
-            IoUtils.safeClose(writer);
-        }
+    public boolean isDelete() {
+        return true;
     }
-
     @Override
-    protected
-    void rollback() throws IOException {
+    public void execute() throws IOException {
         IoUtils.recursiveDelete(target);
+    }
+    @Override
+    public String toString() {
+        return "DeleteTask for " + target.getAbsolutePath();
     }
 }

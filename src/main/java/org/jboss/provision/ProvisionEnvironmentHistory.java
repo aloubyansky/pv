@@ -35,7 +35,7 @@ import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionEnvironmentInfo;
 import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
-import org.jboss.provision.io.FileTaskList;
+import org.jboss.provision.io.FSImage;
 import org.jboss.provision.io.IoUtils;
 
 /**
@@ -85,10 +85,10 @@ class ProvisionEnvironmentHistory {
         if(updatedEnv.getUnitNames().isEmpty()) { // delete the history when the environment is uninstalled
             IoUtils.recursiveDelete(historyHome);
         } else {
-            final FileTaskList tasks = new FileTaskList();
+            final FSImage tasks = new FSImage();
             historyRecord.schedulePersistence(envJournal, tasks);
             try {
-                tasks.safeExecute();
+                tasks.commit();
             } catch (IOException e) {
                 throw ProvisionErrors.failedToUpdateHistory(e);
             }
@@ -97,15 +97,15 @@ class ProvisionEnvironmentHistory {
     }
 
     protected ProvisionEnvironment rollbackLast(ProvisionEnvironment currentEnv) throws ProvisionException {
-        final FileTaskList tasks = new FileTaskList();
+        final FSImage tasks = new FSImage();
         final EnvInstructionHistory.EnvRecord lastRecord = EnvInstructionHistory.getInstance(historyHome).loadLastApplied();
         lastRecord.scheduleDelete(tasks);
         final EnvInstructionHistory.EnvRecord prevRecord = lastRecord.getPrevious();
-        if(tasks.isEmpty()) {
+        if(tasks.isUntouched()) {
             return currentEnv;
         }
         try {
-            tasks.safeExecute();
+            tasks.commit();
         } catch (IOException e) {
             throw ProvisionErrors.failedToUpdateHistory(e);
         }
@@ -124,7 +124,7 @@ class ProvisionEnvironmentHistory {
         if(unitEnv == null) {
             throw ProvisionErrors.unitIsNotInstalled(unitName);
         }
-        final FileTaskList tasks = new FileTaskList();
+        final FSImage tasks = new FSImage();
 
         final EnvInstructionHistory envInstrHistory = EnvInstructionHistory.getInstance(historyHome);
         final UnitInstructionHistory unitHistory = UnitInstructionHistory.getInstance(envInstrHistory, unitName);
@@ -136,15 +136,14 @@ class ProvisionEnvironmentHistory {
             }
             envRecord.scheduleDelete(tasks);
         }
-
         for(ContentPath path : unitEnv.getContentPaths()) {
             tasks.delete(unitEnv.resolvePath(path)); // TODO unless it is a shared path
         }
         tasks.delete(unitHistory.recordsDir);
 
-        if(!tasks.isEmpty()) {
+        if(!tasks.isUntouched()) {
             try {
-                tasks.safeExecute();
+                tasks.commit();
             } catch (IOException e) {
                 throw ProvisionErrors.failedToUninstallUnit(unitEnv.getUnitInfo(), e);
             }

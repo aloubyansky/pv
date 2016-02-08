@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2015, Red Hat, Inc., and individual contributors
+ * Copyright 2016, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -19,31 +19,42 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-
 package org.jboss.provision.io;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
-import java.util.Properties;
+
+import org.jboss.provision.ProvisionErrors;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-class WritePropertiesFileTask extends FileTask {
-    final File trgFile;
-    private final Properties props;
-    WritePropertiesFileTask(File f, Properties props) {
-        this.trgFile = f;
-        this.props = props;
+class MkDirsWriter extends ContentWriter {
+    protected MkDirsWriter(File target) {
+        super(target);
     }
     @Override
-    protected void execute() throws IOException {
-        FileUtils.writeProperties(trgFile, props);
+    void backup() throws IOException {
     }
     @Override
-    protected
-    void rollback() throws IOException {
-        IoUtils.recursiveDelete(trgFile);
+    void revert() throws IOException {
+    }
+    @Override
+    void cleanup() throws IOException {
+    }
+    @Override
+    public void execute() throws IOException {
+        if(target.exists()) {
+            return;
+        }
+        if(!target.mkdirs()) {
+            throw new IOException(ProvisionErrors.couldNotCreateDir(target));
+        }
+    }
+    @Override
+    public void write(BufferedWriter writer) throws IOException {
+        throw new UnsupportedOperationException();
     }
 }

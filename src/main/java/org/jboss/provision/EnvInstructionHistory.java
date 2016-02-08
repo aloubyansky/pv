@@ -37,8 +37,7 @@ import org.jboss.provision.audit.ProvisionUnitJournal;
 import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
 import org.jboss.provision.instruction.ProvisionUnitInstruction;
-import org.jboss.provision.io.FileTask;
-import org.jboss.provision.io.FileTaskList;
+import org.jboss.provision.io.FSImage;
 import org.jboss.provision.io.IoUtils;
 import org.jboss.provision.xml.ProvisionXml;
 
@@ -196,14 +195,14 @@ class EnvInstructionHistory extends InstructionHistory {
             return instrXml.getParentFile();
         }
 
-        void schedulePersistence(ProvisionEnvironmentJournal envJournal, FileTaskList tasks)
+        void schedulePersistence(ProvisionEnvironmentJournal envJournal, FSImage tasks)
                 throws ProvisionException {
             final String recordId = UUID.randomUUID().toString();
             final File recordDir = super.schedulePersistence(recordId, tasks);
             envFile = getFileToPersist(recordDir, ENV_FILE);
-            tasks.add(AuditUtil.createRecordTask(updatedEnv, envFile));
+            tasks.write(AuditUtil.createWriter(updatedEnv, envFile));
             instrXml = getFileToPersist(recordDir, ProvisionXml.PROVISION_XML);
-            tasks.add(FileTask.writeProvisionXml(instrXml, appliedInstruction));
+            tasks.write(appliedInstruction, instrXml);
             Set<String> notAffectedUnits = new HashSet<String>(updatedEnv.getUnitNames());
             for(ProvisionUnitJournal unitJournal : envJournal.getUnitJournals()) {
                 final String unitName = unitJournal.getUnitEnvironment().getUnitInfo().getName();
@@ -217,7 +216,7 @@ class EnvInstructionHistory extends InstructionHistory {
             }
         }
 
-        void scheduleDelete(FileTaskList tasks) throws ProvisionException {
+        void scheduleDelete(FSImage tasks) throws ProvisionException {
             final String recordId = getRecordDir().getName();
             UnitInstructionHistory.scheduleDelete(EnvInstructionHistory.this, tasks, recordId);
             super.scheduleDelete(recordId, tasks);

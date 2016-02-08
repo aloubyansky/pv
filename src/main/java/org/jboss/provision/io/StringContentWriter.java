@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2015, Red Hat, Inc., and individual contributors
+ * Copyright 2016, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -19,32 +19,31 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-
 package org.jboss.provision.io;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+
+import org.jboss.provision.ProvisionErrors;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-class MoveFileTask extends CopyFileTask {
-    MoveFileTask(File src, String name) {
-        super(src, new File(src.getParentFile(), name));
-    }
-    MoveFileTask(File src, File trg) {
-        super(src, trg);
-    }
-    @Override
-    protected void execute() throws IOException {
-        super.execute();
-        IoUtils.recursiveDelete(src);
+class StringContentWriter extends ContentWriter {
+    private final String content;
+    StringContentWriter(String content, File target) {
+        super(target);
+        assert content != null : ProvisionErrors.nullArgument("content");
+        this.content = content;
     }
     @Override
-    protected
-    void rollback() throws IOException {
-        IoUtils.copy(trg, src);
-        super.rollback();
+    public String getContentString() {
+        return content;
+    }
+    @Override
+    public void write(BufferedWriter writer) throws IOException {
+        writer.write(content);
     }
 }

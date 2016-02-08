@@ -43,7 +43,7 @@ import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.instruction.ContentItemInstruction;
 import org.jboss.provision.instruction.UpdatePolicy;
-import org.jboss.provision.io.FileTask;
+import org.jboss.provision.io.ContentWriter;
 import org.jboss.provision.io.FileUtils;
 import org.jboss.provision.util.HashUtils;
 
@@ -333,12 +333,12 @@ public class AuditUtil {
         }
     }
 
-    public static FileTask createRecordTask(ProvisionEnvironment env, File f) throws ProvisionException {
-        return FileTask.write(f, toProperties(env, false));
+    public static ContentWriter createWriter(ProvisionEnvironment env, File f) throws ProvisionException {
+        return ContentWriter.forProperties(toProperties(env, false), f);
     }
 
-    public static FileTask createRecordTask(ProvisionUnitEnvironment env, File f) throws ProvisionException {
-        return FileTask.write(f, toProperties(env));
+    public static ContentWriter createWriter(ProvisionUnitEnvironment env, File f) throws ProvisionException {
+        return ContentWriter.forProperties(toProperties(env), f);
     }
 
     protected static Properties toProperties(ProvisionEnvironment env, boolean includeUnits) throws ProvisionException {

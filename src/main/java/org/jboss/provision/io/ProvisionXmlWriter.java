@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2015, Red Hat, Inc., and individual contributors
+ * Copyright 2016, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -19,21 +19,33 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-
 package org.jboss.provision.io;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.IOException;
 
+import javax.xml.stream.XMLStreamException;
+
+import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
+import org.jboss.provision.xml.ProvisionXml;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-abstract class TwoFilesTask extends FileTask {
-    protected final File src;
-    protected final File trg;
-    TwoFilesTask(File src, File trg) {
-        this.src = src;
-        this.trg = trg;
+class ProvisionXmlWriter extends ContentWriter {
+    final ProvisionEnvironmentInstruction instr;
+    ProvisionXmlWriter(ProvisionEnvironmentInstruction instr, File target) {
+        super(target);
+        this.instr = instr;
+    }
+    @Override
+    public void write(BufferedWriter writer) throws IOException {
+        try {
+            ProvisionXml.marshal(writer, instr);
+        } catch (XMLStreamException e) {
+            throw new IOException(e);
+        }
     }
 }

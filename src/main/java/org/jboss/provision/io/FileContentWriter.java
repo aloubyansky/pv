@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2015, Red Hat, Inc., and individual contributors
+ * Copyright 2016, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -19,27 +19,48 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-
 package org.jboss.provision.io;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
+
+import org.jboss.provision.ProvisionErrors;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-class CopyFileTask extends TwoFilesTask {
-    CopyFileTask(File src, File trg) {
-        super(src, trg);
+class FileContentWriter extends ContentWriter {
+    private final File f;
+    FileContentWriter(File f, File target) {
+        super(target);
+        assert f != null : ProvisionErrors.nullArgument("file");
+        this.f = f;
     }
     @Override
-    protected void execute() throws IOException {
-        IoUtils.copyFile(src, trg);
+    public File getContentFile() {
+        return f;
     }
     @Override
-    protected
-    void rollback() throws IOException {
-        IoUtils.recursiveDelete(trg);
+    public void write(BufferedWriter writer) throws IOException {
+        BufferedReader reader = null;
+        try {
+            reader = new BufferedReader(new FileReader(f));
+            String line = reader.readLine();
+            if(line != null) {
+                writer.write(line);
+                line = reader.readLine();
+                while (line != null) {
+                    writer.newLine();
+                    writer.write(line);
+                    line = reader.readLine();
+                }
+            }
+        } finally {
+            IoUtils.safeClose(reader);
+        }
     }
 }

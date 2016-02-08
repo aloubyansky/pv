@@ -25,8 +25,7 @@ package org.jboss.provision;
 import java.io.File;
 import java.io.IOException;
 
-import org.jboss.provision.io.FileTask;
-import org.jboss.provision.io.FileTaskList;
+import org.jboss.provision.io.FSImage;
 import org.jboss.provision.io.FileUtils;
 import org.jboss.provision.io.IoUtils;
 
@@ -71,22 +70,6 @@ abstract class InstructionHistory {
         return new File(recordsDir, lastId);
     }
 
-    String getLastAppliedId(FileTaskList tasks) throws ProvisionException {
-        final File lastTxt = new File(recordsDir, LAST_INSTR_TXT);
-        final String written = tasks.getWrittenContent(lastTxt);
-        if(written != null) {
-            return written;
-        }
-        if(!lastTxt.exists()) {
-            return null;
-        }
-        try {
-            return FileUtils.readFile(lastTxt);
-        } catch (IOException e) {
-            throw ProvisionErrors.readError(IoUtils.newFile(recordsDir, LAST_INSTR_TXT), e);
-        }
-    }
-
     String getLastAppliedId() throws ProvisionException {
         final File lastTxt = new File(recordsDir, LAST_INSTR_TXT);
         if(!lastTxt.exists()) {
@@ -99,25 +82,6 @@ abstract class InstructionHistory {
         }
     }
 
-    String getPreviousRecordId(FileTaskList tasks, File recordDir) throws ProvisionException {
-        final File prevInstrTxt = new File(recordDir, PREV_INSTR_TXT);
-        String prevId = tasks.getWrittenContent(prevInstrTxt);
-        if(prevId == null) {
-            if(!prevInstrTxt.exists()) {
-                return null;
-            }
-            try {
-                prevId = FileUtils.readFile(prevInstrTxt);
-            } catch (IOException e) {
-                throw ProvisionErrors.readError(prevInstrTxt, e);
-            }
-        }
-        if(tasks.isDeleted(new File(recordsDir, prevId))) {
-            return null;
-        }
-        return prevId;
-    }
-
     String getPreviousRecordId(File recordDir) throws ProvisionException {
         final File prevInstrTxt = new File(recordDir, PREV_INSTR_TXT);
         if(!prevInstrTxt.exists()) {
@@ -128,25 +92,6 @@ abstract class InstructionHistory {
         } catch (IOException e) {
             throw ProvisionErrors.readError(prevInstrTxt, e);
         }
-    }
-
-    String getNextRecordId(FileTaskList tasks, File recordDir) throws ProvisionException {
-        final File nextInstrTxt = new File(recordDir, NEXT_INSTR_TXT);
-        String nextId = tasks.getWrittenContent(nextInstrTxt);
-        if (nextId == null) {
-            if (!nextInstrTxt.exists()) {
-                return null;
-            }
-            try {
-                nextId = FileUtils.readFile(nextInstrTxt);
-            } catch (IOException e) {
-                throw ProvisionErrors.readError(nextInstrTxt, e);
-            }
-        }
-        if(tasks.isDeleted(new File(recordsDir, nextId))) {
-            return null;
-        }
-        return nextId;
     }
 
     String getNextRecordId(File recordDir) throws ProvisionException {
@@ -173,7 +118,7 @@ abstract class InstructionHistory {
             return InstructionHistory.this.getNextRecordId(getRecordDir());
         }
 
-        File schedulePersistence(String recordId, FileTaskList tasks) throws ProvisionException {
+        File schedulePersistence(String recordId, FSImage tasks) throws ProvisionException {
 
             final File recordDir = new File(recordsDir, recordId);
             if (recordDir.exists()) {
@@ -189,40 +134,28 @@ abstract class InstructionHistory {
             final File lastAppliedRecordDir = getLastAppliedDir();
 
             if (lastAppliedRecordDir != null && lastAppliedRecordDir.exists()) {
-                tasks.add(FileTask.write(prevRecordTxt, lastAppliedRecordDir.getName()));
+                tasks.write(lastAppliedRecordDir.getName(), prevRecordTxt);
                 final File nextInstrTxt = getFileToPersist(lastAppliedRecordDir, NEXT_INSTR_TXT);
-                tasks.add(FileTask.write(nextInstrTxt, recordId));
+                tasks.write(recordId, nextInstrTxt);
             }
-            try {
-                if (lastRecordTxt.exists()) {
-                    tasks.override(lastRecordTxt, recordId);
-                } else {
-                    tasks.add(FileTask.write(lastRecordTxt, recordId));
-                }
-            } catch (IOException e) {
-                throw ProvisionErrors.failedToUpdateHistory(e);
-            }
+            tasks.write(recordId, lastRecordTxt);
             return recordDir;
         }
 
-        void scheduleDelete(String recordId, FileTaskList tasks) throws ProvisionException {
+        void scheduleDelete(String recordId, FSImage tasks) throws ProvisionException {
             final File recordDir = new File(recordsDir, recordId);
             if (!recordDir.exists()) {
                 return;
             }
 
-            final String prevRecordId = InstructionHistory.this.getPreviousRecordId(tasks, recordDir);
-            final String nextRecordId = InstructionHistory.this.getNextRecordId(tasks, recordDir);
+            final String prevRecordId = readFile(tasks, new File(recordDir, PREV_INSTR_TXT));
+            final String nextRecordId = readFile(tasks, new File(recordDir, NEXT_INSTR_TXT));
 
             if (prevRecordId != null) {
                 final File nextRecordTxt = IoUtils.newFile(recordsDir, prevRecordId, NEXT_INSTR_TXT);
                 if (nextRecordId != null) {
                     if (nextRecordTxt.exists()) {
-                        try {
-                            tasks.override(nextRecordTxt, nextRecordId);
-                        } catch (IOException e) {
-                            throw ProvisionErrors.failedToUpdateHistory(e);
-                        }
+                        tasks.write(nextRecordId, nextRecordTxt);
                     } else {
                         throw new IllegalStateException("next record must exist");
                     }
@@ -234,11 +167,7 @@ abstract class InstructionHistory {
                 final File prevRecordTxt = IoUtils.newFile(recordsDir, nextRecordId, PREV_INSTR_TXT);
                 if (prevRecordId != null) {
                     if (prevRecordTxt.exists()) {
-                        try {
-                            tasks.override(prevRecordTxt, prevRecordId);
-                        } catch (IOException e) {
-                            throw ProvisionErrors.failedToUpdateHistory(e);
-                        }
+                        tasks.write(prevRecordId, prevRecordTxt);
                     } else {
                         throw new IllegalStateException("previous record must exist");
                     }
@@ -247,25 +176,26 @@ abstract class InstructionHistory {
                 }
             }
 
-            final String lastRecordId = getLastAppliedId(tasks);
+            final File lastInstrTxt = new File(recordsDir, LAST_INSTR_TXT);
+            final String lastRecordId = readFile(tasks, lastInstrTxt);
             if (lastRecordId != null && lastRecordId.equals(recordId)) {
                 if (nextRecordId != null) {
-                    try {
-                        tasks.override(new File(recordsDir, LAST_INSTR_TXT), nextRecordId);
-                    } catch (IOException e) {
-                        throw ProvisionErrors.failedToUpdateHistory(e);
-                    }
+                    tasks.write(nextRecordId, lastInstrTxt);
                 } else if (prevRecordId != null) {
-                    try {
-                        tasks.override(new File(recordsDir, LAST_INSTR_TXT), prevRecordId);
-                    } catch (IOException e) {
-                        throw ProvisionErrors.failedToUpdateHistory(e);
-                    }
+                    tasks.write(prevRecordId, lastInstrTxt);
                 } else {
-                    tasks.delete(new File(recordsDir, LAST_INSTR_TXT));
+                    tasks.delete(lastInstrTxt);
                 }
             }
             tasks.delete(recordDir);
+        }
+
+        protected String readFile(FSImage tasks, File f) throws ProvisionException {
+            try {
+                return tasks.readContent(f);
+            } catch (IOException e) {
+                throw ProvisionErrors.readError(f, e);
+            }
         }
     }
 }

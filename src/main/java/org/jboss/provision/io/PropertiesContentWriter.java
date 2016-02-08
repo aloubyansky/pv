@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2015, Red Hat, Inc., and individual contributors
+ * Copyright 2016, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -19,33 +19,25 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-
 package org.jboss.provision.io;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+import java.util.Properties;
 
 /**
  *
  * @author Alexey Loubyansky
  */
-class DeleteFileTask extends FileTask {
-    private final File f;
-    DeleteFileTask(File f) {
-        this.f = f;
+class PropertiesContentWriter extends ContentWriter {
+    final Properties props;
+    PropertiesContentWriter(Properties props, File target) {
+        super(target);
+        this.props = props;
     }
     @Override
-    protected void execute() throws IOException {
-        IoUtils.recursiveDelete(f);
+    public void write(BufferedWriter writer) throws IOException {
+        props.store(writer, null);
     }
-    @Override
-    protected
-    void rollback() throws IOException {
-        throw new UnsupportedOperationException();
-    }
-    @Override
-    public String toString() {
-        return "DeleteFileTask [f=" + f.getAbsolutePath() + "]";
-    }
-
 }
