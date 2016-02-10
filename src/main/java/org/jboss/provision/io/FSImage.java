@@ -24,6 +24,7 @@ package org.jboss.provision.io;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -220,5 +221,11 @@ public class FSImage {
 
     public boolean isUntouched() {
         return updates.isEmpty();
+    }
+
+    public void logUpdates(PrintStream out) {
+        for(OpDescr op : updates.values()) {
+            out.println(op.contentTask);
+        }
     }
 }

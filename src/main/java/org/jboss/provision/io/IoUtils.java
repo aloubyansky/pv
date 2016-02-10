@@ -29,9 +29,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.UUID;
 import java.util.zip.ZipFile;
 
 import org.jboss.provision.ProvisionErrors;
+import org.jboss.provision.util.PropertyUtils;
 
 /**
  * @author Emanuel Muckenhuber
@@ -39,6 +41,8 @@ import org.jboss.provision.ProvisionErrors;
  * @author <a href="http://jmesnil/net/">Jeff Mesnil</a> (c) 2012 Red Hat Inc
  */
 public class IoUtils {
+
+    private static final File TMP_DIR = new File(PropertyUtils.getSystemProperty("java.io.tmpdir"));
 
     public static byte[] NO_CONTENT = new byte[0];
 
@@ -209,5 +213,21 @@ public class IoUtils {
             f = new File(f, segment);
         }
         return f;
+    }
+
+    public static File getIoTmpDir() {
+        return TMP_DIR;
+    }
+
+    public static File createTmpDir(String name) {
+        final File dir = new File(TMP_DIR, name);
+        if(!dir.mkdirs()) {
+            throw new IllegalStateException("Failed to create " + dir.getAbsolutePath());
+        }
+        return dir;
+    }
+
+    public static File createRandomTmpDir() {
+        return createTmpDir(UUID.randomUUID().toString());
     }
 }

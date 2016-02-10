@@ -119,7 +119,39 @@ class ProvisionEnvironmentHistory {
         return prevRecord.getUpdatedEnvironment();
     }
 
-    protected ProvisionEnvironment uninstall(ProvisionEnvironment currentEnv, String unitName) throws ProvisionException {
+    protected void rollbackPatches(ProvisionEnvironment currentEnv, String unitName) throws ProvisionException {
+
+        ProvisionUnitEnvironment unitEnv = currentEnv.getUnitEnvironment(unitName);
+        if(unitEnv == null) {
+            throw ProvisionErrors.unitIsNotInstalled(unitName);
+        }
+        int patchesTotal = unitEnv.getUnitInfo().getPatches().size();
+        if(patchesTotal == 0) {
+            return;
+        }
+
+        final FSImage tasks = new FSImage();
+        final EnvInstructionHistory envInstrHistory = EnvInstructionHistory.getInstance(historyHome);
+        final UnitInstructionHistory unitHistory = UnitInstructionHistory.getInstance(envInstrHistory, unitName);
+        UnitRecord unitRecord = unitHistory.loadLast();
+        while(patchesTotal > 0 && unitRecord != null) {
+            final EnvInstructionHistory.EnvRecord envRecord = envInstrHistory.loadRecord(unitRecord.getRecordDir().getName());
+            assertRollbackForUnit(unitName, envRecord);
+            envRecord.scheduleDelete(tasks);
+            unitRecord = unitRecord.getPrevious();
+            --patchesTotal;
+        }
+
+        if(!tasks.isUntouched()) {
+            try {
+                tasks.commit();
+            } catch (IOException e) {
+                throw ProvisionErrors.failedToUninstallUnit(unitEnv.getUnitInfo(), e);
+            }
+        }
+    }
+
+    protected void uninstall(ProvisionEnvironment currentEnv, String unitName) throws ProvisionException {
         final ProvisionUnitEnvironment unitEnv = currentEnv.getUnitEnvironment(unitName);
         if(unitEnv == null) {
             throw ProvisionErrors.unitIsNotInstalled(unitName);
@@ -130,10 +162,7 @@ class ProvisionEnvironmentHistory {
         final UnitInstructionHistory unitHistory = UnitInstructionHistory.getInstance(envInstrHistory, unitName);
         for(String recordId : unitHistory.getRecordIds()) {
             final EnvInstructionHistory.EnvRecord envRecord = envInstrHistory.loadRecord(recordId);
-            final Set<String> affectedUnits = envRecord.getAppliedInstruction().getUnitNames();
-            if(!Collections.singleton(unitName).equals(affectedUnits)) {
-                throw ProvisionErrors.instructionTargetsOtherThanRequestedUnits(unitName, affectedUnits);
-            }
+            assertRollbackForUnit(unitName, envRecord);
             envRecord.scheduleDelete(tasks);
         }
         for(ContentPath path : unitEnv.getContentPaths()) {
@@ -149,7 +178,14 @@ class ProvisionEnvironmentHistory {
             }
         }
         currentEnv.removeUnit(unitName);
-        return currentEnv;
+    }
+
+    protected void assertRollbackForUnit(String unitName, final EnvInstructionHistory.EnvRecord envRecord)
+            throws ProvisionException {
+        final Set<String> affectedUnits = envRecord.getAppliedInstruction().getUnitNames();
+        if(!Collections.singleton(unitName).equals(affectedUnits)) {
+            throw ProvisionErrors.instructionTargetsOtherThanRequestedUnits(unitName, affectedUnits);
+        }
     }
 
     ProvisionEnvironment getCurrentEnvironment() throws ProvisionException {

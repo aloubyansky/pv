@@ -36,14 +36,8 @@ import org.jboss.provision.util.PropertyUtils;
  */
 public class FSUtils {
 
-    private static final File TMP_DIR = new File(PropertyUtils.getSystemProperty("java.io.tmpdir"));
-
     public static File createTmpDir(String name) {
-        final File dir = new File(TMP_DIR, name);
-        if(!dir.mkdirs()) {
-            throw new IllegalStateException("Failed to create " + dir.getAbsolutePath());
-        }
-        return dir;
+        return IoUtils.createTmpDir(name);
     }
 
     public static File nextTmpDir(String prefix) {
@@ -63,7 +57,7 @@ public class FSUtils {
     }
 
     public static File newTmpFile(String name) {
-        return new File(TMP_DIR, name);
+        return new File(IoUtils.getIoTmpDir(), name);
     }
 
     public static boolean isEmptyDirBranch(File dir) {

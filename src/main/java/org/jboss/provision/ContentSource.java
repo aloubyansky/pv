@@ -34,6 +34,7 @@ import java.util.zip.ZipFile;
 
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.io.IoUtils;
+import org.jboss.provision.io.ZipUtils;
 
 /**
  *
@@ -41,11 +42,59 @@ import org.jboss.provision.io.IoUtils;
  */
 abstract class ContentSource implements Closeable {
 
+    static ContentSource expandedZip(final File f) throws ProvisionException {
+        assert f != null : ProvisionErrors.nullArgument("f");
+        if(!f.exists()) {
+            throw ProvisionErrors.pathDoesNotExist(f);
+        }
+
+        final File patchDir = IoUtils.createRandomTmpDir();
+        try {
+            ZipUtils.unzip(f, patchDir);
+        } catch (IOException e) {
+            throw ProvisionErrors.readError(f, e);
+        }
+
+        return new ContentSource() {
+            @Override
+            public void close() throws IOException {
+                IoUtils.recursiveDelete(patchDir);
+            }
+
+            @Override
+            boolean isAvailable(ProvisionUnitEnvironment unitEnv, ContentPath path) throws ProvisionException {
+                return new File(patchDir, path.getFSRelativePath()).exists();
+            }
+
+            @Override
+            InputStream getInputStream(ProvisionEnvironment env, ContentPath path, boolean errorIfNotResolved)
+                    throws ProvisionException {
+                return getInputStream(path, errorIfNotResolved);
+            }
+
+            @Override
+            InputStream getInputStream(ProvisionUnitEnvironment unitEnv, ContentPath path, boolean errorIfNotResolved)
+                    throws ProvisionException {
+                return getInputStream(path, errorIfNotResolved);
+            }
+
+            protected InputStream getInputStream(ContentPath path, boolean errorIfNotResolved) throws ProvisionException {
+                final File f = new File(patchDir, path.getFSRelativePath());
+                try {
+                    return new FileInputStream(f);
+                } catch (FileNotFoundException e) {
+                    throw ProvisionErrors.pathDoesNotExist(f);
+                }
+            }
+        };
+    }
+
     static ContentSource forZip(final File f) throws ProvisionException {
         assert f != null : ProvisionErrors.nullArgument("f");
         if(!f.exists()) {
             throw ProvisionErrors.pathDoesNotExist(f);
         }
+
         ZipFile tmpZip = null;
         try {
             tmpZip = new ZipFile(f);
@@ -53,6 +102,7 @@ abstract class ContentSource implements Closeable {
             IoUtils.safeClose(tmpZip);
             throw ProvisionErrors.readError(f, e);
         }
+
         final ZipFile zip = tmpZip;
         return new ContentSource() {
             @Override
