@@ -36,10 +36,9 @@ import java.util.Set;
 
 import org.jboss.provision.EnvInstructionHistory.EnvRecord;
 import org.jboss.provision.audit.AuditUtil;
-import org.jboss.provision.audit.ProvisionUnitJournal;
-import org.jboss.provision.audit.UnitJournalRecord;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionUnitInfo;
+import org.jboss.provision.io.ContentTask;
 import org.jboss.provision.io.ContentWriter;
 import org.jboss.provision.io.FSImage;
 import org.jboss.provision.io.FileUtils;
@@ -122,8 +121,8 @@ public class UnitInstructionHistory extends InstructionHistory {
         return new UnitRecord(recordDir);
     }
 
-    void schedulePersistence(String id, ProvisionUnitEnvironment updatedEnv, ProvisionUnitJournal unitJournal, FSImage tasks) throws ProvisionException {
-        createRecord(id).schedulePersistence(updatedEnv, unitJournal, tasks);
+    void schedulePersistence(String id, ApplicationContextImpl.Journal journal, ProvisionUnitEnvironment updatedEnv, FSImage tasks) throws ProvisionException {
+        createRecord(id).schedulePersistence(journal, updatedEnv, tasks);
     }
 
     void schedulePersistence(String id, FSImage tasks) throws ProvisionException {
@@ -238,37 +237,34 @@ public class UnitInstructionHistory extends InstructionHistory {
             tasks.write(lastRecordId, recordDir);
         }
 
-        void schedulePersistence(ProvisionUnitEnvironment updatedEnv, ProvisionUnitJournal unitJournal, FSImage tasks) throws ProvisionException {
-            super.schedulePersistence(recordDir.getName(), tasks);
-            final File unitBackupDir = getFileToPersist(recordDir, BACKUP);
-            if(!unitJournal.getContentBackupDir().exists()) {
-                tasks.mkdirs(unitBackupDir);
-            } else {
-                if (unitBackupDir.exists()) {
-                    throw ProvisionErrors.pathAlreadyExists(unitBackupDir);
+        ContentTask.BackupPathFactory createBackupPathFactory(final ContentPath path) {
+            return new ContentTask.BackupPathFactory() {
+                @Override
+                public File getBackupFile(File original) {
+                    return IoUtils.newFile(recordDir, BACKUP, path.getFSRelativePath());
                 }
-                tasks.copy(unitJournal.getContentBackupDir(), unitBackupDir);
-            }
+            };
+        }
+        void schedulePersistence(ApplicationContextImpl.Journal journal, ProvisionUnitEnvironment updatedEnv, FSImage tasks) throws ProvisionException {
+            super.schedulePersistence(recordDir.getName(), tasks);
 
-            tasks.write(AuditUtil.createWriter(updatedEnv, getFileToPersist(recordDir, ENV_PROPS)));
+            if(updatedEnv != null) {
+                tasks.write(AuditUtil.createWriter(updatedEnv, getFileToPersist(recordDir, ENV_PROPS)));
+            }
 
             final Set<ContentPath> unitPaths = loadUnitCurrentPaths(getLastAppliedDir());
+
             if(unitPaths.isEmpty()) {
-                for(UnitJournalRecord record : unitJournal.getAdds()) {
-                    unitPaths.add(record.getInstruction().getPath());
-                }
+                unitPaths.addAll(journal.added);
             } else {
-                if(!unitJournal.getDeletes().isEmpty()) {
-                    for(UnitJournalRecord record : unitJournal.getDeletes()) {
-                        unitPaths.remove(record.getInstruction().getPath());
-                    }
+                if(!journal.deleted.isEmpty()) {
+                    unitPaths.removeAll(journal.deleted);
                 }
-                if(!unitJournal.getAdds().isEmpty()) {
-                    for(UnitJournalRecord record : unitJournal.getAdds()) {
-                        unitPaths.add(record.getInstruction().getPath());
-                    }
+                if(!journal.added.isEmpty()) {
+                    unitPaths.addAll(journal.added);
                 }
             }
+
             final File pathsFile = getFileToPersist(recordDir, UNIT_PATHS);
             tasks.write(new ContentWriter(pathsFile) {
                 @Override

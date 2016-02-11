@@ -36,15 +36,18 @@ public abstract class ContentWriter extends ContentTask {
     protected ContentWriter(File target) {
         super(target);
     }
+    protected ContentWriter(File target, BackupPathFactory backupPathFactory, boolean cleanup) {
+        super(target, backupPathFactory, cleanup);
+    }
 
     @Override
     public void execute() throws IOException {
-        if(!target.getParentFile().exists() && !target.getParentFile().mkdirs()) {
-            throw new IOException(ProvisionErrors.couldNotCreateDir(target.getParentFile()));
+        if(!original.getParentFile().exists() && !original.getParentFile().mkdirs()) {
+            throw new IOException(ProvisionErrors.couldNotCreateDir(original.getParentFile()));
         }
         BufferedWriter writer = null;
         try {
-            writer = new BufferedWriter(new FileWriter(target));
+            writer = new BufferedWriter(new FileWriter(original));
             write(writer);
         } finally {
             IoUtils.safeClose(writer);

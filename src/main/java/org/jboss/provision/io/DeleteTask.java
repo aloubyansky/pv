@@ -23,14 +23,46 @@ package org.jboss.provision.io;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.UUID;
 
 /**
  *
  * @author Alexey Loubyansky
  */
 class DeleteTask extends ContentTask {
+
+    static ContentTask DELETE_FLAG = deleteFlag(new File(UUID.randomUUID().toString()));
+
+    static ContentTask deleteFlag(final File target) {
+        return new ContentTask(target) {
+            @Override
+            public void execute() throws IOException {
+            }
+            @Override
+            public boolean isDelete() {
+                return true;
+            }
+            @Override
+            public void backup() throws IOException {
+            }
+            @Override
+            public void revert() throws IOException {
+            }
+            @Override
+            public void cleanup() throws IOException {
+            }
+            @Override
+            public String toString() {
+                return "DeleteFlag for " + target.getAbsolutePath();
+            }
+        };
+    };
+
     protected DeleteTask(File target) {
         super(target);
+    }
+    protected DeleteTask(File target, BackupPathFactory backupPathStrategy, boolean cleanup) {
+        super(target, backupPathStrategy, cleanup);
     }
     @Override
     public boolean isDelete() {
@@ -38,10 +70,10 @@ class DeleteTask extends ContentTask {
     }
     @Override
     public void execute() throws IOException {
-        IoUtils.recursiveDelete(target);
+        IoUtils.recursiveDelete(original);
     }
     @Override
     public String toString() {
-        return "DeleteTask for " + target.getAbsolutePath();
+        return "DeleteTask for " + original.getAbsolutePath();
     }
 }

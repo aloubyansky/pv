@@ -40,6 +40,11 @@ class FileContentWriter extends ContentWriter {
         assert f != null : ProvisionErrors.nullArgument("file");
         this.f = f;
     }
+    FileContentWriter(File f, File target, BackupPathFactory backupPathFactory, boolean cleanup) {
+        super(target, backupPathFactory, cleanup);
+        assert f != null : ProvisionErrors.nullArgument("file");
+        this.f = f;
+    }
     @Override
     public File getContentFile() {
         return f;
@@ -62,5 +67,9 @@ class FileContentWriter extends ContentWriter {
         } finally {
             IoUtils.safeClose(reader);
         }
+    }
+    @Override
+    public String toString() {
+        return "FileContentWriter " + f.getAbsolutePath() + " -> " + original.getAbsolutePath();
     }
 }

@@ -86,6 +86,7 @@ public class UnitVersionMismatchTestCase extends ApplicationTestBase {
 
         AssertUtil.assertNotIdentical(originalInstall.getHome(), testInstall.getHome(), true);
         IoUtils.copyFile(testInstall.getHome(), tmpDir);
+
         try {
             env.apply(archive);
             fail("Cannot apply an update that targets version 1.1 to version 1.0");

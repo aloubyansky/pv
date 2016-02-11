@@ -44,7 +44,7 @@ class CopyContentWriter extends ContentWriter {
     }
     @Override
     public void execute() throws IOException {
-        IoUtils.copyFile(f, target);
+        IoUtils.copyFile(f, original);
     }
     @Override
     public void write(BufferedWriter writer) throws IOException {

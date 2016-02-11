@@ -26,14 +26,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 import javax.xml.stream.XMLStreamException;
 
 import org.jboss.provision.audit.AuditUtil;
-import org.jboss.provision.audit.ProvisionEnvironmentJournal;
-import org.jboss.provision.audit.ProvisionUnitJournal;
 import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
 import org.jboss.provision.instruction.ProvisionUnitInstruction;
@@ -133,6 +132,7 @@ class EnvInstructionHistory extends InstructionHistory {
 
     class EnvRecord extends Record {
 
+        private final String recordId;
         protected File envFile;
         protected File instrXml;
         protected ProvisionEnvironment updatedEnv;
@@ -143,6 +143,7 @@ class EnvInstructionHistory extends InstructionHistory {
             assert instrFile != null : ProvisionErrors.nullArgument("instrFile");
             this.envFile = envFile;
             this.instrXml = instrFile;
+            this.recordId = envFile.getParentFile().getName();
         }
 
         protected EnvRecord(ProvisionEnvironment updatedEnv, ProvisionEnvironmentInstruction appliedInstruction) {
@@ -150,6 +151,12 @@ class EnvInstructionHistory extends InstructionHistory {
             assert appliedInstruction != null : ProvisionErrors.nullArgument("appliedInstruction");
             this.updatedEnv = updatedEnv;
             this.appliedInstruction = appliedInstruction;
+
+            recordId = UUID.randomUUID().toString();
+        }
+
+        String getRecordId() {
+            return recordId;
         }
 
         EnvInstructionHistory getEnvironmentHistory() {
@@ -160,7 +167,7 @@ class EnvInstructionHistory extends InstructionHistory {
             if (updatedEnv == null) {
                 final ProvisionEnvironmentBuilder envBuilder = ProvisionEnvironment.builder();
                 AuditUtil.loadEnv(envBuilder, envFile);
-                UnitInstructionHistory.loadUnitEnvs(EnvInstructionHistory.this, envBuilder, getRecordDir().getName());
+                UnitInstructionHistory.loadUnitEnvs(EnvInstructionHistory.this, envBuilder, recordId);
                 updatedEnv = envBuilder.build();
             }
             return updatedEnv;
@@ -195,18 +202,17 @@ class EnvInstructionHistory extends InstructionHistory {
             return instrXml.getParentFile();
         }
 
-        void schedulePersistence(ProvisionEnvironmentJournal envJournal, FSImage tasks)
+        void schedulePersistence(FSImage tasks, ProvisionEnvironmentInstruction instruction, Map<String, ApplicationContextImpl.Journal> journal)
                 throws ProvisionException {
-            final String recordId = UUID.randomUUID().toString();
             final File recordDir = super.schedulePersistence(recordId, tasks);
             envFile = getFileToPersist(recordDir, ENV_FILE);
             tasks.write(AuditUtil.createWriter(updatedEnv, envFile));
             instrXml = getFileToPersist(recordDir, ProvisionXml.PROVISION_XML);
             tasks.write(appliedInstruction, instrXml);
             Set<String> notAffectedUnits = new HashSet<String>(updatedEnv.getUnitNames());
-            for(ProvisionUnitJournal unitJournal : envJournal.getUnitJournals()) {
-                final String unitName = unitJournal.getUnitEnvironment().getUnitInfo().getName();
-                UnitInstructionHistory.getInstance(EnvInstructionHistory.this, unitName).schedulePersistence(recordId, updatedEnv.getUnitEnvironment(unitName), unitJournal, tasks);
+            for(String unitName : instruction.getUnitNames()) {
+                UnitInstructionHistory.getInstance(EnvInstructionHistory.this, unitName)
+                    .schedulePersistence(recordId, journal.get(unitName), updatedEnv.getUnitEnvironment(unitName), tasks);
                 notAffectedUnits.remove(unitName);
             }
             if(!notAffectedUnits.isEmpty()) {
@@ -217,7 +223,6 @@ class EnvInstructionHistory extends InstructionHistory {
         }
 
         void scheduleDelete(FSImage tasks) throws ProvisionException {
-            final String recordId = getRecordDir().getName();
             UnitInstructionHistory.scheduleDelete(EnvInstructionHistory.this, tasks, recordId);
             super.scheduleDelete(recordId, tasks);
         }

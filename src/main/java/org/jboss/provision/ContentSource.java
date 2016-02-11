@@ -78,6 +78,11 @@ abstract class ContentSource implements Closeable {
                 return getInputStream(path, errorIfNotResolved);
             }
 
+            @Override
+            File getFile(ProvisionUnitEnvironment unitEnv, ContentPath path) throws ProvisionException {
+                return new File(patchDir, path.getFSRelativePath());
+            }
+
             protected InputStream getInputStream(ContentPath path, boolean errorIfNotResolved) throws ProvisionException {
                 final File f = new File(patchDir, path.getFSRelativePath());
                 try {
@@ -137,6 +142,10 @@ abstract class ContentSource implements Closeable {
                 }
                 return null;
             }
+            @Override
+            File getFile(ProvisionUnitEnvironment unitEnv, ContentPath path) throws ProvisionException {
+                throw new UnsupportedOperationException();
+            }
         };
     }
 
@@ -169,7 +178,7 @@ abstract class ContentSource implements Closeable {
             }
 
             protected File getBaseDir(ProvisionUnitEnvironment unitEnv) throws ProvisionException {
-                return UnitInstructionHistory.getBackupDir(envRecord.getEnvironmentHistory(), unitEnv.getUnitInfo().getName(), envRecord.getRecordDir().getName());
+                return UnitInstructionHistory.getBackupDir(envRecord.getEnvironmentHistory(), unitEnv.getUnitInfo().getName(), envRecord.getRecordId());
             }
 
             protected InputStream getInputStream(final File baseDir, ContentPath path, boolean errorIfNotResolved) throws ProvisionException {
@@ -183,10 +192,17 @@ abstract class ContentSource implements Closeable {
                 }
                 return null;
             }
+
+            @Override
+            File getFile(ProvisionUnitEnvironment unitEnv, ContentPath path) throws ProvisionException {
+                return new File(getBaseDir(unitEnv), path.getFSRelativePath());
+            }
         };
     }
 
     abstract boolean isAvailable(ProvisionUnitEnvironment unitEnv, ContentPath path) throws ProvisionException;
+
+    abstract File getFile(ProvisionUnitEnvironment unitEnv, ContentPath path) throws ProvisionException;
 
     InputStream getInputStream(ProvisionEnvironment env, ContentPath path) throws ProvisionException {
         return getInputStream(env, path, true);

@@ -25,11 +25,12 @@ package org.jboss.provision.io;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
 
 import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
+import org.jboss.provision.io.ContentTask.BackupPathFactory;
 
 /**
  *
@@ -58,42 +59,56 @@ public class FSImage {
         }
     }
 
-    private Map<String, OpDescr> updates = new HashMap<String, OpDescr>();
+    public FSImage() {}
+
+    private Map<String, OpDescr> updates = new LinkedHashMap<String, OpDescr>();
 
     public void write(ContentWriter contentWriter) {
-        final OpDescr descr = updates.get(contentWriter.target.getAbsolutePath());
+        final OpDescr descr = updates.get(contentWriter.original.getAbsolutePath());
         if(descr != null) {
+            if(descr.contentTask.isDelete()) {
+                return;
+            }
             descr.setTask(contentWriter);
             return;
         }
-        updates.put(contentWriter.target.getAbsolutePath(), OpDescr.newTask(contentWriter));
+        updates.put(contentWriter.original.getAbsolutePath(), OpDescr.newTask(contentWriter));
     }
 
     public void delete(File target) {
-        if(target.isDirectory()) {
-            for(File f : target.listFiles()) {
-                delete(f);
-            }
-        }
-        scheduleDelete(target);
+        scheduleDelete(target, new DeleteTask(target));
     }
 
-    protected void scheduleDelete(File target) {
+    public void delete(File target, BackupPathFactory backupPathFactory, boolean cleanup) {
+        scheduleDelete(target, new DeleteTask(target, backupPathFactory, cleanup));
+    }
+
+    protected void scheduleDelete(File target, ContentTask task) {
+        if(target.isDirectory()) {
+            for(File f : target.listFiles()) {
+                scheduleDelete(f, DeleteTask.DELETE_FLAG);
+            }
+        }
         final OpDescr descr = updates.get(target.getAbsolutePath());
         if (descr != null) {
             if (!descr.contentTask.isDelete()) {
-                descr.setTask(new DeleteTask(target));
+                descr.setTask(task);
             }
             return;
         }
-        updates.put(target.getAbsolutePath(), OpDescr.newTask(new DeleteTask(target)));
+        updates.put(target.getAbsolutePath(), OpDescr.newTask(task));
     }
+
     public void write(String content, File target) {
-        write(ContentTask.forString(content, target));
+        write(new StringContentWriter(content, target));
     }
 
     public void write(File content, File target) {
-        write(ContentTask.forFile(content, target));
+        write(new FileContentWriter(content, target));
+    }
+
+    public void write(File content, File target, BackupPathFactory backupPathFactory, boolean cleanup) {
+        write(new FileContentWriter(content, target, backupPathFactory, cleanup));
     }
 
     public void write(Properties content, File target) {
@@ -101,7 +116,7 @@ public class FSImage {
     }
 
     public void write(ProvisionEnvironmentInstruction content, File target) {
-        write(ContentTask.forProvisionXml(content, target));
+        write(new ProvisionXmlWriter(content, target));
     }
 
     public void mkdirs(File target) {

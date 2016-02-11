@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.util.Properties;
 
 import org.jboss.provision.ProvisionErrors;
-import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
 
 /**
  *
@@ -34,31 +33,37 @@ import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
  */
 public abstract class ContentTask {
 
-    public static DeleteTask delete(File target) {
-        return new DeleteTask(target);
+    public interface BackupPathFactory {
+        File getBackupFile(File original);
     }
-    public static StringContentWriter forString(String content, File target) {
-        return new StringContentWriter(content, target);
-    }
-    public static FileContentWriter forFile(File f, File target) {
-        return new FileContentWriter(f, target);
-    }
+
+    public static final BackupPathFactory DEFAULT_BACKUP_FACTORY = new BackupPathFactory() {
+        @Override
+        public File getBackupFile(File original) {
+            return new File(original.getParentFile(), original.getName() + FSImage.BACKUP_SUFFIX);
+        }
+    };
+
     public static PropertiesContentWriter forProperties(Properties props, File target) {
         return new PropertiesContentWriter(props, target);
     }
-    public static ProvisionXmlWriter forProvisionXml(ProvisionEnvironmentInstruction instr, File target) {
-        return new ProvisionXmlWriter(instr, target);
+    protected final File original;
+    private File backup;
+    private final BackupPathFactory backupPathFactory;
+    private final boolean cleanup;
+
+    ContentTask(File target) {
+        this(target, DEFAULT_BACKUP_FACTORY, true);
     }
 
-    protected final File target;
-    private File backupFile;
-
-    protected ContentTask(File target) {
-        this.target = target;
+    protected ContentTask(File target, BackupPathFactory backupPathFactory, boolean cleanup) {
+        this.original = target;
+        this.backupPathFactory = backupPathFactory;
+        this.cleanup = cleanup;
     }
 
     public File getTarget() {
-        return target;
+        return original;
     }
 
     public boolean isDelete() {
@@ -73,39 +78,45 @@ public abstract class ContentTask {
         throw new UnsupportedOperationException();
     }
 
-    void backup() throws IOException {
-        if(!target.exists()) {
+    public void backup() throws IOException {
+        if (!original.exists()) {
             return;
         }
-        backupFile = new File(target.getParentFile(), target.getName() + FSImage.BACKUP_SUFFIX);
-        if(backupFile.exists()) {
-            backupFile = null;
-            throw new IOException(ProvisionErrors.pathAlreadyExists(backupFile).getLocalizedMessage());
+        backup = backupPathFactory.getBackupFile(original);
+        if (backup.exists()) {
+            backup = null;
+            throw new IOException(ProvisionErrors.pathAlreadyExists(backup).getLocalizedMessage());
         }
-        IoUtils.copyFile(target, backupFile);
+        IoUtils.copyFile(original, backup);
     }
-    void revert() throws IOException {
-        if(backupFile == null) {
+
+    public void revert() throws IOException {
+        if (backup == null) {
             return;
         }
-        if(backupFile.isDirectory()) {
-            IoUtils.recursiveDelete(target);
+        if (backup.isDirectory()) {
+            IoUtils.recursiveDelete(original);
         }
-        IoUtils.copyFile(backupFile, target);
-        IoUtils.recursiveDelete(backupFile);
-        backupFile = null;
+        IoUtils.copyFile(backup, original);
+        IoUtils.recursiveDelete(backup);
+        backup = null;
     }
-    void cleanup() throws IOException {
-        if(backupFile == null) {
+
+    public void cleanup() throws IOException {
+        if(!cleanup) {
             return;
         }
-        IoUtils.recursiveDelete(backupFile);
-        backupFile = null;
+        if (backup == null) {
+            return;
+        }
+        IoUtils.recursiveDelete(backup);
+        backup = null;
     }
+
     public abstract void execute() throws IOException;
 
     @Override
     public String toString() {
-        return "ContentTask for " + target.getAbsolutePath();
+        return "ContentTask for " + original.getAbsolutePath();
     }
 }

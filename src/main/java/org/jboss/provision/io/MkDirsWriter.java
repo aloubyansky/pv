@@ -36,25 +36,26 @@ class MkDirsWriter extends ContentWriter {
         super(target);
     }
     @Override
-    void backup() throws IOException {
-    }
-    @Override
-    void revert() throws IOException {
-    }
-    @Override
-    void cleanup() throws IOException {
-    }
-    @Override
     public void execute() throws IOException {
-        if(target.exists()) {
+        if(original.exists()) {
             return;
         }
-        if(!target.mkdirs()) {
-            throw new IOException(ProvisionErrors.couldNotCreateDir(target));
+        if(!original.mkdirs()) {
+            throw new IOException(ProvisionErrors.couldNotCreateDir(original));
         }
     }
     @Override
     public void write(BufferedWriter writer) throws IOException {
         throw new UnsupportedOperationException();
+    }
+    @Override
+    public void backup() throws IOException {
+    }
+    @Override
+    public void revert() throws IOException {
+        IoUtils.recursiveDelete(original);
+    }
+    @Override
+    public void cleanup() throws IOException {
     }
 }

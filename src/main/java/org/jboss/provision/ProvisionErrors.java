@@ -245,4 +245,8 @@ public class ProvisionErrors {
     public static ProvisionException historyRecordMissingForInstruction(String unitName, String id) {
         return new ProvisionException(unitName + " history is missing a record for environment instruction " + id);
     }
+
+    public static ProvisionException failedToApplyInstruction(IOException e) {
+        return new ProvisionException("Failed to apply instruction", e);
+    }
 }

@@ -30,13 +30,10 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 import org.jboss.provision.UnitInstructionHistory.UnitRecord;
-import org.jboss.provision.audit.ProvisionEnvironmentJournal;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionEnvironmentInfo;
 import org.jboss.provision.info.ProvisionUnitInfo;
-import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
 import org.jboss.provision.io.FSImage;
-import org.jboss.provision.io.IoUtils;
 
 /**
  *
@@ -79,24 +76,11 @@ class ProvisionEnvironmentHistory {
         return historyHome;
     }
 
-    protected ProvisionEnvironment record(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction, ProvisionEnvironmentJournal envJournal) throws ProvisionException {
-        final EnvInstructionHistory.EnvRecord historyRecord = EnvInstructionHistory.getInstance(historyHome).createRecord(currentEnv, instruction);
-        final ProvisionEnvironment updatedEnv = historyRecord.getUpdatedEnvironment();
-        if(updatedEnv.getUnitNames().isEmpty()) { // delete the history when the environment is uninstalled
-            IoUtils.recursiveDelete(historyHome);
-        } else {
-            final FSImage tasks = new FSImage();
-            historyRecord.schedulePersistence(envJournal, tasks);
-            try {
-                tasks.commit();
-            } catch (IOException e) {
-                throw ProvisionErrors.failedToUpdateHistory(e);
-            }
-        }
-        return updatedEnv;
+    EnvInstructionHistory getEnvInstructionHistory() {
+        return EnvInstructionHistory.getInstance(historyHome);
     }
 
-    protected ProvisionEnvironment rollbackLast(ProvisionEnvironment currentEnv) throws ProvisionException {
+/*    protected ProvisionEnvironment rollbackLast(ProvisionEnvironment currentEnv) throws ProvisionException {
         final FSImage tasks = new FSImage();
         final EnvInstructionHistory.EnvRecord lastRecord = EnvInstructionHistory.getInstance(historyHome).loadLastApplied();
         lastRecord.scheduleDelete(tasks);
@@ -118,7 +102,7 @@ class ProvisionEnvironmentHistory {
         }
         return prevRecord.getUpdatedEnvironment();
     }
-
+*/
     protected void rollbackPatches(ProvisionEnvironment currentEnv, String unitName) throws ProvisionException {
 
         ProvisionUnitEnvironment unitEnv = currentEnv.getUnitEnvironment(unitName);
