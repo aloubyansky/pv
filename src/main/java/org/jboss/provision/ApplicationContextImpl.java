@@ -62,6 +62,8 @@ class ApplicationContextImpl implements ApplicationContext {
 
         EnvRecord getEnvRecord() throws ProvisionException;
 
+        void schedule(ProvisionEnvironmentInstruction instruction) throws ProvisionException;
+
         ProvisionEnvironment commit() throws ProvisionException;
 
         void scheduleWrite(File target, ContentPath path, UnitRecord unitRecord) throws ProvisionException;
@@ -101,20 +103,15 @@ class ApplicationContextImpl implements ApplicationContext {
 
     private final FSImage fsImage = new FSImage();
     private Map<String, Journal> journal = Collections.emptyMap();
-    private final ContentSource contentSrc;
     private final CommitCallback callback;
-    private final ProvisionEnvironmentInstruction instruction;
 
-    ApplicationContextImpl(ProvisionEnvironment env, ContentSource contentSource, File pkgFile) throws ProvisionException {
-        this(env, contentSource, readInstruction(env, contentSource, pkgFile), true);
+    ApplicationContextImpl(ProvisionEnvironment env) throws ProvisionException {
+        this(env, true);
     }
 
-    ApplicationContextImpl(final ProvisionEnvironment env, ContentSource contentSource, final ProvisionEnvironmentInstruction instruction, boolean apply) {
+    ApplicationContextImpl(final ProvisionEnvironment env, boolean apply) {
         assert env != null : ProvisionErrors.nullArgument("env");
-        assert contentSource != null : ProvisionErrors.nullArgument("contentSource");
         this.env = env;
-        this.contentSrc = contentSource;
-        this.instruction = instruction;
         if(apply) {
             callback = new CommitCallback() {
                 private EnvRecord envRecord;
@@ -124,20 +121,24 @@ class ApplicationContextImpl implements ApplicationContext {
                         return envRecord;
                     }
                     final EnvInstructionHistory envHistory = env.getHistory().getEnvInstructionHistory();
-                    envRecord = envHistory.createRecord(env, instruction);
+                    envRecord = envHistory.createRecord(env);
                     return envRecord;
                 }
 
                 @Override
-                public ProvisionEnvironment commit() throws ProvisionException {
-                    final ProvisionEnvironment updatedEnv = envRecord.getUpdatedEnvironment();
+                public void schedule(ProvisionEnvironmentInstruction instruction) throws ProvisionException {
                     envRecord.schedulePersistence(fsImage, instruction, journal);
+                }
+
+                @Override
+                public ProvisionEnvironment commit() throws ProvisionException {
                     try {
                         fsImage.commit();
                     } catch (IOException e) {
                         throw ProvisionErrors.failedToUpdateHistory(e);
                     }
-                    // TODO this below may be a not a good idea, only the actual uninstall probably should erase history,
+                    final ProvisionEnvironment updatedEnv = envRecord.getUpdatedEnvironment();
+                    // TODO this below may be not a good idea, only the actual uninstall probably should erase history,
                     // not a usual delete instruction
                     if(updatedEnv.getUnitNames().isEmpty()) { // delete the history when the environment is uninstalled
                         IoUtils.recursiveDelete(env.getHistory().getHistoryHome());
@@ -168,9 +169,13 @@ class ApplicationContextImpl implements ApplicationContext {
                 }
 
                 @Override
+                public void schedule(ProvisionEnvironmentInstruction instruction) throws ProvisionException {
+                    envRecord.scheduleDelete(fsImage);
+                }
+
+                @Override
                 public ProvisionEnvironment commit() throws ProvisionException {
 
-                    envRecord.scheduleDelete(fsImage);
                     final EnvInstructionHistory.EnvRecord prevRecord = envRecord.getPrevious();
                     if(fsImage.isUntouched()) {
                         return env;
@@ -184,10 +189,11 @@ class ApplicationContextImpl implements ApplicationContext {
                         IoUtils.recursiveDelete(env.getHistory().getHistoryHome());
                         return ProvisionEnvironment.builder().setEnvironmentHome(env.getEnvironmentHome()).build();
                     }
-                    if(prevRecord.getUpdatedEnvironment().getUnitNames().isEmpty()) { // delete the history when the environment is uninstalled
+                    final ProvisionEnvironment updatedEnv = prevRecord.getUpdatedEnvironment();
+                    if(updatedEnv.getUnitNames().isEmpty()) { // delete the history when the environment is uninstalled
                         IoUtils.recursiveDelete(env.getHistory().getHistoryHome());
                     }
-                    return prevRecord.getUpdatedEnvironment();
+                    return updatedEnv;
 
                 }
 
@@ -204,19 +210,23 @@ class ApplicationContextImpl implements ApplicationContext {
         }
     }
 
-    protected ProvisionEnvironment apply() throws ProvisionException {
-        try {
-            final EnvRecord envRecord = callback.getEnvRecord();
-            scheduleTasks(instruction, envRecord);
-            unitEnv = null;
-            env = callback.commit();
-        } finally {
-            IoUtils.safeClose(contentSrc);
-        }
-        return env;
+    void schedule(File pkgFile, ContentSource contentSrc) throws ProvisionException {
+        schedule(readInstruction(env, contentSrc, pkgFile), contentSrc);
     }
 
-    private void scheduleTasks(ProvisionEnvironmentInstruction instructions, EnvRecord envRecord) throws ProvisionException {
+    void schedule(ProvisionEnvironmentInstruction instruction, ContentSource contentSrc) throws ProvisionException {
+        final EnvRecord envRecord = callback.getEnvRecord();
+        envRecord.updateEnvironment(instruction);
+        scheduleTasks(instruction, envRecord, contentSrc);
+        unitEnv = null;
+        callback.schedule(instruction);
+    }
+
+    ProvisionEnvironment commit() throws ProvisionException {
+        return callback.commit();
+    }
+
+    private void scheduleTasks(ProvisionEnvironmentInstruction instructions, EnvRecord envRecord, ContentSource contentSrc) throws ProvisionException {
 
         for (String unitName : instructions.getUnitNames()) {
             final ProvisionUnitInstruction unitInstr = instructions.getUnitInstruction(unitName);
@@ -230,11 +240,11 @@ class ApplicationContextImpl implements ApplicationContext {
                         .setUnitInfo(ProvisionUnitInfo.createInfo(unitInstr.getUnitName(), unitInstr.getRequiredVersion()))
                         .build();
             }
-            scheduleTasks(unitInstr, envRecord);
+            scheduleTasks(unitInstr, envRecord, contentSrc);
         }
     }
 
-    private void scheduleTasks(ProvisionUnitInstruction instructions, EnvRecord envRecord) throws ProvisionException {
+    private void scheduleTasks(ProvisionUnitInstruction instructions, EnvRecord envRecord, ContentSource contentSrc) throws ProvisionException {
 
         final UnitUpdatePolicy updatePolicy = unitEnv.resolveUpdatePolicy();
         if (updatePolicy.getUnitPolicy() == UpdatePolicy.IGNORED) {

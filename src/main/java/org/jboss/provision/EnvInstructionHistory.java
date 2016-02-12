@@ -55,55 +55,8 @@ class EnvInstructionHistory extends InstructionHistory {
         super(historyDir);
     }
 
-    EnvRecord createRecord(ProvisionEnvironment currentEnv, ProvisionEnvironmentInstruction instruction) throws ProvisionException {
-        final ProvisionEnvironmentBuilder envBuilder = ProvisionEnvironment.builder();
-
-        //env home
-        envBuilder.setEnvironmentHome(currentEnv.getEnvironmentHome());
-
-        // named locations
-        for(String locationName : currentEnv.getLocationNames(false)) {
-            envBuilder.nameLocation(locationName, currentEnv.getNamedLocation(locationName));
-        }
-
-        // default update policy
-        envBuilder.setDefaultUnitUpdatePolicy(currentEnv.getUpdatePolicy());
-
-        // units
-        final Set<String> updatedUnits = new HashSet<String>(instruction.getUnitNames());
-        for(String unitName : currentEnv.getUnitNames()) {
-            if(updatedUnits.remove(unitName)) {
-                final ProvisionUnitInstruction unitInstr = instruction.getUnitInstruction(unitName);
-                // WARN this assumes the unit instruction conditions have been satisfied!!!
-                final String newVersion = unitInstr.getResultingVersion();
-                if(newVersion == null) {
-                    // unit removed
-                } else {
-                    final ProvisionUnitEnvironment unitEnv = currentEnv.getUnitEnvironment(unitName);
-                    if(newVersion.equals(unitEnv.getUnitInfo().getVersion())) {
-                        if (unitInstr.getId() != null) {
-                            envBuilder.addPatchedUnit(unitEnv, unitInstr.getId());
-                        } else {
-                            envBuilder.copyUnit(unitEnv);
-                        }
-                    } else {
-                        envBuilder.addUpdatedUnit(unitEnv, newVersion);
-                    }
-                }
-            } else {
-                envBuilder.copyUnit(currentEnv.getUnitEnvironment(unitName));
-            }
-        }
-        if(!updatedUnits.isEmpty()) {
-            for(String newUnit : updatedUnits) {
-                final ProvisionUnitInstruction unitInstr = instruction.getUnitInstruction(newUnit);
-                if(unitInstr.getRequiredVersion() != null) {
-                    throw ProvisionErrors.unitIsNotInstalled(newUnit);
-                }
-                envBuilder.addUnit(ProvisionUnitInfo.createInfo(unitInstr.getUnitName(), unitInstr.getResultingVersion()));
-            }
-        }
-        return new EnvRecord(envBuilder.build(), instruction);
+    EnvRecord createRecord(ProvisionEnvironment currentEnv) throws ProvisionException {
+        return new EnvRecord(currentEnv);
     }
 
     EnvRecord loadRecord(final String recordId) throws ProvisionException {
@@ -145,13 +98,63 @@ class EnvInstructionHistory extends InstructionHistory {
             this.recordId = envFile.getParentFile().getName();
         }
 
-        protected EnvRecord(ProvisionEnvironment updatedEnv, ProvisionEnvironmentInstruction appliedInstruction) {
-            assert updatedEnv != null : ProvisionErrors.nullArgument("updatedEnv");
-            assert appliedInstruction != null : ProvisionErrors.nullArgument("appliedInstruction");
-            this.updatedEnv = updatedEnv;
-            this.appliedInstruction = appliedInstruction;
-
+        protected EnvRecord(ProvisionEnvironment env) {
             recordId = UUID.randomUUID().toString();
+            this.updatedEnv = env;
+        }
+
+        protected void updateEnvironment(ProvisionEnvironmentInstruction instruction) throws ProvisionException {
+            final ProvisionEnvironment updatedEnv = getUpdatedEnvironment();
+            final ProvisionEnvironmentBuilder envBuilder = ProvisionEnvironment.builder();
+
+            //env home
+            envBuilder.setEnvironmentHome(updatedEnv.getEnvironmentHome());
+
+            // named locations
+            for(String locationName : updatedEnv.getLocationNames(false)) {
+                envBuilder.nameLocation(locationName, updatedEnv.getNamedLocation(locationName));
+            }
+
+            // default update policy
+            envBuilder.setDefaultUnitUpdatePolicy(updatedEnv.getUpdatePolicy());
+
+            // units
+            final Set<String> updatedUnits = new HashSet<String>(instruction.getUnitNames());
+            for(String unitName : updatedEnv.getUnitNames()) {
+                if(updatedUnits.remove(unitName)) {
+                    final ProvisionUnitInstruction unitInstr = instruction.getUnitInstruction(unitName);
+                    // WARN this assumes the unit instruction conditions have been satisfied!!!
+                    final String newVersion = unitInstr.getResultingVersion();
+                    if(newVersion == null) {
+                        // unit removed
+                    } else {
+                        final ProvisionUnitEnvironment unitEnv = updatedEnv.getUnitEnvironment(unitName);
+                        if(newVersion.equals(unitEnv.getUnitInfo().getVersion())) {
+                            if (unitInstr.getId() != null) {
+                                envBuilder.addPatchedUnit(unitEnv, unitInstr.getId());
+                            } else {
+                                envBuilder.copyUnit(unitEnv);
+                            }
+                        } else {
+                            envBuilder.addUpdatedUnit(unitEnv, newVersion);
+                        }
+                    }
+                } else {
+                    envBuilder.copyUnit(updatedEnv.getUnitEnvironment(unitName));
+                }
+            }
+            if(!updatedUnits.isEmpty()) {
+                for(String newUnit : updatedUnits) {
+                    final ProvisionUnitInstruction unitInstr = instruction.getUnitInstruction(newUnit);
+                    if(unitInstr.getRequiredVersion() != null) {
+                        throw ProvisionErrors.unitIsNotInstalled(newUnit);
+                    }
+                    envBuilder.addUnit(ProvisionUnitInfo.createInfo(unitInstr.getUnitName(), unitInstr.getResultingVersion()));
+                }
+            }
+
+            this.updatedEnv = envBuilder.build();
+            this.appliedInstruction = instruction; // TODO applied instructions have to be accumulated in one here
         }
 
         String getRecordId() {

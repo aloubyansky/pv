@@ -140,8 +140,9 @@ public class ProvisionEnvironment extends ProvisionEnvironmentBase {
 
     public void apply(File packageFile) throws ProvisionException {
         assert packageFile != null : ProvisionErrors.nullArgument("packageFile");
-        final ApplicationContextImpl appCtx = new ApplicationContextImpl(this, ContentSource.expandedZip(packageFile), packageFile);
-        reset(appCtx.apply());
+        final ApplicationContextImpl appCtx = new ApplicationContextImpl(this);
+        appCtx.schedule(packageFile, ContentSource.expandedZip(packageFile));
+        reset(appCtx.commit());
     }
 
     public void rollbackLast() throws ProvisionException {
@@ -150,8 +151,9 @@ public class ProvisionEnvironment extends ProvisionEnvironmentBase {
             throw ProvisionErrors.noHistoryRecordedUntilThisPoint();
         }
         final ProvisionEnvironmentInstruction rollback = record.getAppliedInstruction().getRollback();
-        final ApplicationContextImpl appCtx = new ApplicationContextImpl(this, record.getBackup(), rollback, false);
-        reset(appCtx.apply());
+        final ApplicationContextImpl appCtx = new ApplicationContextImpl(this, false);
+        appCtx.schedule(rollback, record.getBackup());
+        reset(appCtx.commit());
     }
 
     public void rollbackPatches(String unitName) throws ProvisionException {
