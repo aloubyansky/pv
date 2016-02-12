@@ -80,29 +80,6 @@ class ProvisionEnvironmentHistory {
         return EnvInstructionHistory.getInstance(historyHome);
     }
 
-/*    protected ProvisionEnvironment rollbackLast(ProvisionEnvironment currentEnv) throws ProvisionException {
-        final FSImage tasks = new FSImage();
-        final EnvInstructionHistory.EnvRecord lastRecord = EnvInstructionHistory.getInstance(historyHome).loadLastApplied();
-        lastRecord.scheduleDelete(tasks);
-        final EnvInstructionHistory.EnvRecord prevRecord = lastRecord.getPrevious();
-        if(tasks.isUntouched()) {
-            return currentEnv;
-        }
-        try {
-            tasks.commit();
-        } catch (IOException e) {
-            throw ProvisionErrors.failedToUpdateHistory(e);
-        }
-        if(prevRecord == null) {
-            IoUtils.recursiveDelete(historyHome);
-            return ProvisionEnvironment.builder().setEnvironmentHome(currentEnv.getEnvironmentHome()).build();
-        }
-        if(prevRecord.getUpdatedEnvironment().getUnitNames().isEmpty()) { // delete the history when the environment is uninstalled
-            IoUtils.recursiveDelete(historyHome);
-        }
-        return prevRecord.getUpdatedEnvironment();
-    }
-*/
     protected void rollbackPatches(ProvisionEnvironment currentEnv, String unitName) throws ProvisionException {
 
         ProvisionUnitEnvironment unitEnv = currentEnv.getUnitEnvironment(unitName);

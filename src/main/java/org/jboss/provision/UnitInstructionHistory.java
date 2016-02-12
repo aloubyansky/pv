@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.Set;
 
 import org.jboss.provision.EnvInstructionHistory.EnvRecord;
-import org.jboss.provision.audit.AuditUtil;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.io.ContentTask;
@@ -81,7 +80,7 @@ public class UnitInstructionHistory extends InstructionHistory {
                         throw ProvisionErrors.historyRecordMissingForInstruction(unitDir.getName(), recordId);
                     }
                 }
-                AuditUtil.loadUnitEnv(envBuilder, new File(persistedRecord, ENV_PROPS));
+                EnvPersistUtil.loadUnitEnv(envBuilder, new File(persistedRecord, ENV_PROPS));
             }
         }
     }
@@ -249,7 +248,7 @@ public class UnitInstructionHistory extends InstructionHistory {
             super.schedulePersistence(recordDir.getName(), tasks);
 
             if(updatedEnv != null) {
-                tasks.write(AuditUtil.createWriter(updatedEnv, getFileToPersist(recordDir, ENV_PROPS)));
+                tasks.write(EnvPersistUtil.createWriter(updatedEnv, getFileToPersist(recordDir, ENV_PROPS)));
             }
 
             final Set<ContentPath> unitPaths = loadUnitCurrentPaths(getLastAppliedDir());

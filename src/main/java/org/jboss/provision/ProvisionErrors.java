@@ -31,7 +31,6 @@ import javax.xml.stream.XMLStreamException;
 
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionUnitInfo;
-import org.jboss.provision.instruction.ContentItemInstruction;
 import org.jboss.provision.util.HashUtils;
 
 /**
@@ -141,44 +140,12 @@ public class ProvisionErrors {
         return new ProvisionException(path + " is copied more than once during the same file system update.");
     }
 
-    public static ProvisionException failedToAuditInstruction(ContentItemInstruction instruction, Throwable t) {
-        return new ProvisionException("Failed to audit instruction for " + instruction.getPath(), t);
-    }
-
-    public static ProvisionException failedToAuditEnvironment(Throwable t) {
+    public static ProvisionException failedToStoreEnvironment(Throwable t) {
         return new ProvisionException("Failed to store provision environment", t);
     }
 
-    public static ProvisionException auditJournalIsNotRecording() {
-        return new ProvisionException("Audit journal is not recording");
-    }
-
-    public static ProvisionException auditJournalIsRecording() {
-        return new ProvisionException("Audit journal is in the recording mode");
-    }
-
-    public static ProvisionException cantStartNewAuditSessionOverExistingOne() {
-        return new ProvisionException("There is a backup content left after the previously failed provisioning task which needs to be rolled back before a new task can be performed.");
-    }
-
-    public static ProvisionException auditSessionInitFailed(String msg) {
-        return new ProvisionException("Audit session initialization failed: " + msg);
-    }
-
-    public static ProvisionException failedToLoadAuditSession(String msg) {
-        return new ProvisionException("Failed to load the audit session: " + msg);
-    }
-
-    public static ProvisionException failedToLoadInstructionAuditRecord(Throwable t) {
-        return new ProvisionException("Failed to load instruction audit record", t);
-    }
-
-    public static ProvisionException failedToLoadEnvironmentAuditRecord(Throwable t) {
-        return new ProvisionException("Failed to load provision environment audit record", t);
-    }
-
-    public static ProvisionException failedToLoadInstructionAuditRecord(String msg) {
-        return new ProvisionException("Failed to load instruction audit record: " + msg);
+    public static ProvisionException failedToLoadEnvironmentRecord(Throwable t) {
+        return new ProvisionException("Failed to load provision environment record", t);
     }
 
     public static String relativePathMissing() {
@@ -244,9 +211,5 @@ public class ProvisionErrors {
 
     public static ProvisionException historyRecordMissingForInstruction(String unitName, String id) {
         return new ProvisionException(unitName + " history is missing a record for environment instruction " + id);
-    }
-
-    public static ProvisionException failedToApplyInstruction(IOException e) {
-        return new ProvisionException("Failed to apply instruction", e);
     }
 }

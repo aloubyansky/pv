@@ -32,7 +32,6 @@ import java.util.UUID;
 
 import javax.xml.stream.XMLStreamException;
 
-import org.jboss.provision.audit.AuditUtil;
 import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
 import org.jboss.provision.instruction.ProvisionUnitInstruction;
@@ -166,7 +165,7 @@ class EnvInstructionHistory extends InstructionHistory {
         ProvisionEnvironment getUpdatedEnvironment() throws ProvisionException {
             if (updatedEnv == null) {
                 final ProvisionEnvironmentBuilder envBuilder = ProvisionEnvironment.builder();
-                AuditUtil.loadEnv(envBuilder, envFile);
+                EnvPersistUtil.loadEnv(envBuilder, envFile);
                 UnitInstructionHistory.loadUnitEnvs(EnvInstructionHistory.this, envBuilder, recordId);
                 updatedEnv = envBuilder.build();
             }
@@ -206,7 +205,7 @@ class EnvInstructionHistory extends InstructionHistory {
                 throws ProvisionException {
             final File recordDir = super.schedulePersistence(recordId, tasks);
             envFile = getFileToPersist(recordDir, ENV_FILE);
-            tasks.write(AuditUtil.createWriter(updatedEnv, envFile));
+            tasks.write(EnvPersistUtil.createWriter(updatedEnv, envFile));
             instrXml = getFileToPersist(recordDir, ProvisionXml.PROVISION_XML);
             tasks.write(appliedInstruction, instrXml);
             Set<String> notAffectedUnits = new HashSet<String>(updatedEnv.getUnitNames());

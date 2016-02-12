@@ -24,14 +24,15 @@ package org.jboss.provision.test.audit;
 
 import static org.junit.Assert.assertEquals;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
+import java.io.StringReader;
 import java.io.StringWriter;
+import java.util.Properties;
 
+import org.jboss.provision.EnvPersistUtil;
 import org.jboss.provision.ProvisionEnvironment;
+import org.jboss.provision.ProvisionEnvironmentBuilder;
 import org.jboss.provision.UnitUpdatePolicy;
-import org.jboss.provision.audit.AuditUtil;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.instruction.UpdatePolicy;
 import org.jboss.provision.io.IoUtils;
@@ -87,24 +88,31 @@ public class ProvisionEnvironmentPersistenceTestCase {
             .nameLocation("cLocation", cLocation)
             .build();
 
-        AuditUtil.record(env, envFile);
+        Properties props = EnvPersistUtil.toProperties(env, false);
+        final StringWriter envWriter = new StringWriter();
+        props.store(envWriter, null);
 
-        BufferedReader reader = null;
-        StringWriter original = new StringWriter();
-        try {
-            reader = new BufferedReader(new FileReader(envFile));
-            String line = reader.readLine();
-            while(line != null) {
-                original.write(line);
-                original.write("\n");
-                line = reader.readLine();
-            }
-        } finally {
-            IoUtils.safeClose(reader);
-            original.flush();
-        }
+        props = EnvPersistUtil.toProperties(env.getUnitEnvironment("aUnit"));
+        final StringWriter unitAWriter = new StringWriter();
+        props.store(unitAWriter, null);
 
-        final ProvisionEnvironment loadedEnv = AuditUtil.loadEnv(envFile);
+        props = EnvPersistUtil.toProperties(env.getUnitEnvironment("bUnit"));
+        final StringWriter unitBWriter = new StringWriter();
+        props.store(unitBWriter, null);
+
+        props = EnvPersistUtil.toProperties(env.getUnitEnvironment("cUnit"));
+        final StringWriter unitCWriter = new StringWriter();
+        props.store(unitCWriter, null);
+
+
+        final ProvisionEnvironmentBuilder envBuilder = ProvisionEnvironment.builder();
+        EnvPersistUtil.loadEnv(envBuilder, new StringReader(envWriter.getBuffer().toString()));
+        EnvPersistUtil.loadUnitEnv(envBuilder, new StringReader(unitAWriter.getBuffer().toString()));
+        EnvPersistUtil.loadUnitEnv(envBuilder, new StringReader(unitBWriter.getBuffer().toString()));
+        EnvPersistUtil.loadUnitEnv(envBuilder, new StringReader(unitCWriter.getBuffer().toString()));
+
+
+        final ProvisionEnvironment loadedEnv = envBuilder.build();
 /*        IoUtils.recursiveDelete(envFile);
         AuditUtil.record(loadedEnv, envFile);
 
