@@ -29,10 +29,13 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import org.jboss.provision.UnitInstructionHistory.UnitRecord;
 import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionEnvironmentInfo;
 import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
+import org.jboss.provision.instruction.ProvisionUnitInstruction;
+import org.jboss.provision.io.IoUtils;
 
 /**
  *
@@ -41,6 +44,14 @@ import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
 public class ProvisionEnvironment extends ProvisionEnvironmentBase {
 
     public static final String DEF_HISTORY_DIR = ".pvh";
+
+    public static ProvisionEnvironment load(File home) throws ProvisionException {
+        final File historyDir = ProvisionEnvironmentHistory.getDefaultHistoryDir(home);
+        if(!ProvisionEnvironmentHistory.storesHistory(historyDir)) {
+            throw ProvisionErrors.noHistoryRecordedUntilThisPoint();
+        }
+        return new ProvisionEnvironmentHistory(historyDir).getCurrentEnvironment();
+    }
 
     public static ProvisionEnvironmentBuilder builder() {
         return new ProvisionEnvironmentBuilder();
@@ -140,9 +151,42 @@ public class ProvisionEnvironment extends ProvisionEnvironmentBase {
 
     public void apply(File packageFile) throws ProvisionException {
         assert packageFile != null : ProvisionErrors.nullArgument("packageFile");
-        final ApplicationContextImpl appCtx = new ApplicationContextImpl(this);
-        appCtx.schedule(packageFile, ContentSource.expandedZip(packageFile));
-        reset(appCtx.commit());
+        ContentSource expandedZip = null;
+        try {
+            expandedZip = ContentSource.expandedZip(packageFile);
+            final ProvisionEnvironmentInstruction instruction = ApplicationContextImpl.readInstruction(this, expandedZip, packageFile);
+            final ApplicationContextImpl appCtx = new ApplicationContextImpl(this);
+
+            for(String unitName : instruction.getUnitNames()) {
+                final ProvisionUnitInstruction unitInstr = instruction.getUnitInstruction(unitName);
+                if(unitInstr.isVersionUpdate()) {
+                    final ProvisionUnitEnvironment unitEnv = getUnitEnvironment(unitName);
+                    if(unitEnv == null) {
+                        throw ProvisionErrors.unitIsNotInstalled(unitName);
+                    }
+                    int patchesTotal = unitEnv.getUnitInfo().getPatches().size();
+                    if(patchesTotal == 0) {
+                        continue;
+                    }
+                    final ProvisionEnvironmentHistory history = getHistory();
+                    final EnvInstructionHistory envInstrHistory = history.getEnvInstructionHistory();
+                    final UnitInstructionHistory unitHistory = UnitInstructionHistory.getInstance(envInstrHistory, unitName);
+                    UnitRecord unitRecord = unitHistory.loadLast();
+                    while(patchesTotal > 0 && unitRecord != null) {
+                        final EnvInstructionHistory.EnvRecord envRecord = envInstrHistory.loadRecord(unitRecord.getRecordDir().getName());
+                        history.assertRollbackForUnit(unitName, envRecord);
+                        appCtx.schedule(envRecord.getRollbackInstruction(), envRecord.getBackup());
+                        unitRecord = unitRecord.getPrevious();
+                        --patchesTotal;
+                    }
+                }
+            }
+
+            appCtx.schedule(instruction, expandedZip);
+            reset(appCtx.commit());
+        } finally {
+            IoUtils.safeClose(expandedZip);
+        }
     }
 
     public void rollbackLast() throws ProvisionException {
@@ -150,14 +194,10 @@ public class ProvisionEnvironment extends ProvisionEnvironmentBase {
         if(record == null) {
             throw ProvisionErrors.noHistoryRecordedUntilThisPoint();
         }
-        final ProvisionEnvironmentInstruction rollback = record.getAppliedInstruction().getRollback();
+        final ProvisionEnvironmentInstruction rollback = record.getRollbackInstruction();
         final ApplicationContextImpl appCtx = new ApplicationContextImpl(this, false);
         appCtx.schedule(rollback, record.getBackup());
         reset(appCtx.commit());
-    }
-
-    public void rollbackPatches(String unitName) throws ProvisionException {
-        getHistory().rollbackPatches(this, unitName);
     }
 
     public void uninstall(String unitName) throws ProvisionException {

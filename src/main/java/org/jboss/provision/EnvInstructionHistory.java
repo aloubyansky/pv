@@ -154,7 +154,11 @@ class EnvInstructionHistory extends InstructionHistory {
             }
 
             this.updatedEnv = envBuilder.build();
-            this.appliedInstruction = instruction; // TODO applied instructions have to be accumulated in one here
+            if(this.appliedInstruction == null) {
+                this.appliedInstruction = instruction;
+            } else {
+                this.appliedInstruction = this.appliedInstruction.mergeWith(instruction);
+            }
         }
 
         String getRecordId() {
@@ -173,6 +177,10 @@ class EnvInstructionHistory extends InstructionHistory {
                 updatedEnv = envBuilder.build();
             }
             return updatedEnv;
+        }
+
+        ProvisionEnvironmentInstruction getRollbackInstruction() throws ProvisionException {
+            return getAppliedInstruction().getRollback();
         }
 
         ProvisionEnvironmentInstruction getAppliedInstruction() throws ProvisionException {

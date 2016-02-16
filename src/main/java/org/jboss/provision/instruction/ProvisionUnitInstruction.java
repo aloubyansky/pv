@@ -164,6 +164,10 @@ public abstract class ProvisionUnitInstruction {
         return resultingVersion;
     }
 
+    public boolean isVersionUpdate() {
+        return resultingVersion != null && requiredVersion != null && !resultingVersion.equals(requiredVersion);
+    }
+
     public List<InstructionCondition> getConditions() {
         return conditions;
     }

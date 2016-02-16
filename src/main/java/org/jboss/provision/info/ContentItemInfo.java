@@ -29,34 +29,22 @@ import org.jboss.provision.util.HashUtils;
  *
  * @author Alexey Loubyansky
  */
-public interface ContentItemInfo {
+public class ContentItemInfo {
 
-    Builder BUILDER = new Builder();
+    public static ContentItemInfo create(final String relativePath, final byte[] hash) {
+        return create(ContentPath.forPath(relativePath), hash);
+    }
 
-    class Builder {
+    public static ContentItemInfo create(final ContentPath path, final byte[] hash) {
+        return new ContentItemInfo(path, hash);
+    }
 
-        private Builder() {
-        }
+    protected final ContentPath path;
+    protected final byte[] hash;
 
-        public ContentItemInfo build(final String relativePath, final byte[] hash) {
-            return build(ContentPath.forPath(relativePath), hash);
-        }
-
-        public ContentItemInfo build(final ContentPath path, final byte[] hash) {
-            return new ContentItemInfo() {
-                public ContentPath getPath() {
-                    return path;
-                }
-                public byte[] getContentHash() {
-                    return hash;
-                }
-
-                @Override
-                public String toString() {
-                    return new StringBuilder().append("path=").append(path).append(",hash=").append(HashUtils.bytesToHexString(hash)).toString();
-                }
-            };
-        }
+    protected ContentItemInfo(ContentPath path, byte[] hash) {
+        this.path = path;
+        this.hash = hash;
     }
 
     /**
@@ -64,12 +52,21 @@ public interface ContentItemInfo {
      *
      * @return  path
      */
-    ContentPath getPath();
+    public ContentPath getPath() {
+        return path;
+    }
 
     /**
      * The hash.
      *
      * @return  hash
      */
-    byte[] getContentHash();
+    public byte[] getContentHash() {
+        return hash;
+    }
+
+    @Override
+    public String toString() {
+        return new StringBuilder().append("path=").append(path).append(",hash=").append(HashUtils.bytesToHexString(hash)).toString();
+    }
 }

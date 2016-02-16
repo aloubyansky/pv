@@ -95,6 +95,9 @@ public class AssertUtil {
             if(!target.isDirectory()) {
                 return target.getAbsolutePath() + " is not a directory while " + original.getAbsolutePath() + " is";
             }
+            if(original.getName().equals(ProvisionEnvironment.DEF_HISTORY_DIR)) {
+                return null;
+            }
 
             final Set<String> targetNames = target.list().length == 0 ?
                     Collections.<String>emptySet() : new HashSet<String>(Arrays.asList(target.list()));
@@ -124,6 +127,7 @@ public class AssertUtil {
                             switch(ignoredDirs.size()) {
                                 case 0:
                                     ignoredDirs = Collections.singletonList(t);
+                                    break;
                                 case 1:
                                     ignoredDirs = new ArrayList<String>(ignoredDirs);
                                 default:
@@ -132,10 +136,8 @@ public class AssertUtil {
                         }
                     }
                 }
-                if(!ignoredDirs.isEmpty()) {
+                if(targetNames.size() != ignoredDirs.size()) {
                     targetNames.removeAll(ignoredDirs);
-                }
-                if(!targetNames.isEmpty()) {
                     return target.getAbsolutePath() + " contains unexpected children " + targetNames;
                 }
             }

@@ -31,6 +31,7 @@ import java.util.Properties;
 
 import org.jboss.provision.instruction.ProvisionEnvironmentInstruction;
 import org.jboss.provision.io.ContentTask.BackupPathFactory;
+import org.jboss.provision.util.HashUtils;
 
 /**
  *
@@ -157,34 +158,35 @@ public class FSImage {
         return opDescr.contentTask.isDelete();
     }
 
+    public byte[] getHash(File target) throws IOException {
+        final OpDescr opDescr = updates.get(target.getAbsolutePath());
+        if(opDescr == null) {
+            if(!target.exists()) {
+                return null;
+            }
+            return HashUtils.hashFile(target);
+        }
+        if(opDescr.contentTask.isDelete()) {
+            return null;
+        }
+        if(opDescr.contentTask.getContentFile() != null) {
+            return HashUtils.hashFile(opDescr.contentTask.getContentFile());
+        }
+        if(opDescr.contentTask.getContentString() != null) {
+            return HashUtils.hashBytes(opDescr.contentTask.getContentString().getBytes());
+        }
+        if(!opDescr.contentTask.getTarget().exists()) {
+            return null;
+        }
+        return HashUtils.hashFile(opDescr.contentTask.getTarget());
+    }
+
     public PathStatus getStatus(File target) {
         final OpDescr opDescr = updates.get(target.getAbsolutePath());
         if(opDescr == null) {
             return PathStatus.NOT_SCHEDULED;
         }
         return opDescr.contentTask.isDelete() ? PathStatus.DELETE_SCHEDULED : PathStatus.WRITE_SCHEDULED;
-    }
-
-    public String getScheduledContentString(File target) {
-        final OpDescr opDescr = updates.get(target.getAbsolutePath());
-        if(opDescr == null) {
-            return null;
-        }
-        if(opDescr.contentTask == null) {
-            throw new IllegalStateException();
-        }
-        return opDescr.contentTask.getContentString();
-    }
-
-    public File getScheduledContentFile(File target) {
-        final OpDescr opDescr = updates.get(target.getAbsolutePath());
-        if(opDescr == null) {
-            return null;
-        }
-        if(opDescr.contentTask == null) {
-            throw new IllegalStateException();
-        }
-        return opDescr.contentTask.getContentFile();
     }
 
     public void commit() throws IOException {

@@ -210,19 +210,15 @@ class ApplicationContextImpl implements ApplicationContext {
         }
     }
 
-    void schedule(File pkgFile, ContentSource contentSrc) throws ProvisionException {
-        schedule(readInstruction(env, contentSrc, pkgFile), contentSrc);
-    }
-
     void schedule(ProvisionEnvironmentInstruction instruction, ContentSource contentSrc) throws ProvisionException {
         final EnvRecord envRecord = callback.getEnvRecord();
         envRecord.updateEnvironment(instruction);
         scheduleTasks(instruction, envRecord, contentSrc);
         unitEnv = null;
-        callback.schedule(instruction);
     }
 
     ProvisionEnvironment commit() throws ProvisionException {
+        callback.schedule(callback.getEnvRecord().getAppliedInstruction());
         return callback.commit();
     }
 
@@ -302,6 +298,15 @@ class ApplicationContextImpl implements ApplicationContext {
         }
     }
 
+    @Override
+    public byte[] getHash(File target) throws ProvisionException {
+        try {
+            return fsImage.getHash(target);
+        } catch (IOException e) {
+            throw ProvisionErrors.hashCalculationFailed(target, e);
+        }
+    }
+
     private Journal getUnitJournal(String unitName) {
         Journal unitJournal = journal.get(unitName);
         if(unitJournal != null) {
@@ -327,7 +332,7 @@ class ApplicationContextImpl implements ApplicationContext {
         return unitEnv;
     }
 
-    private static ProvisionEnvironmentInstruction readInstruction(ProvisionEnvironment env, ContentSource contentSrc, File pkgFile) throws ProvisionException {
+    static ProvisionEnvironmentInstruction readInstruction(ProvisionEnvironment env, ContentSource contentSrc, File pkgFile) throws ProvisionException {
         assert pkgFile != null : ProvisionErrors.nullArgument("packageFile");
         if (!pkgFile.exists()) {
             throw ProvisionErrors.pathDoesNotExist(pkgFile);

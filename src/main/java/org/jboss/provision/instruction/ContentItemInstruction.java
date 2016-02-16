@@ -35,10 +35,8 @@ import org.jboss.provision.info.ContentPath;
  *
  * @author Alexey Loubyansky
  */
-public class ContentItemInstruction implements ContentItemInfo {
+public class ContentItemInstruction extends ContentItemInfo {
 
-    protected final ContentPath path;
-    protected final byte[] hash;
     protected final byte[] replacedHash;
     protected boolean required = true;
 
@@ -46,20 +44,10 @@ public class ContentItemInstruction implements ContentItemInfo {
 
     protected ContentItemInstruction(ContentPath path, byte[] hash, byte[] replacedHash, boolean required,
             List<InstructionCondition> conditions) {
-        this.path = path;
-        this.hash = hash;
+        super(path, hash);
         this.replacedHash = replacedHash;
         this.required = required;
         this.conditions = conditions;
-    }
-
-    public ContentPath getPath() {
-        return path;
-    }
-
-    @Override
-    public byte[] getContentHash() {
-        return hash;
     }
 
     public byte[] getReplacedHash() {

@@ -22,11 +22,28 @@
 
 package org.jboss.provision;
 
+import java.io.File;
+
 /**
  *
  * @author Alexey Loubyansky
  */
 public interface ApplicationContext {
 
+    /**
+     * Returns the currently being processed unit environment.
+     *
+     * @return  unit environment currently being processed
+     */
     ProvisionUnitEnvironment getUnitEnvironment();
+
+    /**
+     * Calculates a hash for the target file taking into account scheduled overriding original content on or delete from the disk tasks.
+     * If the target file (taking into account scheduled tasks) does not exist, the method will return null.
+     *
+     * @param target  target file
+     * @return  calculated hash or null, if the target file does not exist
+     * @throws ProvisionException  in case calculation failed for any reason
+     */
+    byte[] getHash(File target) throws ProvisionException;
 }

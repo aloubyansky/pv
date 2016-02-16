@@ -69,7 +69,7 @@ public class ProvisionInfoReader {
                 throw ProvisionErrors.hashCalculationFailed(file, e);
             }
             String relativePath = file.getAbsolutePath().substring(rootPathOffset);
-            builder.add(ContentItemInfo.BUILDER.build(ContentPath.forFSPath(relativePath), fileHash));
+            builder.add(ContentItemInfo.create(ContentPath.forFSPath(relativePath), fileHash));
         }
     }
 }

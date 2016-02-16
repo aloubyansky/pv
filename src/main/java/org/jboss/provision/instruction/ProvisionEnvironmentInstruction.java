@@ -22,13 +22,17 @@
 
 package org.jboss.provision.instruction;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
 import org.jboss.provision.ProvisionErrors;
 import org.jboss.provision.ProvisionException;
+import org.jboss.provision.info.ContentPath;
+import org.jboss.provision.util.HashUtils;
 
 /**
  *
@@ -100,6 +104,110 @@ public class ProvisionEnvironmentInstruction {
                 unitInstBuilder.addContentInstruction(contentInst.getRollback());
             }
             builder.add(unitInstBuilder.build());
+        }
+        return builder.build();
+    }
+
+    public ProvisionEnvironmentInstruction mergeWith(ProvisionEnvironmentInstruction override) throws ProvisionException {
+        final Builder builder = builder();
+        final Set<String> addedNames = new HashSet<String>(override.getUnitNames());
+        for(String unitName : getUnitNames()) {
+            if(addedNames.remove(unitName)) {
+                final ProvisionUnitInstruction unit = getUnitInstruction(unitName);
+                final ProvisionUnitInstruction overrideUnit = override.getUnitInstruction(unitName);
+
+                String requiredVersion = unit.getRequiredVersion();
+                String resultingVersion = overrideUnit.getResultingVersion();
+                if(requiredVersion == null && resultingVersion == null) {
+                    continue;
+                }
+
+                final String originalResultingVersion = unit.getRequiredVersion();
+                final String overrideRequiredVersion = overrideUnit.getRequiredVersion();
+                if(originalResultingVersion == null) {
+                    if(overrideRequiredVersion != null) {
+                        throw ProvisionErrors.unitIsNotInstalled(unitName);
+                    }
+                } else if(!originalResultingVersion.equals(overrideRequiredVersion)) {
+                    throw ProvisionErrors.unitVersionMismatch(unitName, originalResultingVersion, overrideRequiredVersion);
+                }
+
+                final ProvisionUnitInstruction.Builder unitInstBuilder;
+                if(requiredVersion == null) {
+                    // install
+                    unitInstBuilder = ProvisionUnitInstruction.installUnit(unitName, resultingVersion);
+                } else if(resultingVersion == null) {
+                    // uninstall
+                    unitInstBuilder = ProvisionUnitInstruction.installUnit(unitName, requiredVersion);
+                } else if(resultingVersion.equals(requiredVersion)) {
+                    if(!requiredVersion.equals(originalResultingVersion)) {
+                        continue;
+                    }
+                    // two patches TODO indicate two patch IDs applied
+                    unitInstBuilder = ProvisionUnitInstruction.patchUnit(unitName, requiredVersion, overrideUnit.getId());
+                } else if(!requiredVersion.equals(originalResultingVersion)) {
+                    if (overrideRequiredVersion.equals(resultingVersion)) {
+                        // version update + patch TODO indicate version and applied patch
+                        unitInstBuilder = ProvisionUnitInstruction.replaceUnit(unitName, requiredVersion, resultingVersion);
+                    } else {
+                        // version update
+                        unitInstBuilder = ProvisionUnitInstruction.replaceUnit(unitName, requiredVersion, resultingVersion);
+                    }
+                } else {
+                    // patch + version update, which shouldn't happen
+                    if(!unit.getId().startsWith("rollback-")) {
+                        throw ProvisionErrors.versionUpdateOverPatch(unitName, unit.getId(), overrideUnit.getResultingVersion());
+                    }
+                    // version update
+                    unitInstBuilder = ProvisionUnitInstruction.replaceUnit(unitName, requiredVersion, resultingVersion);
+                }
+
+                final Map<ContentPath, ContentItemInstruction> overrideContent = new HashMap<ContentPath, ContentItemInstruction>(overrideUnit.getContentInstructions().size());
+                for(ContentItemInstruction instr : overrideUnit.getContentInstructions()) {
+                    overrideContent.put(instr.getPath(), instr);
+                }
+                for(ContentItemInstruction instr : unit.getContentInstructions()) {
+                    final ContentItemInstruction overrideInstr = overrideContent.remove(instr.getPath());
+                    if(overrideInstr == null) {
+                        unitInstBuilder.addContentInstruction(instr);
+                    } else {
+                        if(instr.getReplacedHash() == null && overrideInstr.getContentHash() == null) {
+                            continue;
+                        }
+                        if (instr.getContentHash() != null && overrideInstr.getReplacedHash() != null
+                                && !Arrays.equals(instr.getContentHash(), overrideInstr.getReplacedHash())) {
+                            throw ProvisionErrors.pathHashMismatch(instr.getPath(),
+                                    HashUtils.bytesToHexString(overrideInstr.getReplacedHash()),
+                                    HashUtils.bytesToHexString(instr.getContentHash()));
+                        }
+                        if(instr.getReplacedHash() == null) {
+                            unitInstBuilder.addContentInstruction(ContentItemInstruction.Builder.addContent(instr.getPath(), overrideInstr.getContentHash()).build());
+                            continue;
+                        }
+                        if(overrideInstr.getContentHash() == null) {
+                            unitInstBuilder.addContentInstruction(ContentItemInstruction.Builder.removeContent(instr.getPath(), instr.getReplacedHash()).build());
+                            continue;
+                        }
+                        if(Arrays.equals(instr.getReplacedHash(), overrideInstr.getContentHash())) {
+                            continue;
+                        }
+                        unitInstBuilder.addContentInstruction(ContentItemInstruction.Builder.replaceContent(instr.getPath(), overrideInstr.getContentHash(), instr.getReplacedHash()).build());
+                    }
+                }
+                if(!overrideContent.isEmpty()) {
+                    for(ContentItemInstruction instr : overrideContent.values()) {
+                        unitInstBuilder.addContentInstruction(instr);
+                    }
+                }
+                builder.add(unitInstBuilder.build());
+            } else {
+                builder.add(getUnitInstruction(unitName));
+            }
+        }
+        if(!addedNames.isEmpty()) {
+            for (String unitName : addedNames) {
+                builder.add(override.getUnitInstruction(unitName));
+            }
         }
         return builder.build();
     }

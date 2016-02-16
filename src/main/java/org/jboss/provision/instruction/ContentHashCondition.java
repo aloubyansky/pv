@@ -23,7 +23,6 @@
 package org.jboss.provision.instruction;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 
 import org.jboss.provision.ApplicationContext;
@@ -53,13 +52,8 @@ class ContentHashCondition implements InstructionCondition {
         final File targetFile = ctx.getUnitEnvironment().resolvePath(path);
         if(expectedHash == null) {
             // the path is not expected to exist
-            if(targetFile.exists()) {
-                byte[] actualHash;
-                try {
-                    actualHash = HashUtils.hashFile(targetFile);
-                } catch (IOException e) {
-                    throw ProvisionErrors.hashCalculationFailed(targetFile, e);
-                }
+            final byte[] actualHash = ctx.getHash(targetFile);
+            if(actualHash != null) {
                 if(Arrays.equals(newHash, actualHash)) {
                     // the existing content matches the new one
                     return false;
@@ -67,17 +61,12 @@ class ContentHashCondition implements InstructionCondition {
                 throw ProvisionErrors.pathAlreadyExists(targetFile);
             }
         } else {
-            if(!targetFile.exists()) {
+            final byte[] actualHash = ctx.getHash(targetFile);
+            if(actualHash == null) {
                 if(newHash == null) {
                     return false;
                 }
                 throw ProvisionErrors.pathDoesNotExist(targetFile);
-            }
-            byte[] actualHash;
-            try {
-                actualHash = HashUtils.hashFile(targetFile);
-            } catch (IOException e) {
-                throw ProvisionErrors.hashCalculationFailed(targetFile, e);
             }
             if(Arrays.equals(newHash, actualHash)) {
                 // the existing content matches the new one

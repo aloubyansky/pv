@@ -112,6 +112,10 @@ public class ProvisionErrors {
         return new ProvisionException("The hash of " + path + " is " + actualHash + " but expected to be " + expectedHash);
     }
 
+    public static ProvisionException pathHashMismatch(ContentPath path, String expectedHash, String actualHash) {
+        return new ProvisionException("The hash of " + path + " is " + actualHash + " but expected to be " + expectedHash);
+    }
+
     public static ProvisionException unitHomeNotDefined(String unitName) {
         return new ProvisionException("Unit home path not defined for " + unitName);
     }
@@ -211,5 +215,9 @@ public class ProvisionErrors {
 
     public static ProvisionException historyRecordMissingForInstruction(String unitName, String id) {
         return new ProvisionException(unitName + " history is missing a record for environment instruction " + id);
+    }
+
+    public static ProvisionException versionUpdateOverPatch(String unitName, String patchId, String updatedVersion) {
+        return new ProvisionException("Before " + updatedVersion + " of " + unitName + " can be installed, patch " + patchId + " has to be reverted.");
     }
 }
