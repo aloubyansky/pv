@@ -124,6 +124,22 @@ public class UnitContentPathsTestCase extends ApplicationTestBase {
         assertPaths(env.getUnitEnvironment("unitA").getContentPaths(), "a.txt");
         assertPaths(env.getUnitEnvironment("unitB").getContentPaths(), "b.txt", "shared.txt");
 
+        copy(unitBInstall, tmp);
+        unitBInstall.delete("shared.txt");
+        ProvisionPackage.newBuilder()
+            .setTargetInstallationDir(unitBInstall.getHome())
+            .setCurrentInstallationDir(tmp)
+            .setPackageOutputFile(archive)
+            .buildPatch("patch2", "unitB", "1.0");
+        env.apply(archive);
+
+        assertPaths(env.getUnitEnvironment("unitA").getContentPaths(), "a.txt");
+        assertPaths(env.getUnitEnvironment("unitB").getContentPaths(), "b.txt");
+
+        env.rollbackLast();
+        assertPaths(env.getUnitEnvironment("unitA").getContentPaths(), "a.txt");
+        assertPaths(env.getUnitEnvironment("unitB").getContentPaths(), "b.txt", "shared.txt");
+
         env.rollbackLast();
         assertPaths(env.getUnitEnvironment("unitA").getContentPaths(), "a.txt", "shared.txt");
         assertPaths(env.getUnitEnvironment("unitB").getContentPaths(), "b.txt", "shared.txt");
