@@ -65,6 +65,9 @@ public class ProvisionEnvironment extends ProvisionEnvironmentBase {
         return new ProvisionEnvironmentBuilder().addUnit(name, version);
     }
 
+    private final File envHome;
+    private Map<String, ProvisionUnitEnvironment> unitEnvs;
+
     ProvisionEnvironment(ProvisionEnvironmentBuilder builder) throws ProvisionException {
         super(builder.namedLocations, builder.defaultUnitUpdatePolicy);
         assert builder.envHome != null : ProvisionErrors.nullArgument("envHome");
@@ -91,8 +94,11 @@ public class ProvisionEnvironment extends ProvisionEnvironmentBase {
         }
     }
 
-    private final File envHome;
-    private Map<String, ProvisionUnitEnvironment> unitEnvs;
+    ProvisionEnvironment(ProvisionEnvironment env) throws ProvisionException {
+        super(env.getNamedLocations(), env.getUpdatePolicy());
+        this.envHome = env.envHome;
+        this.unitEnvs = new HashMap<String, ProvisionUnitEnvironment>(env.unitEnvs);
+    }
 
     @Override
     public File getEnvironmentHome() {
@@ -174,11 +180,14 @@ public class ProvisionEnvironment extends ProvisionEnvironmentBase {
                     UnitRecord unitRecord = unitHistory.loadLast();
                     while(patchesTotal > 0 && unitRecord != null) {
                         final EnvInstructionHistory.EnvRecord envRecord = envInstrHistory.loadRecord(unitRecord.getRecordDir().getName());
-                        history.assertRollbackForUnit(unitName, envRecord);
+                        envRecord.assertRollbackForUnit(unitName);
                         appCtx.schedule(envRecord.getRollbackInstruction(), envRecord.getBackup());
                         unitRecord = unitRecord.getPrevious();
                         --patchesTotal;
                     }
+                } else if(unitInstr.getRequiredVersion() == null && this.unitEnvs.containsKey(unitName)) {
+                    //throw new IllegalStateException();
+                    appCtx.scheduleUninstall(unitName);
                 }
             }
 
@@ -201,7 +210,9 @@ public class ProvisionEnvironment extends ProvisionEnvironmentBase {
     }
 
     public void uninstall(String unitName) throws ProvisionException {
-        getHistory().uninstall(this, unitName);
+        final ApplicationContextImpl appCtx = new ApplicationContextImpl(this, true);
+        appCtx.scheduleUninstall(unitName);
+        reset(appCtx.commit());
     }
 
     ProvisionEnvironmentHistory getHistory() {

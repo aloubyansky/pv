@@ -33,7 +33,7 @@ class DeleteTask extends ContentTask {
 
     static ContentTask DELETE_FLAG = deleteFlag(new File(UUID.randomUUID().toString()));
 
-    static ContentTask deleteFlag(final File target) {
+    private static ContentTask deleteFlag(final File target) {
         return new ContentTask(target) {
             @Override
             public void execute() throws IOException {

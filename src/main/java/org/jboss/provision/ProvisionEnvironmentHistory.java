@@ -23,17 +23,11 @@
 package org.jboss.provision;
 
 import java.io.File;
-import java.io.IOException;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.Set;
-
 import org.jboss.provision.UnitInstructionHistory.UnitRecord;
-import org.jboss.provision.info.ContentPath;
 import org.jboss.provision.info.ProvisionEnvironmentInfo;
 import org.jboss.provision.info.ProvisionUnitInfo;
-import org.jboss.provision.io.FSImage;
 
 /**
  *
@@ -82,43 +76,6 @@ class ProvisionEnvironmentHistory {
 
     EnvInstructionHistory getEnvInstructionHistory() {
         return EnvInstructionHistory.getInstance(historyHome);
-    }
-
-    protected void uninstall(ProvisionEnvironment currentEnv, String unitName) throws ProvisionException {
-        final ProvisionUnitEnvironment unitEnv = currentEnv.getUnitEnvironment(unitName);
-        if(unitEnv == null) {
-            throw ProvisionErrors.unitIsNotInstalled(unitName);
-        }
-        final FSImage tasks = new FSImage();
-
-        final EnvInstructionHistory envInstrHistory = EnvInstructionHistory.getInstance(historyHome);
-        final UnitInstructionHistory unitHistory = UnitInstructionHistory.getInstance(envInstrHistory, unitName);
-        for(String recordId : unitHistory.getRecordIds()) {
-            final EnvInstructionHistory.EnvRecord envRecord = envInstrHistory.loadRecord(recordId);
-            assertRollbackForUnit(unitName, envRecord);
-            envRecord.scheduleDelete(tasks);
-        }
-        for(ContentPath path : unitEnv.getContentPaths()) {
-            tasks.delete(unitEnv.resolvePath(path)); // TODO unless it is a shared path
-        }
-        tasks.delete(unitHistory.recordsDir);
-
-        if(!tasks.isUntouched()) {
-            try {
-                tasks.commit();
-            } catch (IOException e) {
-                throw ProvisionErrors.failedToUninstallUnit(unitEnv.getUnitInfo(), e);
-            }
-        }
-        currentEnv.removeUnit(unitName);
-    }
-
-    void assertRollbackForUnit(String unitName, final EnvInstructionHistory.EnvRecord envRecord)
-            throws ProvisionException {
-        final Set<String> affectedUnits = envRecord.getAppliedInstruction().getUnitNames();
-        if(!Collections.singleton(unitName).equals(affectedUnits)) {
-            throw ProvisionErrors.instructionTargetsOtherThanRequestedUnits(unitName, affectedUnits);
-        }
     }
 
     ProvisionEnvironment getCurrentEnvironment() throws ProvisionException {

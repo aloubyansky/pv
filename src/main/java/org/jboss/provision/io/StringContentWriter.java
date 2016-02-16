@@ -46,4 +46,8 @@ class StringContentWriter extends ContentWriter {
     public void write(BufferedWriter writer) throws IOException {
         writer.write(content);
     }
+    @Override
+    public String toString() {
+        return "StringContentWriter for " + original.getAbsolutePath();
+    }
 }

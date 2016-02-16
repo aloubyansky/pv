@@ -125,15 +125,13 @@ abstract class InstructionHistory {
                 if (!recordDir.isDirectory()) {
                     throw new ProvisionException(ProvisionErrors.notADir(recordDir));
                 }
-            } else if (!recordDir.mkdirs()) {
-                throw new ProvisionException(ProvisionErrors.couldNotCreateDir(recordDir));
             }
 
             final File prevRecordTxt = getFileToPersist(recordDir, PREV_INSTR_TXT);
             final File lastRecordTxt = new File(recordsDir, LAST_INSTR_TXT);
             final File lastAppliedRecordDir = getLastAppliedDir();
 
-            if (lastAppliedRecordDir != null && lastAppliedRecordDir.exists()) {
+            if (lastAppliedRecordDir != null && !tasks.isDeleted(lastAppliedRecordDir)) {
                 tasks.write(lastAppliedRecordDir.getName(), prevRecordTxt);
                 final File nextInstrTxt = getFileToPersist(lastAppliedRecordDir, NEXT_INSTR_TXT);
                 tasks.write(recordId, nextInstrTxt);

@@ -20,12 +20,16 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.provision.test.application.install;
+package org.jboss.provision.test.application.reinstall;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.util.Iterator;
 
 import org.jboss.provision.ProvisionEnvironment;
-import org.jboss.provision.ProvisionException;
+import org.jboss.provision.info.ProvisionEnvironmentInfo;
 import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.instruction.ProvisionPackage;
 import org.jboss.provision.io.IoUtils;
@@ -37,7 +41,7 @@ import org.junit.Test;
  *
  * @author Alexey Loubyansky
  */
-public class InstallOverInstalledTestCase extends ApplicationTestBase {
+public class ReinstallSameContentUndefinedUnitTestCase extends ApplicationTestBase {
 
     @Test
     public void testMain() throws Exception {
@@ -58,13 +62,28 @@ public class InstallOverInstalledTestCase extends ApplicationTestBase {
         env.apply(archive);
 
         AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome(), true);
+        AssertUtil.assertEnvInfo(env.getEnvironmentInfo(), ProvisionUnitInfo.UNDEFINED_INFO);
+        Iterator<ProvisionEnvironmentInfo> envHistory = env.environmentHistory();
+        assertTrue(envHistory.hasNext());
+        AssertUtil.assertEnvInfo(envHistory.next(), ProvisionUnitInfo.UNDEFINED_INFO);
+        assertFalse(envHistory.hasNext());
+        Iterator<ProvisionUnitInfo> unitHistory = env.unitHistory(ProvisionUnitInfo.UNDEFINED_NAME);
+        assertTrue(unitHistory.hasNext());
+        assertEquals(unitHistory.next(), ProvisionUnitInfo.UNDEFINED_INFO);
+        assertFalse(unitHistory.hasNext());
 
-        try {
-            env.apply(archive);
-            fail("Cannot install the same version over itself.");
-        } catch(ProvisionException e) {
-            // expected
-        }
+        env.apply(archive);
+
+        AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome(), true);
+        AssertUtil.assertEnvInfo(env.getEnvironmentInfo(), ProvisionUnitInfo.UNDEFINED_INFO);
+        envHistory = env.environmentHistory();
+        assertTrue(envHistory.hasNext());
+        AssertUtil.assertEnvInfo(envHistory.next(), ProvisionUnitInfo.UNDEFINED_INFO);
+        assertFalse(envHistory.hasNext());
+        unitHistory = env.unitHistory(ProvisionUnitInfo.UNDEFINED_NAME);
+        assertTrue(unitHistory.hasNext());
+        assertEquals(unitHistory.next(), ProvisionUnitInfo.UNDEFINED_INFO);
+        assertFalse(unitHistory.hasNext());
     }
 
     @Test

@@ -175,11 +175,7 @@ class ApplicationContextImpl implements ApplicationContext {
 
                 @Override
                 public ProvisionEnvironment commit() throws ProvisionException {
-
                     final EnvInstructionHistory.EnvRecord prevRecord = envRecord.getPrevious();
-                    if(fsImage.isUntouched()) {
-                        return env;
-                    }
                     try {
                         fsImage.commit();
                     } catch (IOException e) {
@@ -215,10 +211,36 @@ class ApplicationContextImpl implements ApplicationContext {
         envRecord.updateEnvironment(instruction);
         scheduleTasks(instruction, envRecord, contentSrc);
         unitEnv = null;
+        env = envRecord.getUpdatedEnvironment();
+    }
+
+    void scheduleUninstall(String unitName) throws ProvisionException {
+        final EnvRecord activeRecord = callback.getEnvRecord();
+        final ProvisionUnitEnvironment unitEnv = env.getUnitEnvironment(unitName);
+        if(unitEnv == null) {
+            throw ProvisionErrors.unitIsNotInstalled(unitName);
+        }
+
+        final EnvInstructionHistory envInstrHistory = env.getHistory().getEnvInstructionHistory();
+        final UnitInstructionHistory unitHistory = UnitInstructionHistory.getInstance(envInstrHistory, unitName);
+        for(String recordId : unitHistory.getRecordIds()) {
+            final EnvInstructionHistory.EnvRecord envRecord = envInstrHistory.loadRecord(recordId);
+            envRecord.assertRollbackForUnit(unitName);
+            envRecord.scheduleDelete(fsImage);
+        }
+        for(ContentPath path : unitEnv.getContentPaths()) {
+            fsImage.delete(unitEnv.resolvePath(path)); // TODO unless it is a shared path
+        }
+        fsImage.delete(unitHistory.recordsDir);
+        activeRecord.uninstallUnit(unitName);
+        env = activeRecord.getUpdatedEnvironment();
     }
 
     ProvisionEnvironment commit() throws ProvisionException {
-        callback.schedule(callback.getEnvRecord().getAppliedInstruction());
+        final ProvisionEnvironmentInstruction appliedInstr = callback.getEnvRecord().getAppliedInstruction();
+        if(appliedInstr != null) {
+            callback.schedule(appliedInstr);
+        }
         return callback.commit();
     }
 

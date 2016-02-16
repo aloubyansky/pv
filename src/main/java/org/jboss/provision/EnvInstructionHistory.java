@@ -25,6 +25,7 @@ package org.jboss.provision;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -101,6 +102,11 @@ class EnvInstructionHistory extends InstructionHistory {
         protected EnvRecord(ProvisionEnvironment env) {
             recordId = UUID.randomUUID().toString();
             this.updatedEnv = env;
+        }
+
+        void uninstallUnit(String unitName) throws ProvisionException {
+            updatedEnv = new ProvisionEnvironment(updatedEnv);
+            updatedEnv.removeUnit(unitName);
         }
 
         protected void updateEnvironment(ProvisionEnvironmentInstruction instruction) throws ProvisionException {
@@ -184,7 +190,7 @@ class EnvInstructionHistory extends InstructionHistory {
         }
 
         ProvisionEnvironmentInstruction getAppliedInstruction() throws ProvisionException {
-            if (appliedInstruction == null) {
+            if (appliedInstruction == null && instrXml != null) {
                 FileInputStream fis = null;
                 try {
                     fis = new FileInputStream(instrXml);
@@ -243,6 +249,13 @@ class EnvInstructionHistory extends InstructionHistory {
                 return null;
             }
             return loadRecord(prevId);
+        }
+
+        void assertRollbackForUnit(String unitName) throws ProvisionException {
+            final Set<String> affectedUnits = getAppliedInstruction().getUnitNames();
+            if(!Collections.singleton(unitName).equals(affectedUnits)) {
+                throw ProvisionErrors.instructionTargetsOtherThanRequestedUnits(unitName, affectedUnits);
+            }
         }
     }
 }

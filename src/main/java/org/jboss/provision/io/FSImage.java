@@ -65,15 +65,17 @@ public class FSImage {
     private Map<String, OpDescr> updates = new LinkedHashMap<String, OpDescr>();
 
     public void write(ContentWriter contentWriter) {
-        final OpDescr descr = updates.get(contentWriter.original.getAbsolutePath());
+        final OpDescr descr = updates.get(contentWriter.getTarget().getAbsolutePath());
         if(descr != null) {
             if(descr.contentTask.isDelete()) {
-                return;
+                // re-schedule to be the last
+                updates.remove(contentWriter.getTarget().getAbsolutePath());
+                updates.put(contentWriter.getTarget().getAbsolutePath(), descr);
             }
             descr.setTask(contentWriter);
-            return;
+        } else {
+            updates.put(contentWriter.getTarget().getAbsolutePath(), OpDescr.newTask(contentWriter));
         }
-        updates.put(contentWriter.original.getAbsolutePath(), OpDescr.newTask(contentWriter));
     }
 
     public void delete(File target) {
@@ -85,19 +87,20 @@ public class FSImage {
     }
 
     protected void scheduleDelete(File target, ContentTask task) {
+        final OpDescr descr = updates.get(target.getAbsolutePath());
+        if (descr != null) {
+            if (descr.contentTask == DeleteTask.DELETE_FLAG) {
+                return;
+            }
+            descr.setTask(task);
+        } else {
+            updates.put(target.getAbsolutePath(), OpDescr.newTask(task));
+        }
         if(target.isDirectory()) {
             for(File f : target.listFiles()) {
                 scheduleDelete(f, DeleteTask.DELETE_FLAG);
             }
         }
-        final OpDescr descr = updates.get(target.getAbsolutePath());
-        if (descr != null) {
-            if (!descr.contentTask.isDelete()) {
-                descr.setTask(task);
-            }
-            return;
-        }
-        updates.put(target.getAbsolutePath(), OpDescr.newTask(task));
     }
 
     public void write(String content, File target) {
