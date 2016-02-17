@@ -186,7 +186,6 @@ public class ProvisionEnvironment extends ProvisionEnvironmentBase {
                         --patchesTotal;
                     }
                 } else if(unitInstr.getRequiredVersion() == null && this.unitEnvs.containsKey(unitName)) {
-                    //throw new IllegalStateException();
                     appCtx.scheduleUninstall(unitName);
                 }
             }
