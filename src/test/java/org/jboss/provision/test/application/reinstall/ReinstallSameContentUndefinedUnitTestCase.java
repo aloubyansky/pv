@@ -29,6 +29,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.Iterator;
 
 import org.jboss.provision.ProvisionEnvironment;
+import org.jboss.provision.ProvisionException;
 import org.jboss.provision.info.ProvisionEnvironmentInfo;
 import org.jboss.provision.info.ProvisionUnitInfo;
 import org.jboss.provision.instruction.ProvisionPackage;
@@ -60,7 +61,20 @@ public class ReinstallSameContentUndefinedUnitTestCase extends ApplicationTestBa
 
         final ProvisionEnvironment env = ProvisionEnvironment.builder().setEnvironmentHome(testInstall.getHome()).build();
         env.apply(archive);
+        assertInstalled(env);
 
+        env.apply(archive);
+        assertInstalled(env);
+
+        testInstall.updateFileWithRandomContent("a.txt")
+            .delete("c");
+        AssertUtil.assertNotIdentical(originalInstall.getHome(), testInstall.getHome(), true);
+
+        env.apply(archive);
+        assertInstalled(env);
+    }
+
+    protected void assertInstalled(final ProvisionEnvironment env) throws ProvisionException {
         AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome(), true);
         AssertUtil.assertEnvInfo(env.getEnvironmentInfo(), ProvisionUnitInfo.UNDEFINED_INFO);
         Iterator<ProvisionEnvironmentInfo> envHistory = env.environmentHistory();
@@ -68,19 +82,6 @@ public class ReinstallSameContentUndefinedUnitTestCase extends ApplicationTestBa
         AssertUtil.assertEnvInfo(envHistory.next(), ProvisionUnitInfo.UNDEFINED_INFO);
         assertFalse(envHistory.hasNext());
         Iterator<ProvisionUnitInfo> unitHistory = env.unitHistory(ProvisionUnitInfo.UNDEFINED_NAME);
-        assertTrue(unitHistory.hasNext());
-        assertEquals(unitHistory.next(), ProvisionUnitInfo.UNDEFINED_INFO);
-        assertFalse(unitHistory.hasNext());
-
-        env.apply(archive);
-
-        AssertUtil.assertIdentical(originalInstall.getHome(), testInstall.getHome(), true);
-        AssertUtil.assertEnvInfo(env.getEnvironmentInfo(), ProvisionUnitInfo.UNDEFINED_INFO);
-        envHistory = env.environmentHistory();
-        assertTrue(envHistory.hasNext());
-        AssertUtil.assertEnvInfo(envHistory.next(), ProvisionUnitInfo.UNDEFINED_INFO);
-        assertFalse(envHistory.hasNext());
-        unitHistory = env.unitHistory(ProvisionUnitInfo.UNDEFINED_NAME);
         assertTrue(unitHistory.hasNext());
         assertEquals(unitHistory.next(), ProvisionUnitInfo.UNDEFINED_INFO);
         assertFalse(unitHistory.hasNext());
