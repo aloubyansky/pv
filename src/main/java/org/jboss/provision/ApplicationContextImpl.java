@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -50,6 +51,7 @@ import org.jboss.provision.instruction.ProvisionUnitInstruction;
 import org.jboss.provision.instruction.UpdatePolicy;
 import org.jboss.provision.io.FSImage;
 import org.jboss.provision.io.IoUtils;
+import org.jboss.provision.util.HashUtils;
 import org.jboss.provision.xml.ProvisionXml;
 
 /**
@@ -228,8 +230,11 @@ class ApplicationContextImpl implements ApplicationContext {
             envRecord.assertRollbackForUnit(unitName);
             envRecord.scheduleDelete(fsImage);
         }
+        final PathsOwnership pathsOwnership = env.getPathsOwnership();
         for(ContentPath path : unitEnv.getContentPaths()) {
-            fsImage.delete(unitEnv.resolvePath(path)); // TODO unless it is a shared path
+            if(!pathsOwnership.removeOwner(unitEnv.resolvePath(path).getAbsolutePath(), unitName)) {
+                fsImage.delete(unitEnv.resolvePath(path));
+            }
         }
         fsImage.delete(unitHistory.recordsDir);
         activeRecord.uninstallUnit(unitName);
@@ -276,10 +281,10 @@ class ApplicationContextImpl implements ApplicationContext {
             }
         }
 
-        final UnitRecord unitRecord = UnitInstructionHistory.getInstance(envRecord.getEnvironmentHistory(),
-                unitEnv.getUnitInfo().getName()).createRecord(envRecord.getRecordId());
-        final Journal unitJournal = getUnitJournal(unitEnv.getUnitInfo().getName());
-
+        String unitName = unitEnv.getUnitInfo().getName();
+        final UnitRecord unitRecord = UnitInstructionHistory.getInstance(envRecord.getEnvironmentHistory(), unitName).createRecord(envRecord.getRecordId());
+        final Journal unitJournal = getUnitJournal(unitName);
+        final PathsOwnership pathsOwnership = env.getPathsOwnership();
         for (ContentItemInstruction item : instructions.getContentInstructions()) {
             final ContentPath path = item.getPath();
             final UpdatePolicy contentPolicy = updatePolicy.getContentPolicy(path.getRelativePath());
@@ -287,12 +292,56 @@ class ApplicationContextImpl implements ApplicationContext {
                 continue;
             }
             if (contentPolicy == UpdatePolicy.CONDITIONED) {
-                for (InstructionCondition condition : item.getConditions()) {
-                    if (!condition.isSatisfied(this)) {
-                        // TODO this is to add a path of a skipped add of an already existing matching item
-                        if(item.getContentHash() != null && item.getReplacedHash() == null) {
+                final byte[] expectedHash = item.getReplacedHash();
+                final File targetFile = unitEnv.resolvePath(item.getPath());
+                final byte[] actualHash = getHash(targetFile);
+                if(expectedHash == null) {
+                    // the path is not expected to exist
+                    if(actualHash != null) {
+                        if(Arrays.equals(item.getContentHash(), actualHash)) {
+                            // the existing content matches the new one
                             unitJournal.add(path);
+                            pathsOwnership.addOwner(unitEnv.resolvePath(path).getAbsolutePath(), unitName);
+                            continue;
                         }
+                        throw ProvisionErrors.pathAlreadyExists(targetFile);
+                    }
+                } else {
+                    if(item.getContentHash() == null) {
+                        // delete
+                        if(actualHash == null) {
+                            // the target does not exist
+                            pathsOwnership.removeOwner(unitEnv.resolvePath(path).getAbsolutePath(), unitName);
+                            continue;
+                        }
+                        if(!Arrays.equals(expectedHash, actualHash)) {
+                            // - it was modified by the user manually or using an external tool
+                            // - it was overridden by another unit
+                            //if (!pathsOwnership.isOnlyOwner(unitEnv.resolvePath(item.getPath()).getAbsolutePath(), unitName)) {
+                            //    pathsOwnership.removeOwner(unitEnv.resolvePath(path).getAbsolutePath(), unitName);
+                            //    continue;
+                            //}
+                            throw ProvisionErrors.pathHashMismatch(targetFile, HashUtils.bytesToHexString(expectedHash), HashUtils.bytesToHexString(actualHash));
+                        }
+                    } else {
+                        if (actualHash == null) {
+                            throw ProvisionErrors.pathDoesNotExist(targetFile);
+                        }
+                        if (Arrays.equals(item.getContentHash(), actualHash)) {
+                            // the existing content matches the new one
+                            continue;
+                        }
+                        if (!Arrays.equals(expectedHash, actualHash)) {
+                            throw ProvisionErrors.pathHashMismatch(targetFile, HashUtils.bytesToHexString(expectedHash),
+                                    HashUtils.bytesToHexString(actualHash));
+                        }
+                    }
+                }
+
+                int i = 0;
+                while(i < item.getConditions().size()) {
+                    InstructionCondition condition = item.getConditions().get(i++);
+                    if (!condition.isSatisfied(this)) {
                         continue;
                     }
                 }
@@ -300,20 +349,24 @@ class ApplicationContextImpl implements ApplicationContext {
 
             final File f = contentSrc.getFile(unitEnv, path);
             if (item.getContentHash() == null) {
-                // TODO this check here is for rolling back a forced add of an item over a conflicting existing one which was
+                // this check here is for rolling back a forced add of an item over a conflicting existing one which was
                 // backed up
                 if (f.exists()) {
                     callback.scheduleWrite(f, path, unitRecord);
+                    pathsOwnership.addOwner(unitEnv.resolvePath(path).getAbsolutePath(), unitName);
                 } else {
-                    callback.scheduleDelete(f, path, unitRecord);
+                    if(!pathsOwnership.removeOwner(unitEnv.resolvePath(path).getAbsolutePath(), unitName)) {
+                        callback.scheduleDelete(f, path, unitRecord);
+                    }
                     unitJournal.delete(path);
                 }
             } else
-            // TODO this check here is for rolling back a delete of an item which has already been deleted
+            // this check here is for rolling back a delete of an item which has already been deleted
             if (f.exists()) {
                 final File target = unitEnv.resolvePath(path);
                 callback.scheduleWrite(f, path, unitRecord);
-                if(!target.exists()) {
+                pathsOwnership.addOwner(target.getAbsolutePath(), unitName);
+                if(!target.exists()) { // TODO everything should be added to the journal
                     unitJournal.add(path);
                 }
             }

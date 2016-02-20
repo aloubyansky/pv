@@ -67,6 +67,7 @@ public class ProvisionEnvironment extends ProvisionEnvironmentBase {
 
     private final File envHome;
     private Map<String, ProvisionUnitEnvironment> unitEnvs;
+    private PathsOwnership pathsOwnership;
 
     ProvisionEnvironment(ProvisionEnvironmentBuilder builder) throws ProvisionException {
         super(builder.namedLocations, builder.defaultUnitUpdatePolicy);
@@ -77,7 +78,6 @@ public class ProvisionEnvironment extends ProvisionEnvironmentBase {
         this.envHome = builder.envHome;
 
         if(builder.unitInfos.isEmpty()) {
-            //throw ProvisionErrors.environmentHasNoUnits();
             unitEnvs = Collections.emptyMap();
         } else if(builder.unitInfos.size() == 1) {
             final String unitName = builder.unitInfos.keySet().iterator().next();
@@ -216,6 +216,21 @@ public class ProvisionEnvironment extends ProvisionEnvironmentBase {
 
     ProvisionEnvironmentHistory getHistory() {
         return ProvisionEnvironmentHistory.getInstance(this);
+    }
+
+    PathsOwnership getPathsOwnership() throws ProvisionException {
+        if(pathsOwnership != null) {
+            return pathsOwnership;
+        }
+        final PathsOwnership pathsOwnership = new PathsOwnership();
+        for(ProvisionUnitEnvironment unitEnv : unitEnvs.values()) {
+            final String unitName = unitEnv.getUnitInfo().getName();
+            for(ContentPath path : unitEnv.getContentPaths()) {
+                pathsOwnership.addOwner(unitEnv.resolvePath(path).getAbsolutePath(), unitName);
+            }
+        }
+        this.pathsOwnership = pathsOwnership;
+        return pathsOwnership;
     }
 
     protected void reset(ProvisionEnvironment env) {
