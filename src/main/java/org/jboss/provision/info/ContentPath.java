@@ -30,7 +30,7 @@ import org.jboss.provision.ProvisionErrors;
  *
  * @author Alexey Loubyansky
  */
-public abstract class ContentPath {
+public class ContentPath {
 
     public static ContentPath forFSPath(String relativePath) {
         if(File.separatorChar == '\\' && !relativePath.isEmpty()) {
@@ -48,7 +48,7 @@ public abstract class ContentPath {
     }
 
     public static ContentPath create(final String namedLocation, final String relativePath) {
-        return new ContentPath(namedLocation, relativePath){};
+        return new ContentPath(namedLocation, relativePath);
     }
 
     private final String locationName;
